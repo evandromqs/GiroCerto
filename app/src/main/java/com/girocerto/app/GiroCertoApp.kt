@@ -23,6 +23,7 @@ class GiroCertoApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        com.girocerto.app.theme.AppearancePreferences.initialize(this)
         appUpdates = com.girocerto.update.AppUpdateManager(this)
         settingsRepository = SettingsRepository(this)
         rideRepository = RideRepository(this)

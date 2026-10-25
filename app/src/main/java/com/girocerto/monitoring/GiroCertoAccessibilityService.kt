@@ -239,7 +239,9 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 if (policy.captureOfferScreenshot) screenshot.capture(offer, packageName)
 
                 // 2. Exibe o card flutuante sobre a tela do aplicativo de transporte
-                val overlayStatus = if (!OverlayController.canDrawOverlays(this@GiroCertoAccessibilityService)) {
+                val overlayStatus = if (OverlayController.hidden(this@GiroCertoAccessibilityService)) {
+                    "janela ocultada; mostre novamente na tela Copiloto"
+                } else if (!OverlayController.canDrawOverlays(this@GiroCertoAccessibilityService)) {
                     "falta permissão de sobreposição"
                 } else if (OverlayController.showOverlay(this@GiroCertoAccessibilityService, finalAnalysis)) {
                     "janela solicitada"

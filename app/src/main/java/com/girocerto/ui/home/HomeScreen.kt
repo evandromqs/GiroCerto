@@ -1,5 +1,9 @@
 package com.girocerto.ui.home
 
+import com.girocerto.ui.components.TactileButton as Button
+
+import com.girocerto.ui.components.AppText as Text
+
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
@@ -20,12 +24,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import com.girocerto.ui.components.TactileCard as Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -325,14 +327,14 @@ private fun LiveOfferCard(
 @Composable
 private fun AppPlatformBadge(appName: String) {
     val (bgColor, textColor, label) = when {
-        appName.contains("uber eats", ignoreCase = true) -> Triple(Color(0xFF06B6D4L), Color.White, "EATS")
+        appName.contains("uber eats", ignoreCase = true) -> Triple(Color(0xFF102746L), Color.White, "EATS")
         appName.contains("uber moto", ignoreCase = true) -> Triple(Color(0xFF374151L), Color.White, "MOTO")
         appName.contains("uber", ignoreCase = true) -> Triple(Color(0xFF111827L), Color.White, "UBER")
-        appName.contains("99food", ignoreCase = true) -> Triple(Color(0xFFF97316L), Color.White, "99FOOD")
-        appName.contains("99", ignoreCase = true) -> Triple(Color(0xFFF97316L), Color.White, "99")
-        appName.contains("ifood", ignoreCase = true) -> Triple(Color(0xFFEA1D2CL), Color.White, "iFOOD")
-        appName.contains("indrive", ignoreCase = true) -> Triple(Color(0xFF10B981L), Color.White, "inDRIVE")
-        appName.contains("keeta", ignoreCase = true) -> Triple(Color(0xFFF59E0BL), Color.Black, "KEETA")
+        appName.contains("99food", ignoreCase = true) -> Triple(Color(0xFF102746L), Color.White, "99FOOD")
+        appName.contains("99", ignoreCase = true) -> Triple(Color(0xFF102746L), Color.White, "99")
+        appName.contains("ifood", ignoreCase = true) -> Triple(Color(0xFF102746L), Color.White, "iFOOD")
+        appName.contains("indrive", ignoreCase = true) -> Triple(Color(0xFF102746L), Color.White, "inDRIVE")
+        appName.contains("keeta", ignoreCase = true) -> Triple(Color(0xFF102746L), Color.Black, "KEETA")
         else -> Triple(PrimaryBlue, Color.White, appName.take(6).uppercase())
     }
     Box(

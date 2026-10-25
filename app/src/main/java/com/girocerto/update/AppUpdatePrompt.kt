@@ -1,5 +1,7 @@
 package com.girocerto.update
 
+import com.girocerto.ui.components.AppText as Text
+
 import android.app.DownloadManager
 import android.content.Intent
 import androidx.compose.foundation.layout.*
@@ -21,7 +23,7 @@ internal fun AppUpdatePrompt() {
         onDismissRequest = manager::dismiss,
         title = { Text("Giro Certo ${release.versionName}") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                 Text("Sua versão: ${manager.installedName}")
                 Text(state.message)
                 when (state.phase) {

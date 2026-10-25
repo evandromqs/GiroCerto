@@ -1,5 +1,11 @@
 package com.girocerto.ui.home
 
+import com.girocerto.ui.components.TactileButton as Button
+
+import com.girocerto.ui.components.TactileCard as Card
+
+import com.girocerto.ui.components.AppText as Text
+
 import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -32,12 +38,12 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
     val days by repo.days.collectAsState()
     val running by GiroCertoAccessibilityService.isServiceRunning.collectAsState()
     val today = days.firstOrNull { it.date == LocalDate.now() }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text("Giro Certo", style = MaterialTheme.typography.headlineMedium)
         Text(profile?.let { "Olá, ${it.name}. Vamos fechar seu dia?" } ?: "Seu trabalho, suas metas, tudo em um lugar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (profile == null) {
             Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                     Text("Comece pela sua moto", style = MaterialTheme.typography.titleLarge)
                     Text("Responda quatro passos rápidos. O Giro Certo calcula quanto buscar por dia, hora e km.")
                     Button(onClick = onGoals, modifier = Modifier.fillMaxWidth()) { Text("Criar meu perfil") }
@@ -45,7 +51,7 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
             }
         } else {
             Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                     Text("Hoje • ${LocalDate.now().format(dayFormat)}")
                     Text(if (today == null) "Dia ainda não registrado" else Formatters.formatCurrency(today.net),
                         style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
@@ -84,7 +90,7 @@ fun WorkDiaryScreen(onProfile: () -> Unit) {
     var selectedDate by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
     val date = LocalDate.parse(selectedDate)
     val context = LocalContext.current
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text("Meus ganhos", style = MaterialTheme.typography.headlineMedium)
         Text("Informe o que recebeu em cada app após as taxas da plataforma.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         WorkPlatformPicker()

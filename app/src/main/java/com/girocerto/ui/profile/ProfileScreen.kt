@@ -1,5 +1,9 @@
 package com.girocerto.ui.profile
 
+import com.girocerto.ui.components.TactileButton as Button
+
+import com.girocerto.ui.components.AppText as Text
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -19,14 +23,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import com.girocerto.ui.components.TactileCard as Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -100,7 +102,7 @@ fun ProfileScreen(
             Text("Metas e planejamento")
         }
         Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                 Text("Mensagem ao passageiro", color = TextPrimary, fontWeight = FontWeight.Bold)
                 Text("Guarde um modelo neste aparelho. No histórico, você pode revisar a mensagem, escolher o aplicativo e confirmar o envio. Nada é enviado automaticamente.", color = TextSecondary, fontSize = 12.sp)
                 OutlinedTextField(
@@ -473,15 +475,15 @@ private fun resolveDisplayAppName(appName: String): String {
 
 private fun appBadgeColor(appName: String): Color {
     return when {
-        appName.contains("Uber Eats", ignoreCase = true) -> Color(0xFF06B6D4)
+        appName.contains("Uber Eats", ignoreCase = true) -> Color(0xFF102746)
         appName.contains("Uber Moto", ignoreCase = true) -> Color(0xFF6B7280)
         appName.contains("Uber", ignoreCase = true) -> Color(0xFF374151)
-        appName.contains("99Food", ignoreCase = true) -> Color(0xFFF97316)
-        appName.contains("99", ignoreCase = true) -> Color(0xFFEA580C)
-        appName.contains("iFood", ignoreCase = true) -> Color(0xFFEA1D2C)
-        appName.contains("inDrive", ignoreCase = true) -> Color(0xFF10B981)
-        appName.contains("Keeta", ignoreCase = true) -> Color(0xFFF59E0B)
-        else -> Color(0xFF2563EB)
+        appName.contains("99Food", ignoreCase = true) -> Color(0xFF102746)
+        appName.contains("99", ignoreCase = true) -> Color(0xFF102746)
+        appName.contains("iFood", ignoreCase = true) -> Color(0xFF102746)
+        appName.contains("inDrive", ignoreCase = true) -> Color(0xFF102746)
+        appName.contains("Keeta", ignoreCase = true) -> Color(0xFF102746)
+        else -> Color(0xFF102746)
     }
 }
 

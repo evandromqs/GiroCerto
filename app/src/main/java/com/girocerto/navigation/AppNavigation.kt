@@ -1,5 +1,7 @@
 package com.girocerto.navigation
 
+import com.girocerto.ui.components.AppText as Text
+
 import android.content.Context
 import com.girocerto.ui.goals.GoalsScreen
 import com.girocerto.ui.copilot.CopilotScreen
@@ -15,7 +17,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder

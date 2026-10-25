@@ -11,8 +11,8 @@ android {
         applicationId = "com.girocerto.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = providers.environmentVariable("VERSION_CODE").orNull?.toInt() ?: 1
-        versionName = providers.environmentVariable("VERSION_NAME").orNull ?: "1.0"
+        versionCode = providers.environmentVariable("VERSION_CODE").orNull?.toInt() ?: 7
+        versionName = providers.environmentVariable("VERSION_NAME").orNull ?: "1.0.7"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

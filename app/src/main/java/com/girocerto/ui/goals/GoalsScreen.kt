@@ -1,5 +1,9 @@
 package com.girocerto.ui.goals
 
+import com.girocerto.ui.components.TactileButton as Button
+
+import com.girocerto.ui.components.AppText as Text
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -50,7 +54,7 @@ fun GoalsScreen(modifier: Modifier = Modifier) {
             Text(calculation.exceptionOrNull()?.message ?: "Revise os valores.", color = MaterialTheme.colorScheme.error)
         } else {
             Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
             Text("Sua projeção", style = MaterialTheme.typography.titleLarge, color = TextPrimary)
             GoalResult("Custos por semana", estimate.weeklyOperatingCost)
             GoalResult("Faturamento por semana", estimate.requiredWeeklyGross)

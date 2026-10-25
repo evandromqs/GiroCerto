@@ -1,5 +1,11 @@
 package com.girocerto.ui.goals
 
+import com.girocerto.ui.components.TactileButton as Button
+
+import com.girocerto.ui.components.TactileCard as Card
+
+import com.girocerto.ui.components.AppText as Text
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -52,7 +58,7 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
         inputNumber(extra) ?: -1.0, days.toIntOrNull() ?: 0, inputNumber(hours) ?: -1.0,
         inputNumber(km) ?: -1.0, inputNumber(goal) ?: -1.0)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text("Minha moto e metas", style = MaterialTheme.typography.headlineMedium)
         if (saved != null && !editing) {
             val profile = saved!!
@@ -124,7 +130,7 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
 @Composable
 private fun ProfileProjection(p: ElectricProfile) {
     Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
             Text("Meta de faturamento por dia", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(Formatters.formatCurrency(p.dailyGrossGoal), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
             SummaryLine("Para sobrar na semana", Formatters.formatCurrency(p.weeklyNetGoal))

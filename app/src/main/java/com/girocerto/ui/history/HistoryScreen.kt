@@ -1,5 +1,7 @@
 package com.girocerto.ui.history
 
+import com.girocerto.ui.components.AppText as Text
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -22,7 +24,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -217,7 +218,7 @@ private fun HistoryItemCard(
             onDismissRequest = { showMessageDraft = false },
             title = { Text("Revise a mensagem") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                     Text("Você escolherá o aplicativo e o destinatário e confirmará o envio. O Giro Certo não identifica o passageiro nem envia mensagens automaticamente.")
                     OutlinedTextField(value = passengerDraft, onValueChange = { passengerDraft = it },
                         modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 6,

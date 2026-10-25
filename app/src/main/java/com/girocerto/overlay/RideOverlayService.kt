@@ -55,6 +55,8 @@ class RideOverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var currentView: View? = null
     private var currentMode: Mode = Mode.BUBBLE
+    private var trashTarget: FrameLayout? = null
+    private var trashHovered = false
     private var params: WindowManager.LayoutParams? = null
 
     // Posição na tela (persistida durante a sessão)
@@ -76,7 +78,7 @@ class RideOverlayService : Service() {
 
     inner class LocalBinder : android.os.Binder() { val service get() = this@RideOverlayService }
     override fun onBind(intent: Intent?): IBinder = LocalBinder()
-    fun ensureBubble() { if (currentView?.isAttachedToWindow != true) showBubbleMode() }
+    fun ensureBubble() { if (!OverlayController.hidden(this) && currentView?.isAttachedToWindow != true) showBubbleMode() }
     fun updateReaderStatus(message: String) {
         currentView?.findViewWithTag<TextView>("readerStatus")?.text = message
     }
@@ -144,6 +146,7 @@ class RideOverlayService : Service() {
     // ──────────────────────────────────────────────────────────────────────────
 
     private fun showBubbleMode() {
+        if (OverlayController.hidden(this)) { dismiss(); return }
         if (!OverlayController.canDrawOverlays(this)) {
             Log.w("GiroOverlay", "Window blocked: overlay permission missing")
             stopSelf()
@@ -158,8 +161,8 @@ class RideOverlayService : Service() {
         currentView = bubble
 
         val layoutParams = getWindowLayoutParams(
-            width = dpToPx(58),
-            height = dpToPx(58),
+            width = dpToPx(64),
+            height = dpToPx(64),
             x = posX,
             y = posY
         )
@@ -178,93 +181,147 @@ class RideOverlayService : Service() {
 
     private fun createBubbleView(): View {
         val bubble = FrameLayout(this).apply {
-            val bg = GradientDrawable().apply {
+            contentDescription = "Giro Certo. Toque para abrir; arraste até a lixeira para ocultar."
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                intArrayOf(palette("#415A7D"), palette("#102746"), Color.BLACK)).apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#101818"))
-                setStroke(dpToPx(3), Color.parseColor("#19BFB0"))
+                setStroke(dpToPx(2), palette("#C9D5E6"))
             }
-            background = bg
-            elevation = dpToPx(12).toFloat()
+            elevation = dpToPx(10).toFloat()
         }
-
-        // Texto "GC" no centro da bolha
-        val label = TextView(this).apply {
-            text = "GC"
-            setTextColor(Color.WHITE)
-            textSize = 15f
-            paint.isFakeBoldText = true
-            gravity = Gravity.CENTER
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        }
-        bubble.addView(label)
-
-        // Ponto verde indicador de copiloto ativo no canto
-        val statusDot = View(this).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#22C55E"))
-                setStroke(dpToPx(1), Color.WHITE)
-            }
-            val dotSize = dpToPx(11)
-            layoutParams = FrameLayout.LayoutParams(dotSize, dotSize).apply {
-                gravity = Gravity.TOP or Gravity.END
-                setMargins(0, dpToPx(3), dpToPx(3), 0)
-            }
-        }
-        bubble.addView(statusDot)
-
-        // Drag & Click listener para a bolha
+        bubble.addView(android.widget.ImageView(this).apply {
+            setImageResource(com.girocerto.app.R.drawable.ic_launcher_monochrome)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, FrameLayout.LayoutParams(dpToPx(96), dpToPx(96), Gravity.CENTER))
+        bubble.setOnClickListener { showQuickMenuMode() }
         bubble.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
-            private var initialTouchX = 0f
-            private var initialTouchY = 0f
-            private var isDragging = false
-
-            override fun onTouch(v: View?, event: MotionEvent): Boolean {
-                val currentParams = params ?: return false
-                when (event.action) {
+            private var touchX = 0f
+            private var touchY = 0f
+            private var dragging = false
+            private val slop = android.view.ViewConfiguration.get(this@RideOverlayService).scaledTouchSlop
+            override fun onTouch(view: View, event: MotionEvent): Boolean {
+                val layout = params ?: return false
+                when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
-                        initialX = currentParams.x
-                        initialY = currentParams.y
-                        initialTouchX = event.rawX
-                        initialTouchY = event.rawY
-                        isDragging = false
+                        initialX = layout.x; initialY = layout.y
+                        touchX = event.rawX; touchY = event.rawY; dragging = false
                         return true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        val dx = (event.rawX - initialTouchX).toInt()
-                        val dy = (event.rawY - initialTouchY).toInt()
-                        if (abs(dx) > 12 || abs(dy) > 12) {
-                            isDragging = true
+                        val dx = event.rawX - touchX
+                        val dy = event.rawY - touchY
+                        if (!dragging && (abs(dx) > slop || abs(dy) > slop)) {
+                            dragging = true; showTrashTarget()
                         }
-                        if (isDragging) {
-                            currentParams.x = (initialX + dx).coerceIn(0, (resources.displayMetrics.widthPixels - v!!.width).coerceAtLeast(0))
-                            currentParams.y = (initialY + dy).coerceIn(0, (resources.displayMetrics.heightPixels - v.height).coerceAtLeast(0))
-                            posX = currentParams.x
-                            posY = currentParams.y
-                            try {
-                                windowManager?.updateViewLayout(bubble, currentParams)
-                            } catch (_: Exception) {}
+                        if (dragging) {
+                            layout.x = (initialX + dx.toInt()).coerceIn(0, (resources.displayMetrics.widthPixels - view.width).coerceAtLeast(0))
+                            layout.y = (initialY + dy.toInt()).coerceIn(0, (resources.displayMetrics.heightPixels - view.height).coerceAtLeast(0))
+                            runCatching { windowManager?.updateViewLayout(view, layout) }
+                            updateTrashHover(isOverTrash(view))
+                            view.alpha = if (trashHovered) .65f else 1f
                         }
                         return true
                     }
                     MotionEvent.ACTION_UP -> {
-                        if (!isDragging) {
-                            // Toque simples: alterna para o menu rápido
-                            showQuickMenuMode()
-                        }
+                        val remove = dragging && isOverTrash(view)
+                        hideTrashTarget(); view.alpha = 1f
+                        if (remove) {
+                            posX = initialX; posY = initialY
+                            OverlayController.hideByUser(this@RideOverlayService)
+                            Toast.makeText(this@RideOverlayService, "Janela ocultada. Para voltar, abra Copiloto.", Toast.LENGTH_SHORT).show()
+                        } else if (dragging) {
+                            val edge = dpToPx(12)
+                            layout.x = if (layout.x + view.width / 2 < resources.displayMetrics.widthPixels / 2) edge
+                                else (resources.displayMetrics.widthPixels - view.width - edge).coerceAtLeast(0)
+                            posX = layout.x; posY = layout.y
+                            runCatching { windowManager?.updateViewLayout(view, layout) }
+                        } else view.performClick()
+                        return true
+                    }
+                    MotionEvent.ACTION_CANCEL -> {
+                        hideTrashTarget(); view.alpha = 1f
+                        layout.x = initialX; layout.y = initialY
+                        runCatching { windowManager?.updateViewLayout(view, layout) }
                         return true
                     }
                 }
                 return false
             }
         })
-
         return bubble
+    }
+
+    private fun showTrashTarget() {
+        if (trashTarget != null) return
+        val target = FrameLayout(this)
+        val icon = android.widget.ImageView(this).apply {
+            tag = "trashIcon"
+            setImageResource(com.girocerto.app.R.drawable.ic_trash)
+            setPadding(dpToPx(18), dpToPx(18), dpToPx(18), dpToPx(18))
+            contentDescription = "Solte aqui para ocultar"
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(Color.WHITE, palette("#C9D5E6"))).apply {
+                shape = GradientDrawable.OVAL; setStroke(dpToPx(2), palette("#102746"))
+            }
+            elevation = dpToPx(6).toFloat()
+        }
+        target.addView(icon, FrameLayout.LayoutParams(dpToPx(64), dpToPx(64), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dpToPx(8) })
+        target.addView(TextView(this).apply {
+            tag = "trashLabel"; text = "Solte para ocultar"; textSize = 12f; gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply { setColor(palette("#102746")); cornerRadius = dpToPx(8).toFloat() }
+        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dpToPx(32), Gravity.BOTTOM))
+        val bottomInset = if (Build.VERSION.SDK_INT >= 30) windowManager?.currentWindowMetrics?.windowInsets
+            ?.getInsetsIgnoringVisibility(android.view.WindowInsets.Type.navigationBars())?.bottom ?: 0 else dpToPx(24)
+        val layout = getWindowLayoutParams(dpToPx(144), dpToPx(112), 0, 0).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            x = 0; y = bottomInset + dpToPx(16)
+            flags = flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        }
+        try { windowManager?.addView(target, layout); trashTarget = target }
+        catch (_: Exception) { trashTarget = null }
+    }
+
+    private fun isOverTrash(bubble: View): Boolean {
+        val target = trashTarget ?: return false
+        val location = IntArray(2); target.getLocationOnScreen(location)
+        val bubbleLocation = IntArray(2); bubble.getLocationOnScreen(bubbleLocation)
+        return BubbleDropZone.contains(bubbleLocation[0] + bubble.width / 2f, bubbleLocation[1] + bubble.height / 2f,
+            location[0] + target.width / 2f, location[1] + dpToPx(40).toFloat(), dpToPx(50).toFloat())
+    }
+
+    private fun updateTrashHover(hovered: Boolean) {
+        if (trashHovered == hovered) return
+        trashHovered = hovered
+        trashTarget?.findViewWithTag<View>("trashIcon")?.apply {
+            scaleX = if (hovered) 1.15f else 1f; scaleY = scaleX
+            if (hovered) performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+        }
+        trashTarget?.findViewWithTag<TextView>("trashLabel")?.text = if (hovered) "Solte agora" else "Solte para ocultar"
+    }
+
+    private fun hideTrashTarget() {
+        trashTarget?.let { runCatching { windowManager?.removeView(it) } }
+        trashTarget = null; trashHovered = false
+    }
+
+    fun refreshAppearance() {
+        if (currentView == null) return
+        val mode = currentMode
+        removeCurrentViewOnly()
+        when (mode) {
+            Mode.BUBBLE -> ensureBubble()
+            Mode.QUICK_MENU -> showQuickMenuMode()
+            Mode.OFFER_CARD -> currentAnalysis?.let { showOfferCardMode(it.grossPerKm, it.grossPerHour, it.estimatedProfit,
+                it.trafficLight, it.decisionReason, it.offer.appName, it.offer.destinationAddress) }
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        refreshAppearance()
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -312,9 +369,9 @@ class RideOverlayService : Service() {
             setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12))
             background = GradientDrawable().apply {
                 orientation = GradientDrawable.Orientation.TOP_BOTTOM
-                colors = intArrayOf(Color.parseColor("#243535"), Color.parseColor("#101818"))
+                colors = intArrayOf(palette("#243535"), palette("#101818"))
                 cornerRadius = dpToPx(16).toFloat()
-                setStroke(dpToPx(2), Color.parseColor("#19BFB0"))
+                setStroke(dpToPx(2), palette("#4B5563"))
             }
             elevation = dpToPx(16).toFloat()
         }
@@ -326,8 +383,9 @@ class RideOverlayService : Service() {
         }
 
         val title = TextView(this).apply {
+            gravity = Gravity.CENTER
             text = "Giro Certo Copiloto"
-            setTextColor(Color.WHITE)
+            setTextColor(palette("#F9FAFB"))
             textSize = 14f
             paint.isFakeBoldText = true
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f)
@@ -335,7 +393,7 @@ class RideOverlayService : Service() {
 
         val collapseBtn = Button(this).apply {
             text = "━"
-            setTextColor(Color.parseColor("#B5C9C7"))
+            setTextColor(palette("#B5C9C7"))
             setBackgroundColor(Color.TRANSPARENT)
             textSize = 14f
             setPadding(dpToPx(6), 0, dpToPx(6), 0)
@@ -348,10 +406,11 @@ class RideOverlayService : Service() {
 
         // Status de monitoramento
         val statusText = TextView(this).apply {
+            gravity = Gravity.CENTER
             tag = "readerStatus"
             text = com.girocerto.monitoring.GiroCertoAccessibilityService.readerStatus.value
-            setTextColor(Color.parseColor("#B5C9C7"))
-            textSize = 11f
+            setTextColor(palette("#B5C9C7"))
+            textSize = 12f
             setPadding(0, dpToPx(4), 0, dpToPx(10))
         }
         root.addView(statusText)
@@ -362,7 +421,8 @@ class RideOverlayService : Service() {
         )
         val profitText = TextView(this).apply {
             text = String.format(Locale.GERMANY, "Estimativa hoje: R$ %.2f (%d ofertas)", summary.totalEstimatedProfit, summary.totalRides)
-            setTextColor(if (summary.totalEstimatedProfit >= 0) Color.parseColor("#22C55E") else Color.parseColor("#EF4444"))
+            setTextColor(palette("#F9FAFB"))
+            gravity = Gravity.CENTER
             textSize = 12f
             paint.isFakeBoldText = true
             setPadding(0, 0, 0, dpToPx(10))
@@ -377,11 +437,11 @@ class RideOverlayService : Service() {
 
         val openAppBtn = Button(this).apply {
             text = "Abrir App"
-            textSize = 11f
+            textSize = 12f
             setTextColor(Color.WHITE)
             setPadding(dpToPx(12), dpToPx(4), dpToPx(12), dpToPx(4))
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#19BFB0"))
+                setColor(palette("#19BFB0"))
                 cornerRadius = dpToPx(8).toFloat()
             }
             setOnClickListener {
@@ -395,11 +455,11 @@ class RideOverlayService : Service() {
 
         val closeBtn = Button(this).apply {
             text = "Pausar copiloto"
-            textSize = 11f
-            setTextColor(Color.parseColor("#EF4444"))
+            textSize = 12f
+            setTextColor(Color.WHITE)
             setPadding(dpToPx(10), dpToPx(4), dpToPx(10), dpToPx(4))
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#304242"))
+                setColor(palette("#304242"))
                 cornerRadius = dpToPx(8).toFloat()
             }
             setOnClickListener {
@@ -489,9 +549,9 @@ class RideOverlayService : Service() {
             setPadding(dpToPx(20), dpToPx(14), dpToPx(20), dpToPx(14))
             background = GradientDrawable().apply {
                 orientation = GradientDrawable.Orientation.TOP_BOTTOM
-                colors = intArrayOf(Color.parseColor("#243535"), Color.parseColor("#101818"))
+                colors = intArrayOf(palette("#243535"), palette("#101818"))
                 cornerRadius = dpToPx(20).toFloat()
-                setStroke(dpToPx(3), Color.parseColor("#304242"))
+                setStroke(dpToPx(3), palette("#304242"))
             }
             elevation = dpToPx(20).toFloat()
         }
@@ -506,18 +566,19 @@ class RideOverlayService : Service() {
             tag = "appBadge"
             text = "UBER"
             setTextColor(Color.WHITE)
-            textSize = 11f
+            textSize = 12f
             paint.isFakeBoldText = true
             setPadding(dpToPx(8), dpToPx(3), dpToPx(8), dpToPx(3))
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#19BFB0"))
+                setColor(palette("#19BFB0"))
                 cornerRadius = dpToPx(6).toFloat()
             }
         }
 
         val title = TextView(this).apply {
+            gravity = Gravity.CENTER
             text = "Giro Certo"
-            setTextColor(Color.parseColor("#F9FAFB"))
+            setTextColor(palette("#F9FAFB"))
             textSize = 13f
             paint.isFakeBoldText = true
             setPadding(dpToPx(10), 0, 0, 0)
@@ -526,7 +587,7 @@ class RideOverlayService : Service() {
 
         val closeBtn = Button(this).apply {
             text = "✕"
-            setTextColor(Color.parseColor("#B5C9C7"))
+            setTextColor(palette("#B5C9C7"))
             setBackgroundColor(Color.TRANSPARENT)
             textSize = 14f
             setPadding(dpToPx(6), 0, dpToPx(6), 0)
@@ -563,8 +624,10 @@ class RideOverlayService : Service() {
         root.addView(statusBadge, badgeParams)
         root.addView(TextView(this).apply {
             tag = "decisionReason"
-            textSize = 12f
-            setTextColor(Color.WHITE)
+            textSize = 13f
+            gravity = Gravity.CENTER
+            justificationMode = android.graphics.text.LineBreaker.JUSTIFICATION_MODE_INTER_WORD
+            setTextColor(palette("#F9FAFB"))
             setPadding(0, dpToPx(4), 0, dpToPx(8))
         })
 
@@ -582,23 +645,25 @@ class RideOverlayService : Service() {
 
                 val valText = TextView(this@RideOverlayService).apply {
                     this.tag = tag
+                    gravity = Gravity.CENTER
+                    setAutoSizeTextTypeUniformWithConfiguration(11, 16, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
                     textSize = 14f
                     paint.isFakeBoldText = true
-                    setTextColor(Color.parseColor("#F9FAFB"))
+                    setTextColor(palette("#F9FAFB"))
                 }
                 val labelText = TextView(this@RideOverlayService).apply {
                     text = label
-                    textSize = 10f
-                    setTextColor(Color.parseColor("#B5C9C7"))
+                    textSize = 12f
+                    setTextColor(palette("#B5C9C7"))
                 }
                 addView(valText)
                 addView(labelText)
             }
         }
 
-        metricsRow.addView(createMetricView("valKm", "R$/km"))
-        metricsRow.addView(createMetricView("valHour", "R$/h"))
-        metricsRow.addView(createMetricView("valProfit", "Lucro"))
+        metricsRow.addView(createMetricView("valKm", "R$/km"), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        metricsRow.addView(createMetricView("valHour", "R$/h"), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        metricsRow.addView(createMetricView("valProfit", "Lucro"), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(metricsRow)
 
         // Ações: Salvar e Maps
@@ -611,11 +676,11 @@ class RideOverlayService : Service() {
         val saveBtn = Button(this).apply {
             tag = "saveBtn"
             text = "Salvar análise"
-            textSize = 11f
+            textSize = 12f
             setTextColor(Color.WHITE)
             setPadding(dpToPx(12), dpToPx(4), dpToPx(12), dpToPx(4))
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#304242"))
+                setColor(palette("#304242"))
                 cornerRadius = dpToPx(8).toFloat()
             }
             setOnClickListener {
@@ -635,11 +700,11 @@ class RideOverlayService : Service() {
         val mapsBtn = Button(this).apply {
             tag = "mapsBtn"
             text = "Ver destino"
-            textSize = 11f
+            textSize = 12f
             setTextColor(Color.WHITE)
             setPadding(dpToPx(12), dpToPx(4), dpToPx(12), dpToPx(4))
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#19BFB0"))
+                setColor(palette("#19BFB0"))
                 cornerRadius = dpToPx(8).toFloat()
             }
             setOnClickListener {
@@ -706,9 +771,9 @@ class RideOverlayService : Service() {
                 else -> "#19BFB0"
             }
             background = GradientDrawable().apply {
-                setColor(Color.parseColor(badgeBgColor))
+                setColor(palette(badgeBgColor))
                 cornerRadius = dpToPx(6).toFloat()
-                setStroke(1, Color.parseColor("#4B5563"))
+                setStroke(1, palette("#4B5563"))
             }
         }
 
@@ -718,16 +783,16 @@ class RideOverlayService : Service() {
         valProfit?.text = String.format(Locale.GERMANY, "R$ %.2f", profit)
 
         val (colorHex, text) = when (status) {
-            TrafficLightStatus.GREEN -> Pair("#22C55E", "OFERTA COMPATÍVEL (VERDE)")
-            TrafficLightStatus.YELLOW -> Pair("#FACC15", "ATENÇÃO / LIMITE (AMARELO)")
-            TrafficLightStatus.RED -> Pair("#EF4444", "NÃO COMPENSA (VERMELHO)")
+            TrafficLightStatus.GREEN -> Pair("#22C55E", "COMPENSA")
+            TrafficLightStatus.YELLOW -> Pair("#FACC15", "ATENÇÃO / LIMITE")
+            TrafficLightStatus.RED -> Pair("#EF4444", "NÃO COMPENSA")
             TrafficLightStatus.INVALID -> Pair("#6B7280", "DADOS INCOMPLETOS")
         }
 
         statusBadge?.apply {
             this.text = text
             background = GradientDrawable().apply {
-                setColor(Color.parseColor(colorHex))
+                setColor(palette(colorHex))
                 cornerRadius = dpToPx(8).toFloat()
             }
             setTextColor(if (status == TrafficLightStatus.YELLOW) Color.BLACK else Color.WHITE)
@@ -798,6 +863,7 @@ class RideOverlayService : Service() {
     }
 
     private fun removeCurrentViewOnly() {
+        hideTrashTarget()
         if (currentView != null) {
             try {
                 windowManager?.removeView(currentView)
@@ -816,6 +882,24 @@ class RideOverlayService : Service() {
         super.onDestroy()
         removeOverlay()
         serviceScope.cancel()
+    }
+
+    private fun palette(hex: String): Int {
+        val dark = com.girocerto.app.theme.AppearancePreferences.isDark(this)
+        val color = when (hex.uppercase(Locale.ROOT)) {
+            "#101818" -> if (dark) "#101B2D" else "#FFFFFF"
+            "#243535" -> if (dark) "#293F5E" else "#F8FAFD"
+            "#304242" -> "#263E5E"
+            "#4B5563" -> if (dark) "#58708F" else "#B2C2D8"
+            "#F9FAFB" -> if (dark) "#FFFFFF" else "#10151D"
+            "#B5C9C7" -> if (dark) "#CED8E7" else "#40536D"
+            "#FACC15" -> "#DEE5EF"
+            "#EF4444" -> "#080D15"
+            "#6B7280" -> "#40536D"
+            "#19BFB0", "#22C55E", "#10B981", "#06B6D4", "#EA1D2C", "#F97316", "#F59E0B" -> "#102746"
+            else -> hex
+        }
+        return Color.parseColor(color)
     }
 
     private fun dpToPx(dp: Int): Int {

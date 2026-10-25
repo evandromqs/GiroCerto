@@ -56,9 +56,25 @@ object OverlayController {
 
     fun updateReaderStatus(message: String) { boundService?.updateReaderStatus(message) }
 
+    private val _isHidden = MutableStateFlow(false)
+    val isHidden = _isHidden.asStateFlow()
+    fun hidden(context: Context) = context.getSharedPreferences("floating_window", 0).getBoolean("hidden", false)
+    fun hideByUser(context: Context) {
+        context.getSharedPreferences("floating_window", 0).edit().putBoolean("hidden", true).apply()
+        _isHidden.value = true
+        stopFloatingBubble(context)
+    }
+    fun restore(context: Context) {
+        context.getSharedPreferences("floating_window", 0).edit().putBoolean("hidden", false).apply()
+        _isHidden.value = false
+        syncCopilot(context)
+    }
+    fun refreshAppearance() { boundService?.refreshAppearance() }
+
     fun syncCopilot(context: Context) {
+        _isHidden.value = hidden(context)
         if (owner == null) return
-        if (CopilotPreferences(context).read().enabled && canDrawOverlays(context)) boundService?.ensureBubble()
+        if (CopilotPreferences(context).read().enabled && !hidden(context) && canDrawOverlays(context)) boundService?.ensureBubble()
         else {
             pendingAnalysis = null
             boundService?.dismiss()
@@ -124,6 +140,7 @@ object OverlayController {
      * Inicia ou atualiza a Janela Flutuante com a análise informada.
      */
     fun showOverlay(context: Context, analysis: RideAnalysis): Boolean {
+        if (hidden(context)) return false
         if (!canDrawOverlays(context)) {
             Log.w("GiroOverlay", "Offer request blocked: overlay permission missing")
             return false

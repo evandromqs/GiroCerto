@@ -1,5 +1,9 @@
 package com.girocerto.ui.copilot
 
+import com.girocerto.ui.components.TactileButton as Button
+
+import com.girocerto.ui.components.AppText as Text
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -23,6 +27,7 @@ fun CopilotScreen() {
     val repository = remember(context) { CopilotPreferences(context) }
     var policy by remember { mutableStateOf(repository.read()) }
     val connected by com.girocerto.monitoring.GiroCertoAccessibilityService.isServiceRunning.collectAsState()
+    val hidden by OverlayController.isHidden.collectAsState()
     val floating by OverlayController.isOverlayActive.collectAsState()
     val reader by com.girocerto.monitoring.GiroCertoAccessibilityService.readerStatus.collectAsState()
     val observation by com.girocerto.monitoring.GiroCertoAccessibilityService.readerObservation.collectAsState()
@@ -46,7 +51,7 @@ fun CopilotScreen() {
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         update(policy.copy(notifyOffers = granted))
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text("Seu copiloto", style = MaterialTheme.typography.headlineMedium)
         Text("Escolha o que acompanhar e ouvir. Você decide sobre cada oferta.", color = TextSecondary)
         OutlinedButton(onClick = { showReadingDisclosure = true }, modifier = Modifier.fillMaxWidth()) {
@@ -68,6 +73,7 @@ fun CopilotScreen() {
         Text(when {
             !policy.enabled -> "Copiloto pausado"
             !connected -> "Falta ativar a leitura de ofertas nas configurações do Android"
+            hidden -> "Janela flutuante ocultada por você"
             !floating -> "Leitura conectada • janela indisponível. Confira a autorização do cartão flutuante."
             else -> "Copiloto ativo • botão flutuante visível"
         }, color = MaterialTheme.colorScheme.primary)
@@ -87,6 +93,10 @@ fun CopilotScreen() {
                 }) { Text("Copiar diagnóstico") }
             }
         }
+        if (hidden) Button(onClick = { OverlayController.restore(context) }, modifier = Modifier.fillMaxWidth()) {
+            Text("Mostrar botão flutuante")
+        }
+        Text("Arraste a bolha até a lixeira no rodapé para ocultar a janela. A leitura continua; você pode mostrar a janela novamente aqui.", style = MaterialTheme.typography.bodySmall)
         Preference("Copiloto ativo", policy.enabled) { update(policy.copy(enabled = it)) }
         Text("Aplicativos acompanhados", style = MaterialTheme.typography.titleMedium)
         Preference("Uber e Uber Eats", policy.uber) { update(policy.copy(uber = it)) }

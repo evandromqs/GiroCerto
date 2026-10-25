@@ -29,6 +29,7 @@ fun TactileCard(
     MaterialCard(
         modifier = modifier.drawWithContent {
             drawContent()
+            drawRect(brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = .05f), Color.Transparent, Color.Black.copy(alpha = .025f))))
             drawLine(
                 brush = Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = .17f), Color.Transparent)),
                 start = Offset(20.dp.toPx(), 1.dp.toPx()),
