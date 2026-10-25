@@ -31,6 +31,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
+import com.girocerto.monitoring.CopilotPreferences
 import java.util.Locale
 import kotlin.math.abs
 
@@ -64,8 +66,7 @@ class RideOverlayService : Service() {
     private var currentAnalysis: RideAnalysis? = null
 
     private val autoCollapseRunnable = Runnable {
-        val settings = GiroCertoApp.instance.settingsRepository.settings.value
-        if (settings.isFloatingBubbleEnabled) {
+        if (CopilotPreferences(this@RideOverlayService).read().enabled) {
             switchToBubble()
         } else {
             removeOverlay()
@@ -73,7 +74,11 @@ class RideOverlayService : Service() {
         }
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    inner class LocalBinder : android.os.Binder() { val service get() = this@RideOverlayService }
+    override fun onBind(intent: Intent?): IBinder = LocalBinder()
+    fun ensureBubble() { if (currentView?.isAttachedToWindow != true) showBubbleMode() }
+    fun dismiss() { removeOverlay(); stopSelf() }
+
 
     override fun onCreate() {
         super.onCreate()
@@ -128,7 +133,7 @@ class RideOverlayService : Service() {
             }
         }
 
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -234,8 +239,8 @@ class RideOverlayService : Service() {
                             isDragging = true
                         }
                         if (isDragging) {
-                            currentParams.x = initialX + dx
-                            currentParams.y = initialY + dy
+                            currentParams.x = (initialX + dx).coerceIn(0, (resources.displayMetrics.widthPixels - v!!.width).coerceAtLeast(0))
+                            currentParams.y = (initialY + dy).coerceIn(0, (resources.displayMetrics.heightPixels - v.height).coerceAtLeast(0))
                             posX = currentParams.x
                             posY = currentParams.y
                             try {
@@ -385,7 +390,7 @@ class RideOverlayService : Service() {
         }
 
         val closeBtn = Button(this).apply {
-            text = "Fechar Flutuante"
+            text = "Pausar copiloto"
             textSize = 11f
             setTextColor(Color.parseColor("#EF4444"))
             setPadding(dpToPx(10), dpToPx(4), dpToPx(10), dpToPx(4))
@@ -394,8 +399,9 @@ class RideOverlayService : Service() {
                 cornerRadius = dpToPx(8).toFloat()
             }
             setOnClickListener {
-                removeOverlay()
-                stopSelf()
+                val preferences = CopilotPreferences(this@RideOverlayService)
+                preferences.write(preferences.read().copy(enabled = false))
+                dismiss()
             }
         }
 
@@ -521,8 +527,7 @@ class RideOverlayService : Service() {
             textSize = 14f
             setPadding(dpToPx(6), 0, dpToPx(6), 0)
             setOnClickListener {
-                val settings = GiroCertoApp.instance.settingsRepository.settings.value
-                if (settings.isFloatingBubbleEnabled) {
+                if (CopilotPreferences(this@RideOverlayService).read().enabled) {
                     switchToBubble()
                 } else {
                     removeOverlay()
@@ -783,8 +788,8 @@ class RideOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            this.x = x
-            this.y = y
+            this.x = x.coerceIn(0, (resources.displayMetrics.widthPixels - width.coerceAtLeast(dpToPx(58))).coerceAtLeast(0))
+            this.y = y.coerceIn(0, (resources.displayMetrics.heightPixels - dpToPx(180)).coerceAtLeast(0))
         }
     }
 
@@ -806,6 +811,7 @@ class RideOverlayService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         removeOverlay()
+        serviceScope.cancel()
     }
 
     private fun dpToPx(dp: Int): Int {

@@ -11,8 +11,8 @@ internal class OfferDeliveryGate(private val intervalMs: Long = 15_000L) {
         // The same offer may be recognized by either reader. Its source is not its identity.
         val identity = result.copy(source = OfferSource.ACCESSIBILITY_SERVICE)
         val previous = recent[packageName]
-        if (previous?.result == identity) return false
         recent[packageName] = Entry(identity, now)
-        return true
+        // Continuous polling must not reopen a card the user has already collapsed.
+        return previous?.result != identity
     }
 }

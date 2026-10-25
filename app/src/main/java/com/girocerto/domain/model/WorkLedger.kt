@@ -52,3 +52,7 @@ data class WorkDay(
     val grossPerHour get() = if (activeHours > 0) revenue / activeHours else null
     val grossPerKm get() = if (totalKm > 0) revenue / totalKm else null
 }
+
+/** Keep historical or unsaved amounts visible even after deselecting a platform. */
+fun platformsForDay(selected: Set<WorkPlatform>, entries: List<PlatformWork>): Set<WorkPlatform> =
+    selected + entries.filter { it.revenue != 0.0 || it.km != 0.0 || it.hours != 0.0 }.map { it.platform }

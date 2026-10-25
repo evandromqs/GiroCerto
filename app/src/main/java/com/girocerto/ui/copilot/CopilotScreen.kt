@@ -22,6 +22,20 @@ fun CopilotScreen() {
     val context = LocalContext.current
     val repository = remember(context) { CopilotPreferences(context) }
     var policy by remember { mutableStateOf(repository.read()) }
+    val connected by com.girocerto.monitoring.GiroCertoAccessibilityService.isServiceRunning.collectAsState()
+    val floating by OverlayController.isOverlayActive.collectAsState()
+    val reader by com.girocerto.monitoring.GiroCertoAccessibilityService.readerStatus.collectAsState()
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                policy = repository.read()
+                OverlayController.syncCopilot(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     var showReadingDisclosure by remember { mutableStateOf(false) }
     fun update(value: CopilotPolicy) {
         repository.write(value)
@@ -50,6 +64,13 @@ fun CopilotScreen() {
         OutlinedButton(onClick = { context.startActivity(OverlayController.createOverlayPermissionIntent(context)) }, modifier = Modifier.fillMaxWidth()) {
             Text("Autorizar cartão flutuante")
         }
+        Text(when {
+            !policy.enabled -> "Copiloto pausado"
+            !connected -> "Falta ativar a leitura de ofertas nas configurações do Android"
+            !floating -> "Leitura conectada • janela indisponível. Confira a autorização do cartão flutuante."
+            else -> "Copiloto ativo • botão flutuante visível"
+        }, color = MaterialTheme.colorScheme.primary)
+        if (connected && policy.enabled) Text(reader, style = MaterialTheme.typography.bodySmall)
         Preference("Copiloto ativo", policy.enabled) { update(policy.copy(enabled = it)) }
         Text("Aplicativos acompanhados", style = MaterialTheme.typography.titleMedium)
         Preference("Uber e Uber Eats", policy.uber) { update(policy.copy(uber = it)) }

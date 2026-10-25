@@ -12,6 +12,11 @@ import com.girocerto.app.theme.GiroCertoTheme
 import com.girocerto.navigation.AppNavigation
 
 class MainActivity : ComponentActivity() {
+    override fun onResume() {
+        super.onResume()
+        com.girocerto.overlay.OverlayController.syncCopilot(this)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

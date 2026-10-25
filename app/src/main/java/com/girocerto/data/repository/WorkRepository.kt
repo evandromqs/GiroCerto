@@ -15,6 +15,21 @@ import java.time.LocalDate
 class WorkRepository(context: Context) {
     private val prefs = context.getSharedPreferences("work_ledger_v1", Context.MODE_PRIVATE)
     private val mutex = Mutex()
+    private val _selectedPlatforms = MutableStateFlow(
+        prefs.getStringSet("selected_platforms", null)?.let { names ->
+            WorkPlatform.entries.filter { it.name in names }.toSet().takeIf { it.isNotEmpty() }
+        } ?: WorkPlatform.entries.toSet()
+    )
+    val selectedPlatforms = _selectedPlatforms.asStateFlow()
+
+    suspend fun saveSelectedPlatforms(platforms: Set<WorkPlatform>) = withContext(Dispatchers.IO) { mutex.withLock {
+        require(platforms.isNotEmpty())
+        check(prefs.edit().putStringSet("selected_platforms", platforms.map { it.name }.toSet()).commit()) {
+            "Não foi possível salvar seus apps."
+        }
+        _selectedPlatforms.value = platforms.toSet()
+    } }
+
     private val _profile = MutableStateFlow(readProfile())
     val profile = _profile.asStateFlow()
     private val _days = MutableStateFlow(readDays())

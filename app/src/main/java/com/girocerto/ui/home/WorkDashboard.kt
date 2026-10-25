@@ -87,6 +87,7 @@ fun WorkDiaryScreen(onProfile: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Meus ganhos", style = MaterialTheme.typography.headlineMedium)
         Text("Informe o que recebeu em cada app após as taxas da plataforma.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        WorkPlatformPicker()
         OutlinedButton(onClick = {
             DatePickerDialog(context, { _, y, m, d -> selectedDate = LocalDate.of(y, m + 1, d).toString() },
                 date.year, date.monthValue - 1, date.dayOfMonth).apply { datePicker.maxDate = System.currentTimeMillis() }.show()
@@ -121,13 +122,18 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var deletePrompt by remember { mutableStateOf(false) }
-    val entries = WorkPlatform.entries.mapIndexed { i, p -> PlatformWork(p, inputNumber(revenueFields[i]) ?: -1.0, inputNumber(kmFields[i]) ?: -1.0, inputNumber(hourFields[i]) ?: -1.0) }
+    val selectedPlatforms by repo.selectedPlatforms.collectAsState()
+    val allEntries = WorkPlatform.entries.mapIndexed { i, p -> PlatformWork(p, inputNumber(revenueFields[i]) ?: -1.0, inputNumber(kmFields[i]) ?: -1.0, inputNumber(hourFields[i]) ?: -1.0) }
+    val visiblePlatforms = platformsForDay(selectedPlatforms, allEntries)
+    val entries = allEntries.filter { it.platform in visiblePlatforms }
     val draft = WorkDay(date, entries, inputNumber(km) ?: -1.0, inputNumber(hours) ?: -1.0,
         existing?.fixedCost ?: profile.dailyRent, existing?.variablePerKm ?: profile.variablePerKm,
         existing?.grossGoal ?: profile.dailyGrossGoal)
     WorkPlatform.entries.forEachIndexed { i, platform ->
+        if (platform !in visiblePlatforms) return@forEachIndexed
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (platform !in selectedPlatforms) Text("App desmarcado, com valores neste dia. O registro foi preservado.", style = MaterialTheme.typography.bodySmall)
                 MoneyField("${platform.label} • recebido (R$)", revenueFields[i], {
                     revenueFields = ArrayList(revenueFields).apply { set(i, it) }; message = null
                 })
@@ -180,4 +186,46 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
             finally { busy = false; deletePrompt = false }
         } }, enabled = !busy) { Text("Excluir") } },
         dismissButton = { TextButton(onClick = { deletePrompt = false }, enabled = !busy) { Text("Cancelar") } })
+}
+
+@Composable
+private fun WorkPlatformPicker() {
+    val repo = GiroCertoApp.instance.workRepository
+    val selected by repo.selectedPlatforms.collectAsState()
+    val scope = rememberCoroutineScope()
+    var open by remember { mutableStateOf(false) }
+    var choices by remember { mutableStateOf(selected) }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    OutlinedButton(onClick = { choices = selected; error = null; open = true }, modifier = Modifier.fillMaxWidth()) {
+        Text("Meus apps de trabalho • alterar")
+    }
+    Text(WorkPlatform.entries.filter { it in selected }.joinToString { it.label }, style = MaterialTheme.typography.bodySmall)
+    if (open) AlertDialog(
+        onDismissRequest = { if (!saving) open = false },
+        title = { Text("Em quais apps você trabalha?") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("Escolha pelo menos um. Os ganhos já registrados serão preservados. Esta seleção filtra o diário; a leitura de ofertas é configurada no Copiloto.")
+                WorkPlatform.entries.forEach { platform ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Checkbox(checked = platform in choices, enabled = !saving, onCheckedChange = {
+                            choices = if (it) choices + platform else choices - platform
+                        })
+                        Text(platform.label)
+                    }
+                }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = { TextButton(enabled = choices.isNotEmpty() && !saving, onClick = {
+            scope.launch {
+                saving = true
+                try { repo.saveSelectedPlatforms(choices); open = false }
+                catch (_: Exception) { error = "Não foi possível salvar. Tente novamente." }
+                finally { saving = false }
+            }
+        }) { Text(if (saving) "Salvando…" else "Salvar apps") } },
+        dismissButton = { TextButton(enabled = !saving, onClick = { open = false }) { Text("Cancelar") } }
+    )
 }

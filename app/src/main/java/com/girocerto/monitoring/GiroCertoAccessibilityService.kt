@@ -47,37 +47,34 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         _isServiceRunning.value = true
         voiceAnnouncer = VoiceAnnouncer(this)
 
-        // Se a bolha flutuante permanente estiver habilitada, exibe-a imediatamente
-        try {
-            val settings = GiroCertoApp.instance.settingsRepository.settings.value
-            if (CopilotPreferences(this).read().enabled && settings.isFloatingBubbleEnabled && OverlayController.canDrawOverlays(this)) {
-                OverlayController.startFloatingBubble(this)
-            }
-        } catch (_: Exception) {}
+        OverlayController.connect(this)
+        readHandler.removeCallbacks(scanVisibleWindows)
+        readHandler.post(scanVisibleWindows)
     }
 
     private val readHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var retryRead: Runnable? = null
-    private var visiblePoll: Runnable? = null
-    private var polledPackage: String? = null
-
-    private fun watchVisibleWindow(packageName: String, windowId: Int) {
-        if (!CopilotPreferences(this).read().ocrEnabled) return
-        if (polledPackage == packageName && visiblePoll != null) return
-        visiblePoll?.let { readHandler.removeCallbacks(it) }
-        polledPackage = packageName
-        visiblePoll = object : Runnable {
-            override fun run() {
-                if (!ocrDelegate.value.isObservable(packageName)) {
-                    visiblePoll = null; polledPackage = null
-                    return
+    private val scanVisibleWindows = object : Runnable {
+        override fun run() {
+            try {
+                OverlayController.syncCopilot(this@GiroCertoAccessibilityService)
+                val power = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+                val lock = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+                if (power.isInteractive && !lock.isKeyguardLocked && CopilotPreferences(this@GiroCertoAccessibilityService).read().enabled) {
+                    // Popup windows may belong to a driver app while another app has focus.
+                    val packages = linkedMapOf<String, Int>()
+                    windows.forEach { window ->
+                        val root = window.root
+                        val pkg = root?.packageName?.toString()
+                        @Suppress("DEPRECATION")
+                        root?.recycle()
+                        if (pkg in TARGET_PACKAGES) packages[pkg!!] = window.id
+                    }
+                    packages.forEach { (pkg, id) -> readOfferWindow(pkg, id) }
                 }
-                // Re-read accessibility first; OCR remains a fallback for missing data.
-                readOfferWindow(packageName, windowId)
-                if (visiblePoll === this) readHandler.postDelayed(this, 2_500L)
-            }
+            } catch (error: Exception) { reportReader("Falha ao observar janelas: ${error.javaClass.simpleName}") }
+            finally { readHandler.postDelayed(this, 1_500L) }
         }
-        readHandler.postDelayed(visiblePoll!!, 2_500L)
     }
     private var lastFormatTrace: String? = null
 
@@ -100,7 +97,6 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         // Content can arrive in several frames; retry a bounded read, without
         // retaining AccessibilityEvent or mixing text from different offers.
         val windowId = event.windowId
-        watchVisibleWindow(packageName, windowId)
         if (!readOfferWindow(packageName, windowId)) {
             retryRead = Runnable {
                 if (!readOfferWindow(packageName, windowId)) {
@@ -266,8 +262,8 @@ class GiroCertoAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        visiblePoll?.let { readHandler.removeCallbacks(it) }
-        visiblePoll = null; polledPackage = null
+        readHandler.removeCallbacks(scanVisibleWindows)
+        OverlayController.disconnect()
         retryRead?.let { readHandler.removeCallbacks(it) }
         serviceScope.cancel()
         _isServiceRunning.value = false

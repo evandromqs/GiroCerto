@@ -21,11 +21,19 @@ class OfferDeliveryGateTest {
         assertTrue(gate.accepts("uber", offer.copy(passengerRating = 4.5), 200))
     }
 
+    @Test fun continuouslyVisibleOfferDoesNotReopenAfterCardTimeout() {
+        val gate = OfferDeliveryGate()
+        assertTrue(gate.accepts("uber", offer, 0))
+        for (time in 1_500L..120_000L step 1_500L) assertFalse(gate.accepts("uber", offer, time))
+        assertTrue(gate.accepts("uber", offer.copy(fare = 25.0), 121_500L))
+    }
+
     @Test fun incompleteReadsDoNotConsumeDeliveryAndExpiryAllowsRedisplay() {
         val gate = OfferDeliveryGate()
         assertFalse(gate.accepts("uber", offer.copy(fare = null), 0))
         assertTrue(gate.accepts("uber", offer, 100))
         assertFalse(gate.accepts("uber", offer, 15_099))
-        assertTrue(gate.accepts("uber", offer, 15_100))
+        assertFalse(gate.accepts("uber", offer, 15_100))
+        assertTrue(gate.accepts("uber", offer, 30_100))
     }
 }

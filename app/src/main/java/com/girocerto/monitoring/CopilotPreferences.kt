@@ -36,7 +36,7 @@ data class CopilotPolicy(
     }
 }
 
-class CopilotPreferences(context: Context) {
+class CopilotPreferences(private val context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("copilot_preferences", Context.MODE_PRIVATE)
     fun read() = CopilotPolicy(
         enabled = prefs.getBoolean("enabled", true),
@@ -62,5 +62,6 @@ class CopilotPreferences(context: Context) {
             .putBoolean("capture_screenshot", policy.captureOfferScreenshot)
             .putBoolean("ocr_enabled", policy.ocrEnabled)
             .putBoolean("notifications", policy.notifyOffers).putBoolean("autosave", policy.autoSave).apply()
+        com.girocerto.overlay.OverlayController.syncCopilot(context)
     }
 }

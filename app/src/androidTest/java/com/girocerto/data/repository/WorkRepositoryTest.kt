@@ -9,6 +9,22 @@ import org.junit.Test
 import java.time.LocalDate
 
 class WorkRepositoryTest {
+    @Test fun selectedPlatformsSurviveReloadAndRejectEmptySelection() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val repo = WorkRepository(context)
+        val original = repo.selectedPlatforms.value
+        try {
+            val selected = setOf(WorkPlatform.UBER_EATS, WorkPlatform.KEETA)
+            repo.saveSelectedPlatforms(selected)
+            assertEquals(selected, WorkRepository(context).selectedPlatforms.value)
+            try {
+                repo.saveSelectedPlatforms(emptySet())
+                fail("Empty selection must be rejected")
+            } catch (_: IllegalArgumentException) { }
+            assertEquals(selected, WorkRepository(context).selectedPlatforms.value)
+        } finally { repo.saveSelectedPlatforms(original) }
+    }
+
     @Test fun dailyEditsReplaceAndSurviveReloadWithOriginalCosts() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         // Instrumented test uses the target app's private preferences; reserve a historical fixture day.

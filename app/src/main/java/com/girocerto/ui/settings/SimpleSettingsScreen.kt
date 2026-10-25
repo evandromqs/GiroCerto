@@ -39,15 +39,7 @@ fun CardAndVoiceScreen() {
         Slider(settings.speechRate, { repository.updateSettings(settings.copy(speechRate = it)) }, valueRange = 0.5f..2f)
         Text("Mostrar cartão por ${settings.cardDurationSeconds} segundos")
         Slider(settings.cardDurationSeconds.toFloat(), { repository.updateSettings(settings.copy(cardDurationSeconds = it.toInt())) }, valueRange = 5f..60f, steps = 54)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Manter bolha flutuante", Modifier.weight(1f))
-            Switch(settings.isFloatingBubbleEnabled, {
-                repository.updateSettings(settings.copy(isFloatingBubbleEnabled = it))
-                if (!it) com.girocerto.overlay.OverlayController.hideOverlay(context)
-                else if (com.girocerto.monitoring.CopilotPreferences(context).read().enabled)
-                    com.girocerto.overlay.OverlayController.startFloatingBubble(context)
-            })
-        }
+        Text("O botão flutuante permanece visível enquanto o copiloto estiver ativo e a sobreposição estiver autorizada. Ao fechar o cartão de cálculo, ele volta ao botão.")
         Text("Alterações salvas automaticamente. Para mudar os custos da moto e os valores do semáforo, abra Metas.", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
