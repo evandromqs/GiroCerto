@@ -15,8 +15,29 @@ class AccessibilityOfferReaderTest {
     }
     @Test fun repeatedNodesDoNotDoubleDistanceOrTime() {
         val offer = AccessibilityOfferReader.parse(listOf("R$ 20,00", "10 km", "20 min", "10 km", "20 min", "Aceitar"), "com.ubercab.driver")
-        assertEquals(10.0, offer.distanceKm!! + offer.pickupDistanceKm!!, .001)
-        assertEquals(20, offer.durationMinutes)
+        assertFalse("Repeated unlabeled measures must not invent a total", offer.isComplete)
+    }
+    @Test fun ambiguousSegmentsAndParentAggregatesAreRejected() {
+        for (lines in listOf(listOf("2 km", "2 km"), listOf("5 min 20 min", "5 min", "20 min", "10 km"), listOf("2 km", "5 km", "8 km"))) {
+            assertFalse(AccessibilityOfferReader.parse(listOf("R$ 20,00", "Aceitar") + lines, "com.ubercab.driver").isComplete)
+        }
+    }
+    @Test fun suffixDigitsAreNotParentChildDuplicates() {
+        val result = AccessibilityOfferReader.parse(listOf("R$ 20,00","1 km","11 km","Aceitar"),"com.ubercab.driver")
+        assertTrue(result.isComplete)
+        assertEquals(12.0,result.distanceKm!! + result.pickupDistanceKm!!,.001)
+    }
+    @Test fun sameTotalsAreNormalizedAndLowRatingIsRead() {
+        val result = AccessibilityOfferReader.parse(listOf("R$ 20,00", "Total 10 km", "Distância total: 10 km", "★ 3,90"), "com.ubercab.driver")
+        assertTrue(result.isComplete)
+        assertEquals(10.0, result.distanceKm!!, .001)
+        assertEquals(3.9, result.passengerRating!!, .001)
+    }
+    @Test fun fullCurrencyIsParsedAndAmbiguousBarePricesAreRejected() {
+        val result = AccessibilityOfferReader.parse(listOf("R$ 1.234,56", "10 km"), "com.ubercab.driver")
+        assertEquals(1234.56, result.fare!!, .001)
+        assertFalse(AccessibilityOfferReader.parse(listOf("20,00", "30,00", "10 km"), "com.ubercab.driver").isComplete)
+        assertFalse(AccessibilityOfferReader.parse(listOf("R$ 1.23.45", "10 km"), "com.ubercab.driver").isComplete)
     }
     @Test fun explicitTimeTotalOverridesLegs() {
         val offer = AccessibilityOfferReader.parse(listOf("R$ 20,00", "Total 10 km", "Embarque 5 min", "Viagem 20 min", "Tempo total 25 min"), "com.ubercab.driver")

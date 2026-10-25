@@ -61,6 +61,38 @@ class OverlayFlowTest {
         compose.runOnIdle { OverlayController.stopFloatingBubble(compose.activity) }
     }
 
+    @Test fun offerCardMinimizesWithoutPausingCopilot() {
+        val pkg = compose.activity.packageName
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("appops set $pkg SYSTEM_ALERT_WINDOW allow")).use { it.readBytes() }
+        val analysis = com.girocerto.domain.calculator.RideCalculator.calculate(
+            com.girocerto.domain.model.RideOffer(fare = 16.73, distanceKm = 10.7, durationMinutes = 29, appName = "Uber"),
+            com.girocerto.domain.model.VehicleSettings())
+        for (theme in listOf(com.girocerto.app.theme.ThemeMode.LIGHT, com.girocerto.app.theme.ThemeMode.DARK)) {
+            compose.runOnIdle {
+                com.girocerto.app.theme.AppearancePreferences.set(compose.activity, theme)
+                val prefs = CopilotPreferences(compose.activity); prefs.write(prefs.read().copy(enabled = true))
+                OverlayController.restore(compose.activity)
+                assertTrue(OverlayController.showOverlay(compose.activity, analysis))
+            }
+            val minimize = awaitBounds("Minimizar análise e manter copiloto ativo")
+            SystemClock.sleep(300)
+            val dir = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+            if(dir != null) java.io.File(dir,"offer-${theme.name}.png").outputStream().use { automation.takeScreenshot()?.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) }
+            val time = SystemClock.uptimeMillis()
+            for(action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+                val event = MotionEvent.obtain(time,SystemClock.uptimeMillis(),action,minimize.exactCenterX(),minimize.exactCenterY(),0)
+                event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+                assertTrue(automation.injectInputEvent(event,true)); event.recycle()
+            }
+            awaitBounds("Giro Certo. Toque para abrir; arraste até a lixeira para ocultar.")
+            assertTrue(CopilotPreferences(compose.activity).read().enabled)
+        }
+        compose.runOnIdle {
+            OverlayController.stopFloatingBubble(compose.activity)
+            com.girocerto.app.theme.AppearancePreferences.set(compose.activity, com.girocerto.app.theme.ThemeMode.SYSTEM)
+        }
+    }
+
     private fun awaitBounds(description: String): Rect {
         var found: Rect? = null
         val deadline = SystemClock.uptimeMillis() + 5_000

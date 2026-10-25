@@ -41,9 +41,9 @@ data class PlatformWork(val platform: WorkPlatform, val revenue: Double, val km:
 data class WorkDay(
     val date: LocalDate, val entries: List<PlatformWork>, val totalKm: Double,
     val activeHours: Double, val fixedCost: Double, val variablePerKm: Double,
-    val grossGoal: Double
+    val grossGoal: Double, val weeklyRent: Double? = null
 ) {
-    fun valid() = entries.map { it.platform }.distinct().size == entries.size && entries.all { it.valid() } &&
+    fun valid() = (weeklyRent == null || weeklyRent.isFinite() && weeklyRent in 0.0..1_000_000.0) && entries.map { it.platform }.distinct().size == entries.size && entries.all { it.valid() } &&
         totalKm.isFinite() && totalKm in 0.0..2000.0 && activeHours.isFinite() && activeHours in 0.0..24.0 &&
         listOf(fixedCost, variablePerKm, grossGoal).all { it.isFinite() && it >= 0.0 }
     val revenue get() = entries.sumOf { it.revenue }

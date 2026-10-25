@@ -1,5 +1,7 @@
 package com.girocerto.app.theme
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,7 +41,7 @@ private val LightScheme = lightColorScheme(
 
 @Composable
 fun GiroCertoTheme(content: @Composable () -> Unit) {
-    val mode by AppearancePreferences.mode.collectAsState()
+    val mode by AppearancePreferences.mode.collectAsStateWithLifecycle()
     val dark = when (mode) { ThemeMode.SYSTEM -> isSystemInDarkTheme(); ThemeMode.DARK -> true; ThemeMode.LIGHT -> false }
     val activity = androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity
     SideEffect {

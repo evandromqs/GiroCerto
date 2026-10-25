@@ -2,6 +2,8 @@ package com.girocerto.navigation
 
 import com.girocerto.ui.components.AppText as Text
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import android.content.Context
 import com.girocerto.ui.goals.GoalsScreen
 import com.girocerto.ui.copilot.CopilotScreen
@@ -52,6 +54,11 @@ import com.girocerto.ui.settings.SettingsScreen
 fun AppNavigation() {
     val context = LocalContext.current
     var currentScreen by rememberSaveable { mutableStateOf(Screen.HOME) }
+    var navigationHistory by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    var todayRequest by rememberSaveable { mutableStateOf(0) }
+    fun navigate(screen: Screen) {
+        if (currentScreen != screen) { navigationHistory = ArrayList(navigationHistory + currentScreen.name); currentScreen = screen }
+    }
     var pendingOverlayAnalysis by remember { mutableStateOf<RideAnalysis?>(null) }
     var showPermissionRationale by remember { mutableStateOf(false) }
 
@@ -77,7 +84,10 @@ fun AppNavigation() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    BackHandler(currentScreen != Screen.HOME) { currentScreen = Screen.HOME }
+    BackHandler(currentScreen != Screen.HOME) {
+        currentScreen = navigationHistory.lastOrNull()?.let { Screen.valueOf(it) } ?: Screen.HOME
+        navigationHistory = ArrayList(navigationHistory.dropLast(1))
+    }
     Scaffold(
         bottomBar = {
             NavigationBar(
@@ -90,7 +100,7 @@ fun AppNavigation() {
 
                     NavigationBarItem(
                         selected = selected,
-                        onClick = { currentScreen = screen },
+                        onClick = { navigationHistory = arrayListOf(); currentScreen = screen },
                         icon = { NavigationGlyph(screen, selected) },
                         label = {
                             Text(
@@ -114,27 +124,30 @@ fun AppNavigation() {
                 .background(BackgroundDark)
                 .padding(innerPadding)
         ) {
-            stateHolder.SaveableStateProvider(currentScreen.name) {
-            when (currentScreen) {
+            AnimatedContent(targetState = currentScreen, label = "Troca de tela",
+                transitionSpec = { (fadeIn(tween(180)) + slideInHorizontally(tween(220)) { it / 16 }) togetherWith fadeOut(tween(120)) }) { screen ->
+            stateHolder.SaveableStateProvider(screen.name) {
+            when (screen) {
                 Screen.HOME -> com.girocerto.ui.home.WorkDashboard(
-                    onRecord = { currentScreen = Screen.DIARY },
-                    onGoals = { currentScreen = Screen.GOALS },
-                    onCopilot = { currentScreen = Screen.COPILOT },
-                    onOffers = { currentScreen = Screen.HISTORY }
+                    onRecord = { todayRequest++; navigate(Screen.DIARY) },
+                    onGoals = { navigate(Screen.GOALS) },
+                    onCopilot = { navigate(Screen.COPILOT) },
+                    onOffers = { navigate(Screen.HISTORY) }
                 )
-                Screen.DIARY -> com.girocerto.ui.home.WorkDiaryScreen(onProfile = { currentScreen = Screen.GOALS })
+                Screen.DIARY -> com.girocerto.ui.home.WorkDiaryScreen(openTodayRequest = todayRequest, onProfile = { navigate(Screen.GOALS) })
                 Screen.HISTORY -> HistoryScreen(
                     onShowOverlay = { handleShowOverlay(it) },
-                    onNavigateToCopilot = { currentScreen = Screen.COPILOT }
+                    onNavigateToCopilot = { navigate(Screen.COPILOT) }
                 )
-                Screen.PROFILE -> com.girocerto.ui.goals.ElectricProfileScreen(onDone = { currentScreen = Screen.DIARY })
+                Screen.PROFILE -> com.girocerto.ui.goals.ElectricProfileScreen(onDone = { todayRequest++; navigate(Screen.DIARY) })
                 Screen.SETTINGS -> com.girocerto.ui.settings.SimpleSettingsScreen(
-                    onCopilot = { currentScreen = Screen.COPILOT },
-                    onProfile = { currentScreen = Screen.GOALS },
-                    onAdvanced = { currentScreen = Screen.ADVANCED })
+                    onCopilot = { navigate(Screen.COPILOT) },
+                    onProfile = { navigate(Screen.GOALS) },
+                    onAdvanced = { navigate(Screen.ADVANCED) })
                 Screen.ADVANCED -> com.girocerto.ui.settings.CardAndVoiceScreen()
-                Screen.GOALS -> com.girocerto.ui.goals.ElectricProfileScreen(onDone = { currentScreen = Screen.DIARY })
+                Screen.GOALS -> com.girocerto.ui.goals.ElectricProfileScreen(onDone = { todayRequest++; navigate(Screen.DIARY) })
                 Screen.COPILOT -> CopilotScreen()
+            }
             }
             }
         }
@@ -143,7 +156,7 @@ fun AppNavigation() {
     // Modal educativo e transparente para solicitar permissão de sobreposição
     if (showPermissionRationale) {
         AlertDialog(
-            onDismissRequest = { showPermissionRationale = false },
+            onDismissRequest = { showPermissionRationale = false; pendingOverlayAnalysis = null },
             containerColor = SurfaceDark,
             title = {
                 Text(text = "Permissão da Janela Flutuante", color = TextPrimary)
@@ -169,7 +182,7 @@ fun AppNavigation() {
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showPermissionRationale = false },
+                    onClick = { showPermissionRationale = false; pendingOverlayAnalysis = null },
                     colors = ButtonDefaults.textButtonColors(contentColor = TextSecondary)
                 ) {
                     Text("Agora Não")

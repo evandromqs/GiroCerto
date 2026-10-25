@@ -41,6 +41,8 @@ class OfferOcrReader(
     private var retry: Runnable? = null
     private var busy = false
     private var closed = false
+    private val epochs = OfferReadEpoch()
+    fun invalidate(pkg: String) { epochs.invalidate(pkg) }
     private var lastAttempt = -2_000L
     private var lastStatus = ""
     private var lastStatusTime = -5_000L
@@ -82,20 +84,20 @@ class OfferOcrReader(
     }
     fun isObservable(pkg: String): Boolean = Build.VERSION.SDK_INT >= 30 && target(pkg) != null
     fun read(pkg: String) { attempt(pkg, 2) }
-    private fun attempt(pkg: String, remaining: Int) {
+    private fun attempt(pkg: String, remaining: Int, confirmation: OfferReaderResult? = null) {
         if (closed) return
         if (Build.VERSION.SDK_INT < 30) { report("OCR indisponível: exige Android 11"); return }
         if (!allowed(pkg)) { report("OCR desativado ou aplicativo pausado"); return }
         val selected = target(pkg)
         if (selected == null) { report("OCR: janela alvo indisponível ou encoberta"); return }
         val now = SystemClock.elapsedRealtime()
-        val wait = (2_000L - (now - lastAttempt)).coerceAtLeast(0L)
+        val wait = ((if (confirmation == null) 2_000L else 350L) - (now - lastAttempt)).coerceAtLeast(0L)
         if (busy || wait > 0) {
             report(if (busy) "OCR: processamento em andamento" else "OCR: aguardando intervalo de captura")
             if (remaining > 0 && retry == null) {
                 retry = Runnable {
                     retry = null
-                    if (target(pkg, selected) != null) attempt(pkg, remaining - 1)
+                    if (target(pkg, selected) != null) attempt(pkg, remaining - 1, confirmation)
                     else report("OCR: tentativa cancelada; janela mudou")
                 }
                 handler.postDelayed(retry!!, if (busy) 2_000L else wait + 50L)
@@ -103,6 +105,7 @@ class OfferOcrReader(
             return
         }
         retry?.let { handler.removeCallbacks(it) }; retry = null
+        val generation = epochs.current(pkg)
         busy = true; lastAttempt = now
         report("OCR: lendo imagem local da janela da oferta")
         try {
@@ -138,24 +141,39 @@ class OfferOcrReader(
                             crop = Bitmap.createBitmap(source, b.left, b.top, b.width(), b.height())
                             if (crop === source) full = null
                         }
+                        var nextConfirmation: OfferReaderResult? = null
                         val bitmap = checkNotNull(crop)
                         recognizer.process(InputImage.fromBitmap(bitmap, 0))
                             .addOnSuccessListener { recognized ->
-                                if (target(pkg, selected) != null) {
+                                if (target(pkg, selected) != null && epochs.accepts(pkg, generation, now, SystemClock.elapsedRealtime())) {
                                     val lines = recognized.textBlocks.flatMap { it.lines }
                                         .filter { OfferOcrContext.acceptsLine(it.text, it.boundingBox?.top, bitmap.height) }
                                         .map { it.text }
                                     val parsed = AccessibilityOfferReader.parse(lines, pkg)
                                     if (OfferOcrContext.permits(lines) && parsed.isComplete) {
-                                        report("OCR: oferta completa reconhecida")
-                                        offerReady(parsed.copy(source = OfferSource.OCR_FALLBACK), pkg)
+                                        if (confirmation == null) {
+                                            nextConfirmation = parsed
+                                            report("OCR: confirmando que a oferta continua na tela")
+                                        } else if (confirmation == parsed) {
+                                            report("OCR: oferta confirmada em duas leituras")
+                                            offerReady(parsed.copy(source = OfferSource.OCR_FALLBACK), pkg)
+                                        } else report("OCR: oferta mudou; aguardando nova leitura")
                                     } else report(if (!parsed.isComplete)
                                         "OCR: ${lines.size} textos; faltam ${parsed.missingFields.joinToString().ifEmpty { "dados da oferta" }}"
                                         else "OCR: valores ambíguos ou botão Aceitar não reconhecido")
                                 } else report("OCR: resultado descartado; janela mudou")
                             }
                             .addOnFailureListener { report("OCR: falha no reconhecimento local") }
-                            .addOnCompleteListener { bitmap.recycle(); finish() }
+                            .addOnCompleteListener {
+                                bitmap.recycle(); finish()
+                                nextConfirmation?.let { candidate ->
+                                    if (!closed && epochs.accepts(pkg, generation, now, SystemClock.elapsedRealtime())) {
+                                        retry?.let { handler.removeCallbacks(it) }
+                                        retry = Runnable { retry = null; if (epochs.accepts(pkg, generation, now, SystemClock.elapsedRealtime())) attempt(pkg, 1, candidate) }
+                                        handler.postDelayed(retry!!, (350L - (SystemClock.elapsedRealtime() - lastAttempt)).coerceAtLeast(0))
+                                    }
+                                }
+                            }
                         submitted = true; crop = null
                     } catch (_: Exception) { report("OCR: falha ao preparar imagem") }
                     finally {

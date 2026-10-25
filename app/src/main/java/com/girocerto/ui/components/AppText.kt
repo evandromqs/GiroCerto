@@ -20,10 +20,8 @@ fun AppText(text: String, modifier: Modifier = Modifier, color: Color = Color.Un
     overflow: TextOverflow = TextOverflow.Clip, softWrap: Boolean = true, maxLines: Int = Int.MAX_VALUE,
     minLines: Int = 1, onTextLayout: ((TextLayoutResult) -> Unit)? = null, style: TextStyle = LocalTextStyle.current
 ) {
-    val paragraph = textAlign == TextAlign.Justify
-    val heading = style.fontSize != TextUnit.Unspecified && style.fontSize.value >= 22
-    MaterialText(text = text, modifier = if (paragraph || heading) modifier.fillMaxWidth() else modifier,
-        color = color, fontSize = fontSize, fontStyle = fontStyle, fontWeight = fontWeight,
+    MaterialText(text = text, modifier = modifier,
+        color = color, fontSize = fontSize, fontStyle = fontStyle, fontWeight = FontWeight.Medium,
         fontFamily = fontFamily, letterSpacing = letterSpacing, textDecoration = textDecoration,
         textAlign = textAlign ?: style.textAlign.takeUnless { it == TextAlign.Unspecified } ?: TextAlign.Start,
         lineHeight = lineHeight, overflow = overflow, softWrap = softWrap, maxLines = maxLines,

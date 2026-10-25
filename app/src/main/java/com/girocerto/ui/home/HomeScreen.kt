@@ -1,5 +1,7 @@
 package com.girocerto.ui.home
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import com.girocerto.ui.components.TactileButton as Button
 
 import com.girocerto.ui.components.AppText as Text
@@ -36,7 +38,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,11 +77,11 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val rideRepo = GiroCertoApp.instance.rideRepository
-    val rides by rideRepo.rides.collectAsState()
-    val settings by GiroCertoApp.instance.settingsRepository.settings.collectAsState()
+    val rides by rideRepo.rides.collectAsStateWithLifecycle()
+    val settings by GiroCertoApp.instance.settingsRepository.settings.collectAsStateWithLifecycle()
     val dailySummary = rideRepo.getTodaySummary(settings.dailyFixedCost)
 
-    val isAccessibilityRunning by GiroCertoAccessibilityService.isServiceRunning.collectAsState()
+    val isAccessibilityRunning by GiroCertoAccessibilityService.isServiceRunning.collectAsStateWithLifecycle()
     val isAccessibilityConfigured = isAccessibilityRunning || GiroCertoAccessibilityService.isAccessibilityEnabled(context)
     var permissionRevision by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -93,9 +94,9 @@ fun HomeScreen(
     }
     val copilotEnabled = remember(permissionRevision) { CopilotPreferences(context).read().enabled }
     val hasOverlayPermission = remember(permissionRevision) { OverlayController.canDrawOverlays(context) }
-    val liveOffer by GiroCertoAccessibilityService.lastAnalyzedRide.collectAsState()
-    val isOverlayActive by OverlayController.isOverlayActive.collectAsState()
-    val readerStatus by GiroCertoAccessibilityService.readerStatus.collectAsState()
+    val liveOffer by GiroCertoAccessibilityService.lastAnalyzedRide.collectAsStateWithLifecycle()
+    val isOverlayActive by OverlayController.isOverlayActive.collectAsStateWithLifecycle()
+    val readerStatus by GiroCertoAccessibilityService.readerStatus.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = modifier

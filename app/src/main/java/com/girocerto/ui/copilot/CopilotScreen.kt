@@ -1,5 +1,7 @@
 package com.girocerto.ui.copilot
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import com.girocerto.ui.components.TactileButton as Button
 
 import com.girocerto.ui.components.AppText as Text
@@ -26,11 +28,11 @@ fun CopilotScreen() {
     val context = LocalContext.current
     val repository = remember(context) { CopilotPreferences(context) }
     var policy by remember { mutableStateOf(repository.read()) }
-    val connected by com.girocerto.monitoring.GiroCertoAccessibilityService.isServiceRunning.collectAsState()
-    val hidden by OverlayController.isHidden.collectAsState()
-    val floating by OverlayController.isOverlayActive.collectAsState()
-    val reader by com.girocerto.monitoring.GiroCertoAccessibilityService.readerStatus.collectAsState()
-    val observation by com.girocerto.monitoring.GiroCertoAccessibilityService.readerObservation.collectAsState()
+    val connected by com.girocerto.monitoring.GiroCertoAccessibilityService.isServiceRunning.collectAsStateWithLifecycle()
+    val hidden by OverlayController.isHidden.collectAsStateWithLifecycle()
+    val floating by OverlayController.isOverlayActive.collectAsStateWithLifecycle()
+    val reader by com.girocerto.monitoring.GiroCertoAccessibilityService.readerStatus.collectAsStateWithLifecycle()
+    val observation by com.girocerto.monitoring.GiroCertoAccessibilityService.readerObservation.collectAsStateWithLifecycle()
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -51,7 +53,7 @@ fun CopilotScreen() {
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         update(policy.copy(notifyOffers = granted))
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text("Seu copiloto", style = MaterialTheme.typography.headlineMedium)
         Text("Escolha o que acompanhar e ouvir. Você decide sobre cada oferta.", color = TextSecondary)
         OutlinedButton(onClick = { showReadingDisclosure = true }, modifier = Modifier.fillMaxWidth()) {
@@ -78,7 +80,7 @@ fun CopilotScreen() {
             else -> "Copiloto ativo • botão flutuante visível"
         }, color = MaterialTheme.colorScheme.primary)
         OutlinedCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Content), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Diagnóstico da leitura", style = MaterialTheme.typography.titleMedium)
                 Text(observation, style = MaterialTheme.typography.bodySmall)
                 Text(reader, style = MaterialTheme.typography.bodySmall)

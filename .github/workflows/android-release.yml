@@ -17,7 +17,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
@@ -39,6 +39,8 @@ jobs:
         run: bash gradlew testDebugUnitTest lintDebug --no-daemon --no-configuration-cache
       - name: Android integration and interface tests
         run: bash gradlew pixel2api30DebugAndroidTest --no-daemon --no-configuration-cache -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+      - name: Android 15 integration tests
+        run: bash gradlew pixel2api35DebugAndroidTest --no-daemon --no-configuration-cache -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -52,7 +54,7 @@ jobs:
     needs: test
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: write
     steps:
@@ -83,7 +85,7 @@ jobs:
           export RELEASE_STORE_FILE="$RUNNER_TEMP/release.p12"
           trap 'rm -f "$RELEASE_STORE_FILE"' EXIT
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RELEASE_STORE_FILE"
-          bash gradlew assembleRelease --no-daemon --no-configuration-cache
+          bash gradlew testReleaseUnitTest lintRelease assembleRelease --no-daemon --no-configuration-cache
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
       - name: Prepare release files
         run: |
@@ -93,6 +95,9 @@ jobs:
           sha256sum "GiroCerto-$VERSION_NAME.apk" > SHA256SUMS.txt
           python3 - <<'PY'
           import hashlib, json, os
+          changes = json.load(open('../changelog.json'))[0]
+          assert changes['version'] == os.environ['VERSION_NAME']
+          open('NOTES.md', 'w').write('# Giro Certo ' + changes['version'] + '\n\n' + '\n'.join('- ' + item for item in changes['changes']))
           filename = 'GiroCerto-' + os.environ['VERSION_NAME'] + '.apk'
           digest = hashlib.sha256(open(filename, 'rb').read()).hexdigest()
           tag = 'v' + os.environ['VERSION_NAME']
@@ -107,4 +112,4 @@ jobs:
           tag="v$VERSION_NAME"
           gh release create "$tag" "release/GiroCerto-$VERSION_NAME.apk" release/SHA256SUMS.txt release/update.json \
             --verify-tag=false --target "$GITHUB_SHA" --title "Giro Certo $VERSION_NAME" \
-            --notes-file "analysis/RELEASE_${VERSION_NAME//./_}.md" --latest
+            --notes-file release/NOTES.md --latest

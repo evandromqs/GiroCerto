@@ -1,0 +1,50 @@
+[
+  {
+    "version": "1.0.9",
+    "changes": [
+      "Poppins Medium, margens e espaçamentos padronizados, parágrafos justificados e transições suaves entre telas.",
+      "Cartão do copiloto remodelado, com botão de minimizar, conteúdo rolável e cores de resultado.",
+      "Atualizações baixadas na pasta do Giro Certo, verificadas e abertas diretamente no instalador do Android.",
+      "Proteção de registros financeiros danificados, rascunhos persistentes, navegação por data corrigida e validação dos campos.",
+      "Leitura de ofertas mais conservadora para medidas repetidas, valores ambíguos, notas e números com milhar; descarte de OCR desatualizado.",
+      "Fechamento semanal com cobrança única do contrato e backup completo com restauração validada.",
+      "Carregamento assíncrono, histórico otimizado, ações preservadas ao navegar e testes em Android 11 e Android 15."
+    ]
+  },
+  {
+    "version": "1.0.8",
+    "changes": [
+      "Ícones oficiais dos apps e suporte ao pacote atual do Keeta. Leitura mais conservadora de valores e medidas repetidas. Proteção do histórico, rascunhos por data, saldo real na bolha, leitura com limites, alinhamento explícito, lembrete de atualização adiado por 24 horas, regras de backup e testes Android antes da publicação."
+    ]
+  },
+  {
+    "version": "1.0.7",
+    "changes": [
+      "Temas claro e escuro, visual azul-marinho com relevo, nova bolha e lixeira para ocultar a janela."
+    ]
+  },
+  {
+    "version": "1.0.6",
+    "changes": [
+      "Leitura de ofertas parcialmente encobertas, diagnóstico de OCR e download de atualizações pelo app."
+    ]
+  },
+  {
+    "version": "1.0.5",
+    "changes": [
+      "Janela flutuante vinculada ao leitor e seleção dos apps usados no diário de ganhos."
+    ]
+  },
+  {
+    "version": "1.0.4",
+    "changes": [
+      "Ícone próprio do aplicativo e redução das permissões solicitadas."
+    ]
+  },
+  {
+    "version": "1.0.3",
+    "changes": [
+      "Primeira release publicada: copiloto, perfil da moto elétrica, metas e registro diário de ganhos."
+    ]
+  }
+]

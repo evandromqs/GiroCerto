@@ -7,7 +7,7 @@ import com.girocerto.domain.model.RideAnalysis
 import com.girocerto.domain.model.RideOffer
 import com.girocerto.domain.model.TrafficLightStatus
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +24,8 @@ import java.util.Calendar
  */
 class RideRepository(
     private val context: Context,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    deferLoading: Boolean = false
 ) {
 
     private val historyFile: File by lazy {
@@ -40,11 +41,17 @@ class RideRepository(
     private val _rides = MutableStateFlow<List<RideAnalysis>>(emptyList())
     val rides: StateFlow<List<RideAnalysis>> = _rides.asStateFlow()
 
+    private val ready = CompletableDeferred<Unit>()
+    private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
+    private val _loading = MutableStateFlow(true)
+    val loading = _loading.asStateFlow()
     init {
-        loadHistory()
+        if (deferLoading) scope.launch { loadHistory(); _loading.value = false; ready.complete(Unit) }
+        else { loadHistory(); _loading.value = false; ready.complete(Unit) }
     }
-
-    fun retryLoad() { _loadError.value = null; loadHistory() }
+    fun retryLoad() { scope.launch { ready.await(); writeMutex.withLock {
+        _loading.value = true; _loadError.value = null; loadHistory(); _loading.value = false
+    } } }
 
     private fun loadHistory() {
         try {
@@ -87,6 +94,7 @@ class RideRepository(
 
     /** Publish changes only after persistence succeeds; serialize the entire transaction. */
     suspend fun saveRide(analysis: RideAnalysis): RideAnalysis = withContext(ioDispatcher) {
+        ready.await()
         writeMutex.withLock {
             val highestId = _rides.value.maxOfOrNull { it.id } ?: 0L
             val assignedId = if (analysis.id > 0 && _rides.value.none { it.id == analysis.id }) {
@@ -103,6 +111,7 @@ class RideRepository(
     }
 
     suspend fun deleteRide(id: Long) = withContext(ioDispatcher) {
+        ready.await()
         writeMutex.withLock {
             val updated = _rides.value.filterNot { it.id == id }
             persistToFile(updated)
@@ -111,6 +120,7 @@ class RideRepository(
     }
 
     suspend fun clearHistory() = withContext(ioDispatcher) {
+        ready.await()
         writeMutex.withLock {
             persistToFile(emptyList())
             _rides.value = emptyList()

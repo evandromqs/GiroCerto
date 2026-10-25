@@ -15,6 +15,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         com.girocerto.overlay.OverlayController.syncCopilot(this)
+        GiroCertoApp.instance.appUpdates.onResume()
         GiroCertoApp.instance.appUpdates.check()
     }
 

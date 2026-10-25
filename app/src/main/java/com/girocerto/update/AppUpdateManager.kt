@@ -2,27 +2,30 @@ package com.girocerto.update
 
 import android.app.DownloadManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
+import android.provider.Settings
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import org.json.JSONObject
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 
 internal enum class DownloadPhase { AVAILABLE, DOWNLOADING, VERIFYING, READY, FAILED }
-internal data class UpdateState(
-    val release: AppRelease? = null, val checking: Boolean = false,
+internal data class UpdateState(val release: AppRelease? = null, val checking: Boolean = false,
     val phase: DownloadPhase = DownloadPhase.AVAILABLE, val progress: Int? = null,
-    val message: String = "Verifica novas versões ao abrir o app.", val showPrompt: Boolean = false
-)
+    val message: String = "Verifica novas versões ao abrir o app.", val showPrompt: Boolean = false)
 
 internal class AppUpdateManager(private val context: Context) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val preferences = context.getSharedPreferences("app_updates", Context.MODE_PRIVATE)
     private val downloads = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -31,120 +34,181 @@ internal class AppUpdateManager(private val context: Context) {
     private val _state = MutableStateFlow(UpdateState())
     val state = _state.asStateFlow()
     private var downloadJob: Job? = null
+    private val transferMutex = Mutex()
+    private var installJob: Job? = null
+    private var pendingInstall: AppRelease? = null
     private var lastCheck = -60_000L
+    private val updateDirectory get() = File(context.filesDir, "updates").apply { mkdirs() }
+    private fun apk(release: AppRelease) = File(updateDirectory, release.fileName)
 
     init {
         val saved = runCatching { parse(preferences.getString("release", null) ?: "") }.getOrNull()
         val id = preferences.getLong("download_id", -1L)
-        if (saved != null && saved.isNewerThan(installedCode) && id > 0) {
+        if (saved != null && saved.isNewerThan(installedCode)) {
             _state.value = UpdateState(release = saved, phase = DownloadPhase.DOWNLOADING)
-            downloadJob = scope.launch { monitor(id, saved) }
-        } else clearDownload()
+            downloadJob = scope.launch { transferMutex.withLock {
+                if (withContext(Dispatchers.IO) { apk(saved).isFile }) verifyAndReady(saved, false)
+                else if (id > 0) monitor(id, saved, false)
+                else unavailable("O APK não está mais disponível. Baixe novamente.")
+            } }
+        } else {
+            clearDownload()
+            scope.launch(Dispatchers.IO) { updateDirectory.listFiles()?.filter { it.name.endsWith(".apk") || it.name.endsWith(".part") }?.forEach { it.delete() } }
+        }
     }
-
     fun check(force: Boolean = false) {
-        if (_state.value.checking || downloadJob?.isActive == true) return
+        if (_state.value.checking) { return }
         val now = android.os.SystemClock.elapsedRealtime()
-        if (!force && now - lastCheck < 60_000L) return
+        if (!force && now - lastCheck < 60_000L) { return }
         lastCheck = now
         _state.update { it.copy(checking = true) }
         scope.launch {
             try {
-                val release = parse(fetchManifest())
+                val release = withContext(Dispatchers.IO) { parse(fetchManifest()) }
                 if (release.isNewerThan(installedCode)) {
-                    _state.update { current ->
-                        if (current.release == release) current.copy(checking = false, showPrompt = force || shouldPrompt(release.versionCode))
-                        else UpdateState(release = release, message = "Nova versão disponível: ${release.versionName}", showPrompt = force || shouldPrompt(release.versionCode))
+                    if (_state.value.release != release) {
+                        cancelTransfer()
+                        _state.value = UpdateState(release = release, message = "Nova versão disponível: ${release.versionName}", showPrompt = force || shouldPrompt(release.versionCode))
+                    } else {
+                        if (_state.value.phase == DownloadPhase.READY && !withContext(Dispatchers.IO) { apk(release).isFile }) unavailable("APK removido. Baixe novamente.")
+                        _state.update { it.copy(checking = false, showPrompt = force || shouldPrompt(release.versionCode)) }
                     }
-                } else _state.update { UpdateState(message = "Você já usa a versão mais recente.") }
-            } catch (error: Exception) {
-                if (error is CancellationException) throw error
-                _state.update { it.copy(checking = false, message = "Não foi possível consultar atualizações. Confira a conexão e tente novamente.") }
-            }
+                } else { cancelTransfer(); _state.value = UpdateState(message = "Você já usa a versão mais recente.") }
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { _state.update { it.copy(checking = false, message = "Não foi possível consultar atualizações. Confira a conexão e tente novamente.") } }
         }
     }
-
     private fun clearDownload() { preferences.edit().remove("release").remove("download_id").apply() }
-    private fun shouldPrompt(version: Long) = UpdateReminder.shouldPrompt(version, preferences.getLong("dismissed_version", -1),
-        preferences.getLong("remind_after", 0), System.currentTimeMillis())
+    private fun shouldPrompt(version: Long) = UpdateReminder.shouldPrompt(version, preferences.getLong("dismissed_version", -1), preferences.getLong("remind_after", 0), System.currentTimeMillis())
     fun dismiss() {
-        _state.value.release?.let { preferences.edit().putLong("dismissed_version", it.versionCode)
-            .putLong("remind_after", System.currentTimeMillis() + UpdateReminder.DELAY_MS).apply() }
+        _state.value.release?.let { preferences.edit().putLong("dismissed_version", it.versionCode).putLong("remind_after", System.currentTimeMillis() + UpdateReminder.DELAY_MS).apply() }
         _state.update { it.copy(showPrompt = false) }
     }
-    fun open() {
-        if (_state.value.release != null) _state.update { it.copy(showPrompt = true) }
-        else check(force = true)
+    fun open() { if (_state.value.release == null) check(true) else { onResume(); _state.update { it.copy(showPrompt = true) } } }
+    private fun cancelTransfer() {
+        downloadJob?.cancel(); downloadJob = null
+        val id = preferences.getLong("download_id", -1L)
+        if (id > 0) downloads.remove(id)
+        clearDownload()
     }
-
+    fun cancelDownload() { cancelTransfer(); _state.update { it.copy(phase = DownloadPhase.AVAILABLE, progress = null, message = "Download cancelado. Você pode tentar novamente.") } }
     fun download() {
         val release = _state.value.release ?: return
-        if (downloadJob?.isActive == true || _state.value.phase == DownloadPhase.READY) return
-        _state.update { it.copy(phase = DownloadPhase.DOWNLOADING, progress = null, message = "Iniciando download…") }
-        downloadJob = scope.launch {
+        if (downloadJob?.isActive == true) return
+        if (_state.value.phase == DownloadPhase.READY && apk(release).isFile) return
+        cancelTransfer()
+        _state.update { it.copy(phase = DownloadPhase.DOWNLOADING, progress = null, message = "Baixando na pasta do Giro Certo…") }
+        downloadJob = scope.launch { transferMutex.withLock {
+            var createdId = -1L
             try {
-                // Remove only a failed download created by this updater before retrying.
-                val previous = preferences.getLong("download_id", -1L)
-                val previousRelease = runCatching { parse(preferences.getString("release", null) ?: "") }.getOrNull()
-                if (previous > 0 && previousRelease == release) downloads.remove(previous)
-                val request = DownloadManager.Request(Uri.parse(release.apkUrl))
-                    .setTitle(release.fileName)
-                    .setDescription("Atualização do Giro Certo")
-                    .setMimeType("application/vnd.android.package-archive")
-                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                if (Build.VERSION.SDK_INT >= 29) request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, release.fileName)
-                val id = downloads.enqueue(request)
-                preferences.edit().putLong("download_id", id).putString("release", serialize(release)).commit()
-                monitor(id, release, userInitiated = true)
-            } catch (error: Exception) {
-                if (error is CancellationException) throw error
-                fail("Não foi possível baixar. Confira a conexão, o espaço livre e se o arquivo já existe em Downloads.")
-            }
-        }
-    }
-
-    private suspend fun monitor(id: Long, release: AppRelease, userInitiated: Boolean = false) {
-        try {
-            while (true) {
-                val status = downloads.query(DownloadManager.Query().setFilterById(id)).use { cursor ->
-                    if (cursor == null || !cursor.moveToFirst()) throw IllegalStateException("Download removed")
-                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                    val bytes = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    _state.update { it.copy(progress = if (total > 0) ((bytes * 100 / total).toInt()).coerceIn(0, 100) else null,
-                        message = if (status == DownloadManager.STATUS_PAUSED) "Download pausado pelo Android; aguardando conexão ou condições de rede." else "Baixando ${release.fileName}") }
-                    status
-                }
-                if (status == DownloadManager.STATUS_FAILED) throw IllegalStateException("Download failed")
-                if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                    _state.update { it.copy(phase = DownloadPhase.VERIFYING, message = "Conferindo o arquivo baixado…") }
-                    val uri = downloads.getUriForDownloadedFile(id) ?: throw IllegalStateException("Missing APK")
-                    val digest = MessageDigest.getInstance("SHA-256")
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        val buffer = ByteArray(64 * 1024)
-                        while (true) { val count = input.read(buffer); if (count < 0) break; digest.update(buffer, 0, count) }
-                    } ?: throw IllegalStateException("Unreadable APK")
-                    val checksum = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
-                    if (checksum != release.sha256) {
+                val id = withContext(Dispatchers.IO) {
+                    val destination = File(context.getExternalFilesDir("updates"), release.fileName)
+                    if (destination.exists()) check(destination.delete())
+                    val request = DownloadManager.Request(Uri.parse(release.apkUrl)).setTitle(release.fileName)
+                        .setDescription("Atualização do Giro Certo").setMimeType("application/vnd.android.package-archive")
+                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        .setDestinationInExternalFilesDir(context, "updates", release.fileName)
+                    val id = downloads.enqueue(request)
+                    createdId = id
+                    try {
+                        check(preferences.edit().putLong("download_id", id).putString("release", serialize(release)).commit())
+                        currentCoroutineContext().ensureActive()
+                        id
+                    } catch (error: Exception) {
                         downloads.remove(id)
-                        clearDownload()
-                        fail("O arquivo não passou na verificação. Baixe novamente.")
-                        return
+                        if (preferences.getLong("download_id", -1L) == id) clearDownload()
+                        throw error
                     }
-                    _state.update { it.copy(phase = DownloadPhase.READY, progress = 100,
-                        message = "${release.fileName} baixado e verificado. Abra Downloads e toque no APK para instalar.",
-                        showPrompt = userInitiated || shouldPrompt(release.versionCode)) }
-                    return
                 }
-                delay(1_000L)
+                monitor(id, release, true)
+            } catch (e: CancellationException) {
+                withContext(NonCancellable + Dispatchers.IO) {
+                    if (createdId > 0) { downloads.remove(createdId)
+                        if (preferences.getLong("download_id", -1L) == createdId) clearDownload() }
+                }
+                throw e
+            } catch (_: Exception) { unavailable("Não foi possível baixar. Confira a conexão e o espaço livre.") }
+        } }
+    }
+    private suspend fun monitor(id: Long, release: AppRelease, userInitiated: Boolean) {
+        try {
+            while (currentCoroutineContext().isActive) {
+                val status = withContext(Dispatchers.IO) {
+                    downloads.query(DownloadManager.Query().setFilterById(id)).use { cursor ->
+                        check(cursor != null && cursor.moveToFirst())
+                        val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                        val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                        val done = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                        val reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
+                        Triple(status, if(total > 0) (done * 100 / total).toInt().coerceIn(0,100) else null, reason)
+                    }
+                }
+                _state.update { it.copy(phase = DownloadPhase.DOWNLOADING, progress = status.second,
+                    message = if(status.first == DownloadManager.STATUS_PAUSED) "Download pausado pelo Android. Aguarde a rede ou cancele para tentar novamente." else "Baixando ${release.fileName}") }
+                if(status.first == DownloadManager.STATUS_FAILED) { unavailable("Falha no download (código ${status.third}). Confira rede e armazenamento e tente novamente."); return }
+                if(status.first == DownloadManager.STATUS_SUCCESSFUL) {
+                    _state.update { it.copy(phase = DownloadPhase.VERIFYING, message = "Conferindo o APK…") }
+                    withContext(Dispatchers.IO) {
+                        val uri = checkNotNull(downloads.getUriForDownloadedFile(id))
+                        val temporary = File(updateDirectory, release.fileName + ".part")
+                        try {
+                            checkNotNull(context.contentResolver.openInputStream(uri)).use { input -> temporary.outputStream().use { input.copyTo(it) } }
+                            check(checksum(temporary) == release.sha256)
+                            val target = apk(release); if(target.exists()) check(target.delete())
+                            check(temporary.renameTo(target))
+                        } finally { temporary.delete() }
+                    }
+                    downloads.remove(id)
+                    preferences.edit().remove("download_id").apply()
+                    verifyAndReady(release, userInitiated); return
+                }
+                delay(1_000)
             }
-        } catch (error: Exception) {
-            if (error is CancellationException) throw error
-            fail("O download não foi concluído. Tente novamente; confira também o espaço livre em Downloads.")
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { unavailable("O APK não pôde ser conferido. Baixe novamente.") }
+    }
+    private fun checksum(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input -> val buffer = ByteArray(64 * 1024)
+            while(true) { val count = input.read(buffer); if(count < 0) break; digest.update(buffer,0,count) } }
+        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+    }
+    private suspend fun verifyAndReady(release: AppRelease, prompt: Boolean) {
+        val valid = withContext(Dispatchers.IO) { runCatching { checksum(apk(release)) == release.sha256 }.getOrDefault(false) }
+        if (!valid) { withContext(Dispatchers.IO) { apk(release).delete() }; unavailable("Arquivo ausente ou inválido. Baixe novamente."); return }
+        _state.update { it.copy(phase = DownloadPhase.READY, progress = 100,
+            message = "APK verificado. Toque em Instalar atualização para abrir o instalador do Android.", showPrompt = prompt || shouldPrompt(release.versionCode)) }
+    }
+    private fun unavailable(message: String) { _state.update { it.copy(phase = DownloadPhase.FAILED, progress = null, message = message, showPrompt = true) } }
+    fun onResume() {
+        val pending = pendingInstall
+        pendingInstall = null
+        if (pending != null && context.packageManager.canRequestPackageInstalls()) install()
+        val release = _state.value.release ?: return
+        if (_state.value.phase == DownloadPhase.READY) scope.launch {
+            if (!withContext(Dispatchers.IO) { apk(release).isFile }) unavailable("APK removido. Baixe novamente.")
         }
     }
-
-    private fun fail(message: String) { _state.update { it.copy(phase = DownloadPhase.FAILED, message = message, showPrompt = true) } }
+    fun install() {
+        val release = _state.value.release ?: return
+        if (installJob?.isActive == true) return
+        installJob = scope.launch {
+            try {
+                val valid = withContext(Dispatchers.IO) { apk(release).isFile && checksum(apk(release)) == release.sha256 }
+                if (!valid) { unavailable("APK ausente ou alterado. Baixe novamente."); return@launch }
+                if (!context.packageManager.canRequestPackageInstalls()) {
+                    pendingInstall = release
+                    context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    return@launch
+                }
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.updates", apk(release))
+                context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION))
+                dismiss()
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { _state.update { it.copy(message = "Não foi possível abrir o instalador. Verifique a permissão para instalar atualizações.", showPrompt = true) } }
+        }
+    }
     private fun parse(text: String): AppRelease {
         val json = JSONObject(text)
         return AppRelease.validated(json.getLong("versionCode"), json.getString("versionName"), json.getString("sha256"), json.getString("apkUrl"))

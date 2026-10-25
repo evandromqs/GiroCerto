@@ -1,5 +1,7 @@
 package com.girocerto.ui.settings
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import com.girocerto.ui.components.TactileButton as Button
 
 import com.girocerto.ui.components.AppText as Text
@@ -36,7 +38,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -88,7 +89,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val settingsRepo = GiroCertoApp.instance.settingsRepository
-    val currentSettings by settingsRepo.settings.collectAsState()
+    val currentSettings by settingsRepo.settings.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }

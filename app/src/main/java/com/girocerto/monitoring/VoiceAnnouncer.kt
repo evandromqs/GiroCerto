@@ -57,9 +57,9 @@ class VoiceAnnouncer(private val context: Context) : TextToSpeech.OnInitListener
         val kmRateFormatted = formatRateForSpeech(analysis.grossPerKm)
 
         val statusText = when (analysis.trafficLight) {
-            TrafficLightStatus.GREEN -> "Sinal verde. Boa corrida."
-            TrafficLightStatus.YELLOW -> "Sinal amarelo. Atenção."
-            TrafficLightStatus.RED -> "Sinal vermelho. Abaixo da meta."
+            TrafficLightStatus.GREEN -> "Compensa. Dentro das metas."
+            TrafficLightStatus.YELLOW -> "Atenção. Confira as metas."
+            TrafficLightStatus.RED -> "Não compensa. Abaixo das metas."
             TrafficLightStatus.INVALID -> "Dados insuficientes."
         }
 

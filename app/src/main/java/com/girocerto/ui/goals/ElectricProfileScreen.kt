@@ -1,5 +1,7 @@
 package com.girocerto.ui.goals
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import com.girocerto.ui.components.TactileButton as Button
 
 import com.girocerto.ui.components.TactileCard as Card
@@ -21,12 +23,22 @@ import com.girocerto.domain.model.ElectricProfile
 import com.girocerto.ui.components.Formatters
 import kotlinx.coroutines.launch
 
-internal fun inputNumber(value: String): Double? = value.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() }
+internal fun inputNumber(value: String): Double? {
+    val text = value.trim().replace("\u00A0", "")
+    if (!Regex("""(?:[0-9]{1,3}(?:\.[0-9]{3})+,[0-9]+|[0-9]+(?:[.,][0-9]+)?)""").matches(text)) return null
+    val normalized = if (text.contains(',')) text.replace(".", "").replace(',', '.') else text
+    return normalized.toDoubleOrNull()?.takeIf { it.isFinite() }
+}
 
 @Composable
-fun MoneyField(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier) {
-    OutlinedTextField(value, onChange, label = { Text(label) }, singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = modifier.fillMaxWidth())
+fun MoneyField(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier,
+    maximum: Double = 1_000_000.0, wholeNumber: Boolean = false) {
+    val parsed = inputNumber(value)
+    val invalid = value.isNotBlank() && (parsed == null || parsed !in 0.0..maximum || wholeNumber && value.toIntOrNull() == null)
+    OutlinedTextField(value, { onChange(it.take(18)) }, label = { Text(label) }, singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Start),
+        isError = invalid, supportingText = if (invalid) { { Text(if (wholeNumber) "Informe um número inteiro até ${maximum.toInt()}." else "Informe um valor de 0 a ${maximum.toInt()}, usando vírgula nos centavos.") } } else null,
+        keyboardOptions = KeyboardOptions(keyboardType = if (wholeNumber) KeyboardType.Number else KeyboardType.Decimal), modifier = modifier.fillMaxWidth())
 }
 
 @Composable
@@ -40,7 +52,7 @@ fun SummaryLine(label: String, value: String) {
 @Composable
 fun ElectricProfileScreen(onDone: () -> Unit) {
     val app = GiroCertoApp.instance
-    val saved by app.workRepository.profile.collectAsState()
+    val saved by app.workRepository.profile.collectAsStateWithLifecycle()
     var editing by rememberSaveable { mutableStateOf(false) }
     var step by rememberSaveable { mutableIntStateOf(0) }
     var name by rememberSaveable { mutableStateOf(saved?.name ?: "") }
@@ -52,13 +64,21 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
     var km by rememberSaveable { mutableStateOf(saved?.kmPerDay?.toString() ?: "") }
     var goal by rememberSaveable { mutableStateOf(saved?.weeklyNetGoal?.toString() ?: "") }
     var error by remember { mutableStateOf<String?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    val viewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val operation by viewModel.operation.collectAsStateWithLifecycle()
+    val busy = operation.busy
+    var completed by rememberSaveable { mutableStateOf(0) }
+    val revision by app.workRepository.restoreRevision.collectAsStateWithLifecycle()
+    LaunchedEffect(revision) { if (revision > 0) { editing = false; step = 0 } }
+    LaunchedEffect(operation.completed) {
+        if (operation.completed > completed) { completed = operation.completed; editing = false; onDone() }
+    }
+    androidx.activity.compose.BackHandler((saved == null || editing) && step > 0) { if (!busy) step-- }
     val draft = ElectricProfile(name.trim(), inputNumber(rent) ?: -1.0, inputNumber(kmCost) ?: -1.0,
         inputNumber(extra) ?: -1.0, days.toIntOrNull() ?: 0, inputNumber(hours) ?: -1.0,
         inputNumber(km) ?: -1.0, inputNumber(goal) ?: -1.0)
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(com.girocerto.app.theme.AppSpacing.Screen),
+        verticalArrangement = Arrangement.spacedBy(com.girocerto.app.theme.AppSpacing.Section), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text("Minha moto e metas", style = MaterialTheme.typography.headlineMedium)
         if (saved != null && !editing) {
             val profile = saved!!
@@ -88,9 +108,9 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
                 }
                 2 -> {
                     Text("Como será sua semana?", style = MaterialTheme.typography.titleLarge)
-                    MoneyField("Dias de trabalho por semana (1 a 7)", days, { days = it })
-                    MoneyField("Horas ativas por dia", hours, { hours = it })
-                    MoneyField("Km totais previstos por dia", km, { km = it })
+                    MoneyField("Dias de trabalho por semana (1 a 7)", days, { days = it }, maximum = 7.0, wholeNumber = true)
+                    MoneyField("Horas ativas por dia", hours, { hours = it }, maximum = 24.0)
+                    MoneyField("Km totais previstos por dia", km, { km = it }, maximum = 2000.0)
                     Text("Inclua espera e deslocamentos. Conte cada hora e km uma só vez, mesmo com vários apps abertos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 3 -> {
@@ -106,18 +126,11 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
                 2 -> (days.toIntOrNull() ?: 0) in 1..7 && (inputNumber(hours) ?: 0.0) > 0 && (inputNumber(hours) ?: 25.0) <= 24 && (inputNumber(km) ?: 0.0) > 0 && (inputNumber(km) ?: 2001.0) <= 2000
                 else -> draft.valid()
             }
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            if (!validStep) Text("Preencha os campos desta etapa com valores válidos para continuar.", style = MaterialTheme.typography.bodySmall)
+            (error ?: operation.error)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Button(onClick = {
                 if (step < 3) { step++; error = null }
-                else scope.launch {
-                    busy = true
-                    try {
-                        app.workRepository.saveProfile(draft)
-                        app.settingsRepository.updateSettings(draft.vehicleSettings(app.settingsRepository.settings.value))
-                        editing = false; onDone()
-                    } catch (_: Exception) { error = "Não foi possível salvar. Tente novamente." }
-                    finally { busy = false }
-                }
+                else viewModel.save(draft)
             }, enabled = validStep && !busy, modifier = Modifier.fillMaxWidth()) {
                 Text(if (busy) "Salvando…" else if (step == 3) "Salvar perfil e metas" else "Continuar")
             }
@@ -130,7 +143,7 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
 @Composable
 private fun ProfileProjection(p: ElectricProfile) {
     Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+        Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
             Text("Meta de faturamento por dia", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(Formatters.formatCurrency(p.dailyGrossGoal), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
             SummaryLine("Para sobrar na semana", Formatters.formatCurrency(p.weeklyNetGoal))

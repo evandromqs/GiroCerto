@@ -9,6 +9,38 @@ import org.junit.Test
 import java.time.LocalDate
 
 class WorkRepositoryTest {
+    @Test fun corruptDayIsPreservedAndCannotBeOverwritten() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = context.getSharedPreferences("work_ledger_v1", 0)
+        val date = LocalDate.of(1899, 12, 31)
+        val key = "day:$date"
+        val previous = prefs.getString(key, null)
+        try {
+            prefs.edit().putString(key, "broken-json").commit()
+            val repo = WorkRepository(context)
+            assertNotNull(repo.loadError.value)
+            try { repo.saveDay(WorkDay(date, emptyList(),0.0,0.0,0.0,0.0,0.0)); fail("Protected record") }
+            catch (_: IllegalStateException) { }
+            assertEquals("broken-json", prefs.getString(key,null))
+            assertTrue(repo.backup().contains("broken-json"))
+        } finally { prefs.edit().apply { if(previous == null) remove(key) else putString(key,previous) }.commit() }
+    }
+    @Test fun fullBackupRoundTripPreservesAppDetailsAndContract() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val repo = WorkRepository(context)
+        val date = LocalDate.of(1899, 12, 30)
+        val day = WorkDay(date,listOf(PlatformWork(WorkPlatform.KEETA,45.75,12.3,2.5)),15.0,3.0,40.0,.6,100.0,200.0)
+        try {
+            repo.saveDay(day)
+            val backup = repo.backup()
+            repo.deleteDay(date)
+            repo.restoreBackup(backup)
+            assertEquals(day, repo.days.value.first { it.date == date })
+            try { repo.restoreBackup(backup.replace("girocerto-ledger", "other-format")); fail("Invalid format") }
+            catch (_: IllegalArgumentException) { }
+            assertEquals(day, repo.days.value.first { it.date == date })
+        } finally { repo.deleteDay(date) }
+    }
     @Test fun selectedPlatformsSurviveReloadAndRejectEmptySelection() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val repo = WorkRepository(context)

@@ -1,5 +1,7 @@
 package com.girocerto.ui.history
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import com.girocerto.ui.components.AppText as Text
 
 import androidx.compose.animation.AnimatedVisibility
@@ -37,8 +39,10 @@ import androidx.compose.material3.OutlinedTextField
 import android.content.Intent
 import android.net.Uri
 import java.util.Calendar
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,22 +76,24 @@ fun HistoryScreen(
     modifier: Modifier = Modifier
 ) {
     val rideRepo = GiroCertoApp.instance.rideRepository
-    val rides by rideRepo.rides.collectAsState()
-    val loadError by rideRepo.loadError.collectAsState()
+    val rides by rideRepo.rides.collectAsStateWithLifecycle()
+    val loadError by rideRepo.loadError.collectAsStateWithLifecycle()
     var platformFilter by rememberSaveable { mutableStateOf("Todos") }
     var periodFilter by rememberSaveable { mutableStateOf("Todo período") }
-    val platforms = listOf("Todos") + rides.map { it.offer.appName }.distinct().sorted()
-    val startOfToday = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
+    val platforms by produceState(listOf("Todos"), rides) { value = withContext(Dispatchers.Default) { listOf("Todos") + rides.map { it.offer.appName }.distinct().sorted() } }
+    val currentDay = com.girocerto.ui.components.rememberCurrentDay()
+    val startOfToday = remember(currentDay) { currentDay.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() }
     val periodStart = when (periodFilter) {
         "Hoje" -> startOfToday
         "7 dias" -> Calendar.getInstance().apply { timeInMillis = startOfToday; add(Calendar.DAY_OF_YEAR, -6) }.timeInMillis
         else -> 0L
     }
-    val filteredRides = rides.filter {
-        (platformFilter == "Todos" || it.offer.appName == platformFilter) && it.timestamp >= periodStart
+    val filteredRides by produceState(emptyList<RideAnalysis>(), rides, platformFilter, periodStart) {
+        value = withContext(Dispatchers.Default) { rides.filter {
+            (platformFilter == "Todos" || it.offer.appName == platformFilter) && it.timestamp >= periodStart
+        } }
     }
+    val loading by rideRepo.loading.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -98,9 +104,10 @@ fun HistoryScreen(
         modifier = modifier
             .fillMaxSize()
             .background(BackgroundDark)
-            .padding(16.dp)
+            .padding(com.girocerto.app.theme.AppSpacing.Screen)
     ) {
         SnackbarHost(hostState = snackbarHostState)
+        if (loading) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
         loadError?.let { message ->
             Text(message, modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.error)
             TextButton(onClick = rideRepo::retryLoad) { Text("Tentar recuperar histórico") }
@@ -216,8 +223,8 @@ private fun HistoryItemCard(
     onShowOverlay: () -> Unit
 ) {
     val context = LocalContext.current
-    var showMessageDraft by remember { mutableStateOf(false) }
-    var passengerDraft by remember { mutableStateOf("") }
+    var showMessageDraft by rememberSaveable { mutableStateOf(false) }
+    var passengerDraft by rememberSaveable { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     if (showMessageDraft) {
         AlertDialog(
@@ -442,10 +449,3 @@ private fun EmptyHistoryView(onNavigateToCopilot: () -> Unit) {
         }
     }
 }
-
-
-
-
-
-
-

@@ -1,5 +1,7 @@
 package com.girocerto.ui.goals
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import com.girocerto.ui.components.TactileButton as Button
 
 import com.girocerto.ui.components.AppText as Text
@@ -26,7 +28,7 @@ import com.girocerto.ui.components.Formatters
 @Composable
 fun GoalsScreen(modifier: Modifier = Modifier) {
     val repository = GiroCertoApp.instance.settingsRepository
-    val settings by repository.settings.collectAsState()
+    val settings by repository.settings.collectAsStateWithLifecycle()
     var goal by rememberSaveable { mutableStateOf("1000") }
     var days by rememberSaveable { mutableStateOf("5") }
     var hours by rememberSaveable { mutableStateOf("8") }

@@ -12,7 +12,7 @@ object AccessibilityOfferReader {
 
     // Regex para valores monetários em Reais (ex: "R$ 28,50", "R$28.50", "R$ 115,00")
     private val FARE_PATTERN = Pattern.compile(
-        """(?:R\$\s*|BRL\s*)([0-9]{1,4}(?:[.,][0-9]{2}))""",
+        """(?:R\$\s*|BRL\s*)((?:[0-9]{1,3}(?:\.[0-9]{3})+,[0-9]{2}|[0-9]{1,4}[.,][0-9]{2}))(?![0-9.,])""",
         Pattern.CASE_INSENSITIVE
     )
 
@@ -47,10 +47,10 @@ object AccessibilityOfferReader {
 
     // Regex para nota de passageiro (ex: "★ 4.95", "⭐ 5.0", "4.92 ★" ou "4.95" isolado)
     private val RATING_STAR_PATTERN = Pattern.compile(
-        """[★⭐*]\s*([45][.,][0-9]{1,2})\b|\b([45][.,][0-9]{1,2})\s*[★⭐*]"""
+        """[★⭐*]\s*([0-5][.,][0-9]{1,2})\b|\b([0-5][.,][0-9]{1,2})\s*[★⭐*]"""
     )
     private val RATING_ISOLATED_PATTERN = Pattern.compile(
-        """\b([45][.,][0-9]{1,2})\b"""
+        """\b([0-5][.,][0-9]{1,2})\b"""
     )
 
     // Palavras-chave indicativas de endereços ou logradouros comuns no Brasil
@@ -76,7 +76,16 @@ object AccessibilityOfferReader {
         val appName = resolveAppName(packageName, rawLines)
         val cleanedLines = joinAdjacentMeasurementNodes(rawLines.map {
             it.replace('\u00A0', ' ').replace('\u202F', ' ').trim()
-        }.filter { it.isNotBlank() }).distinct()
+        }.filter { it.isNotBlank() })
+
+        // Flattened text cannot distinguish repeated legs from duplicate tree nodes.
+        // The collector removes parent aggregates; otherwise fail closed and retry via OCR.
+        val measurements = cleanedLines.filter { DISTANCE_KM_PATTERN.matcher(it).find() || DURATION_MIN_PATTERN.matcher(it).find() }
+        val repeated = measurements.groupingBy { it }.eachCount().any { (line, count) -> count > 1 && !line.contains("total", true) }
+        val aggregates = measurements.any { parent -> measurements.any { child -> parent != child && Regex("(?<![0-9A-Za-z.,])" + Regex.escape(child) + "(?![0-9A-Za-z])").containsMatchIn(parent) } }
+        if (repeated || aggregates) return OfferReaderResult(appName = appName,
+            error = "Medidas repetidas ou agrupadas; aguardando leitura inequívoca",
+            missingFields = listOf("Trajeto inequívoco"), source = OfferSource.ACCESSIBILITY_SERVICE)
 
         val eligibleLines = cleanedLines.filterNot {
             Regex("(?i)\\b(saldo|carteira|ganhos de hoje|ganhos da semana|promoção|bônus)\\b").containsMatchIn(it)
@@ -88,6 +97,9 @@ object AccessibilityOfferReader {
         if (prices.size > 1) return OfferReaderResult(appName = appName,
             error = "Mais de um valor monetário na janela; aguardando oferta inequívoca",
             missingFields = listOf("Valor da oferta"), source = OfferSource.ACCESSIBILITY_SERVICE)
+        val currencyCount = eligibleLines.sumOf { Regex("(?i)(R\\$|BRL)").findAll(it).count() }
+        val matchedCount = eligibleLines.sumOf { line -> val m = FARE_PATTERN.matcher(line); var n = 0; while(m.find()) n++; n }
+        if (currencyCount != matchedCount) return OfferReaderResult(appName = appName, error = "Formato monetário ambíguo", missingFields = listOf("Valor da oferta"))
         var fare: Double? = prices.singleOrNull()
         var tripDistanceKm: Double? = null
         var pickupDistanceKm: Double? = null
@@ -165,14 +177,14 @@ object AccessibilityOfferReader {
                 if (starMatcher.find()) {
                     val rawRating = starMatcher.group(1) ?: starMatcher.group(2)
                     val ratingVal = parseDecimal(rawRating)
-                    if (ratingVal in 4.0..5.0) {
+                    if (ratingVal in 0.0..5.0) {
                         passengerRating = ratingVal
                     }
                 } else {
                     val isoMatcher = RATING_ISOLATED_PATTERN.matcher(line)
                     if (isoMatcher.find()) {
                         val ratingVal = parseDecimal(isoMatcher.group(1))
-                        if (ratingVal in 4.0..5.0) {
+                        if (ratingVal in 0.0..5.0) {
                             passengerRating = ratingVal
                         }
                     }
@@ -198,27 +210,18 @@ object AccessibilityOfferReader {
 
         // Se ainda não encontrou tarifa com "R$", tenta valor numérico solto proeminente
         if (fare == null) {
-            for (line in eligibleLines) {
-                if (line.contains("km", true) || line.contains("min", true) ||
-                    line.contains("★") || line.contains("⭐") || line.contains("nota", true) || line.contains("avalia", true)) continue
-                if (line.trim().matches(Regex("[45][.,][0-9]{1,2}"))) continue
-                val isolatedMatcher = ISOLATED_FARE_PATTERN.matcher(line)
-                if (isolatedMatcher.matches()) {
-                    val candidate = parseCurrency(isolatedMatcher.group(1))
-                    if (candidate in 4.0..500.0) {
-                        fare = candidate
-                        break
-                    }
-                }
-            }
+            val candidates = eligibleLines.filterNot { it.trim().matches(Regex("[0-5][.,][0-9]{1,2}")) }
+                .mapNotNull { line -> val matcher = ISOLATED_FARE_PATTERN.matcher(line)
+                    if (matcher.matches()) parseCurrency(matcher.group(1)).takeIf { it in 4.0..500.0 } else null }.distinct()
+            fare = candidates.singleOrNull()
         }
 
         // Consolidação de Distâncias (Viagem vs Embarque)
-        if (explicitTotals.size == 1) {
+        if (explicitTotals.distinct().size == 1) {
             // A stated total includes approach/collection; do not add it twice.
-            tripDistanceKm = explicitTotals.single()
+            tripDistanceKm = explicitTotals.distinct().single()
             pickupDistanceKm = 0.0
-        } else if (detectedDistances.isNotEmpty() && explicitTotals.isEmpty()) {
+        } else if (detectedDistances.isNotEmpty() && detectedDistances.size <= 2 && explicitTotals.isEmpty()) {
             val pickupCandidate = detectedDistances.firstOrNull { it.second }
             val tripCandidates = detectedDistances.filter { !it.second }
 
@@ -333,7 +336,7 @@ object AccessibilityOfferReader {
             val normalized = raw.trim()
                 .replace(" ", "")
                 
-                .replace(",", ".")
+                 .let { if (it.contains(',')) it.replace(".", "").replace(",", ".") else it }
             normalized.toDoubleOrNull() ?: 0.0
         } catch (_: Exception) {
             0.0

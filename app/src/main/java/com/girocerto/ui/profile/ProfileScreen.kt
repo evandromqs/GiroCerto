@@ -1,5 +1,7 @@
 package com.girocerto.ui.profile
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import com.girocerto.ui.components.TactileButton as Button
 
 import com.girocerto.ui.components.AppText as Text
@@ -30,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,8 +71,8 @@ fun ProfileScreen(
     var messageSaved by rememberSaveable { mutableStateOf(false) }
     val rideRepo = GiroCertoApp.instance.rideRepository
     val settingsRepo = GiroCertoApp.instance.settingsRepository
-    val rides by rideRepo.rides.collectAsState()
-    val settings by settingsRepo.settings.collectAsState()
+    val rides by rideRepo.rides.collectAsStateWithLifecycle()
+    val settings by settingsRepo.settings.collectAsStateWithLifecycle()
 
     // Estatísticas acumuladas
     val totalRides = rides.size

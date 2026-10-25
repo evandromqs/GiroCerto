@@ -24,6 +24,7 @@ android {
         managedDevices {
             localDevices {
                 create("pixel2api30") { device = "Pixel 2"; apiLevel = 30; systemImageSource = "aosp"; testedAbi = "x86_64" }
+                create("pixel2api35") { device = "Pixel 2"; apiLevel = 35; systemImageSource = "aosp"; testedAbi = "x86_64" }
             }
         }
     }
@@ -39,7 +40,8 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("production")
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -105,3 +107,15 @@ dependencies {
   implementation(libs.androidx.navigation3.runtime)
   implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 }
+
+val prepareChangelog by tasks.registering(Copy::class) {
+    from(rootProject.file("changelog.json"))
+    into(layout.buildDirectory.dir("generated/changelogAssets"))
+    inputs.property("expectedVersion", releaseVersion.getProperty("versionName"))
+    doFirst {
+        val changes = groovy.json.JsonSlurper().parse(inputs.files.singleFile) as List<*>
+        check((changes.first() as Map<*,*>)["version"] == inputs.properties["expectedVersion"]) { "Changelog and version must match" }
+    }
+}
+android.sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/changelogAssets").get().asFile)
+tasks.named("preBuild").configure { dependsOn(prepareChangelog) }

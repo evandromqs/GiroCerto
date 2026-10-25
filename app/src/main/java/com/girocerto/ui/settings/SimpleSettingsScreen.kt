@@ -1,5 +1,7 @@
 package com.girocerto.ui.settings
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import com.girocerto.ui.components.AppText as Text
 
 import androidx.compose.foundation.layout.*
@@ -7,7 +9,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -16,7 +17,7 @@ import com.girocerto.ui.components.NavigationGlyph
 
 @Composable
 fun SimpleSettingsScreen(onCopilot: () -> Unit, onProfile: () -> Unit, onAdvanced: () -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(com.girocerto.app.theme.AppSpacing.Section), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text("Ajustes", style = MaterialTheme.typography.headlineMedium)
         Text("O essencial para trabalhar do seu jeito.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         SettingsLink(Screen.COPILOT, "Copiloto e permissões", "Leitura de ofertas, janela flutuante e alertas", onCopilot)
@@ -33,9 +34,9 @@ fun SimpleSettingsScreen(onCopilot: () -> Unit, onProfile: () -> Unit, onAdvance
 @Composable
 fun CardAndVoiceScreen() {
     val repository = com.girocerto.app.GiroCertoApp.instance.settingsRepository
-    val settings by repository.settings.collectAsState()
+    val settings by repository.settings.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(com.girocerto.app.theme.AppSpacing.Section), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text("Cartão e voz", style = MaterialTheme.typography.headlineMedium)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Ouvir análise das ofertas", Modifier.weight(1f))
@@ -53,7 +54,7 @@ fun CardAndVoiceScreen() {
 @Composable
 private fun SettingsLink(icon: Screen, title: String, subtitle: String, action: () -> Unit) {
     OutlinedCard(onClick = action, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(Modifier.padding(com.girocerto.app.theme.AppSpacing.Screen), horizontalArrangement = Arrangement.spacedBy(com.girocerto.app.theme.AppSpacing.Section)) {
             NavigationGlyph(icon, true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
@@ -66,9 +67,9 @@ private fun SettingsLink(icon: Screen, title: String, subtitle: String, action: 
 @Composable
 private fun AppearancePicker() {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val mode by com.girocerto.app.theme.AppearancePreferences.mode.collectAsState()
+    val mode by com.girocerto.app.theme.AppearancePreferences.mode.collectAsStateWithLifecycle()
     com.girocerto.ui.components.TactileCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+        Column(Modifier.fillMaxWidth().padding(com.girocerto.app.theme.AppSpacing.Content), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
             Text("Aparência", style = MaterialTheme.typography.titleMedium)
             FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 com.girocerto.app.theme.ThemeMode.entries.forEach { option ->

@@ -32,9 +32,40 @@ fun DataExportSection() {
             } catch (_: Exception) { "Não foi possível exportar. Tente outro local." }
         }
     }
+    var pendingBackup by remember { mutableStateOf<String?>(null) }
+    val backup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) scope.launch {
+            message = try { withContext(Dispatchers.IO) {
+                val text = GiroCertoApp.instance.workRepository.backup()
+                checkNotNull(context.contentResolver.openOutputStream(uri)).bufferedWriter().use { it.write(text) }
+            }; "Backup completo exportado. Guarde em um local seguro." }
+            catch (_: Exception) { "Não foi possível exportar o backup." }
+        }
+    }
+    val restore = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            try {
+                pendingBackup = withContext(Dispatchers.IO) {
+                    checkNotNull(context.contentResolver.openInputStream(uri)).bufferedReader().use { reader ->
+                        val chars = CharArray(5_000_001); var count = 0
+                        while (count < chars.size) { val n = reader.read(chars, count, chars.size-count); if(n<0) break; count += n }
+                        require(count <= 5_000_000); String(chars,0,count)
+                    }
+                }
+            } catch (_: Exception) { message = "Backup inválido ou maior que 5 MB." }
+        }
+    }
+    if (pendingBackup != null) AlertDialog(onDismissRequest = { pendingBackup = null }, title = { Text("Restaurar backup?") },
+        text = { Text("O perfil, os apps e os dias presentes no backup substituirão os correspondentes neste aparelho. Dias que não estão no arquivo serão preservados. Exporte o backup atual antes de continuar.") },
+        confirmButton = { TextButton(onClick = { val text = pendingBackup ?: return@TextButton; pendingBackup = null; scope.launch {
+            message = try { GiroCertoApp.instance.workRepository.restoreBackup(text); "Backup restaurado." }
+                catch (_: Exception) { "Restauração recusada: arquivo inválido, versão incompatível ou registro protegido. Nenhum dado foi alterado." }
+        } }) { Text("Restaurar") } }, dismissButton = { TextButton(onClick = { pendingBackup = null }) { Text("Cancelar") } })
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             TextButton(onClick = { export.launch("GiroCerto-ganhos.csv") }) { Text("Exportar meus ganhos") }
+            TextButton(onClick = { backup.launch("GiroCerto-backup.json") }) { Text("Exportar backup completo") }
+            TextButton(onClick = { restore.launch(arrayOf("application/json", "text/plain")) }) { Text("Restaurar backup") }
             message?.let { Text(it) }
         }
     }

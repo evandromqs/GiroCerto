@@ -9,6 +9,9 @@ import androidx.compose.material3.Card as MaterialCard
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -29,6 +32,13 @@ fun TactileCard(
     MaterialCard(
         modifier = modifier.drawWithContent {
             drawContent()
+            val outline = shape.createOutline(size, layoutDirection, this)
+            val path = Path().apply { when (outline) {
+                is Outline.Rounded -> addRoundRect(outline.roundRect)
+                is Outline.Rectangle -> addRect(outline.rect)
+                is Outline.Generic -> addPath(outline.path)
+            } }
+            clipPath(path) {
             drawRect(brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = .05f), Color.Transparent, Color.Black.copy(alpha = .025f))))
             drawLine(
                 brush = Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = .17f), Color.Transparent)),
@@ -36,6 +46,7 @@ fun TactileCard(
                 end = Offset(size.width - 20.dp.toPx(), 1.dp.toPx()),
                 strokeWidth = 1.dp.toPx()
             )
+            }
         },
         shape = shape,
         colors = colors,

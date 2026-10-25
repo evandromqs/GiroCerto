@@ -98,6 +98,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             reportReader("Monitoramento pausado para $packageName")
             return
         }
+        if (ocrDelegate.isInitialized() && event.eventType in listOf(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, AccessibilityEvent.TYPE_WINDOWS_CHANGED)) ocrDelegate.value.invalidate(packageName)
         val now = android.os.SystemClock.elapsedRealtime()
         if (now - lastEventRead < 400L) return
         lastEventRead = now
@@ -193,6 +194,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                     reportReader("Valores lidos, mas sem confirmação de uma oferta na tela")
                     continue
                 }
+                if (ocrDelegate.isInitialized()) ocrDelegate.value.invalidate(packageName)
                 acceptParsedOffer(parsed, packageName)
                 return true
             }
@@ -291,13 +293,22 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     }
     private fun collectAllTexts(node: AccessibilityNodeInfo, texts: MutableList<String>, budget: ReadBudget, depth: Int = 0): Boolean {
         if (!budget.permits(depth)) return false
-        node.text?.toString()?.trim()?.takeIf { it.isNotBlank() }?.let { texts.add(it.take(500)) }
-        node.contentDescription?.toString()?.trim()?.takeIf { it.isNotBlank() && it != node.text?.toString()?.trim() }?.let { texts.add(it.take(500)) }
+        val children = mutableListOf<String>()
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            try { if (!collectAllTexts(child, texts, budget, depth + 1)) return false }
+            try { if (!collectAllTexts(child, children, budget, depth + 1)) return false }
             finally { @Suppress("DEPRECATION") child.recycle() }
         }
+        val childText = children.joinToString(" ")
+        val own = listOfNotNull(node.text?.toString(), node.contentDescription?.toString()).map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        texts.addAll(own.filter { value ->
+            // Do not discard a parent's exclusive fare merely because a child says Aceitar.
+            val tokens = Regex("[\\p{L}\\p{N}$.,]+").findAll(value).map { it.value }.toList()
+            val available = Regex("[\\p{L}\\p{N}$.,]+").findAll(childText).map { it.value }.toList().toMutableList()
+            val fullyRepresented = tokens.isNotEmpty() && tokens.all { available.remove(it) }
+            !fullyRepresented
+        }.map { it.take(500) })
+        texts.addAll(children)
         return true
     }
 

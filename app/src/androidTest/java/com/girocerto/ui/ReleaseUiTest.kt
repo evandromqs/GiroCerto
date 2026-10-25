@@ -41,7 +41,7 @@ class ReleaseUiTest {
         for (mode in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
             compose.onNodeWithText(mode.label).performScrollTo().performClick()
             compose.onNodeWithText("Histórico de versões").performScrollTo().performClick()
-            compose.onNodeWithText("Versão 1.0.8").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Versão 1.0.9").performScrollTo().assertIsDisplayed()
             capture("settings-${mode.name}")
             compose.onNodeWithText("Ocultar histórico de versões").performScrollTo().performClick()
         }
@@ -60,6 +60,38 @@ class ReleaseUiTest {
         selectDate(today.minusDays(1))
         compose.onNodeWithText("67,89").performScrollTo().assertIsDisplayed()
         capture("diary-draft")
+    }
+
+    @Test fun restoringBeforeOpeningDiaryInvalidatesOldDrafts() {
+        val repository = GiroCertoApp.instance.workRepository
+        val date = LocalDate.of(1899, 12, 29)
+        runBlocking { repository.awaitLoaded() }
+        val preferences = context.getSharedPreferences("ledger_drafts_v1", 0)
+        preferences.edit().putLong("revision", repository.restoreRevision.value)
+            .putString(date.toString(), org.json.JSONArray(List(20) { "123" }).toString()).commit()
+        runBlocking { repository.restoreBackup(repository.backup()) }
+        lateinit var model: com.girocerto.ui.home.LedgerViewModel
+        val store = androidx.lifecycle.ViewModelStore()
+        compose.runOnIdle {
+            model = com.girocerto.ui.home.LedgerViewModel(GiroCertoApp.instance)
+            store.put("test", model)
+        }
+        compose.waitUntil(5_000) { model.draftsLoaded }
+        compose.runOnIdle {
+            org.junit.Assert.assertNull(model.draft(date))
+            store.clear()
+        }
+    }
+
+    @Test fun homeRecordActionExplicitlyOpensToday() {
+        runBlocking { GiroCertoApp.instance.workRepository.saveProfile(ElectricProfile("Teste",200.0,.5,.1,5,8.0,100.0,500.0)) }
+        compose.setContent { GiroCertoTheme { androidx.compose.material3.Surface { com.girocerto.navigation.AppNavigation() } } }
+        compose.onNodeWithText("Ganhos", useUnmergedTree = true).performClick()
+        selectDate(LocalDate.now().minusDays(1))
+        compose.onNodeWithText("Início", useUnmergedTree = true).performClick()
+        compose.onNode(hasText("Registrar meu dia") or hasText("Editar meu dia")).performScrollTo().performClick()
+        val expected = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        compose.onNodeWithText("Dia: $expected • alterar").performScrollTo().assertIsDisplayed()
     }
 
     private fun selectDate(date: LocalDate) {

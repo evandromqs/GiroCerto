@@ -1,6 +1,8 @@
 package com.girocerto.app
 
 import android.app.Application
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collectLatest
 import com.girocerto.data.repository.RideRepository
 import com.girocerto.data.repository.SettingsRepository
 
@@ -26,11 +28,12 @@ class GiroCertoApp : Application() {
         com.girocerto.app.theme.AppearancePreferences.initialize(this)
         appUpdates = com.girocerto.update.AppUpdateManager(this)
         settingsRepository = SettingsRepository(this)
-        rideRepository = RideRepository(this)
-        workRepository = com.girocerto.data.repository.WorkRepository(this)
-        // Keep the electric profile authoritative for costs even after an interrupted save.
-        workRepository.profile.value?.let {
-            settingsRepository.updateSettings(it.vehicleSettings(settingsRepository.settings.value))
+        rideRepository = RideRepository(this, deferLoading = true)
+        workRepository = com.girocerto.data.repository.WorkRepository(this, deferLoading = true)
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            workRepository.profile.collectLatest { profile ->
+                profile?.let { settingsRepository.updateSettings(it.vehicleSettings(settingsRepository.settings.value)) }
+            }
         }
     }
 

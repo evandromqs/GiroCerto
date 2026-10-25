@@ -1,5 +1,7 @@
 package com.girocerto.update
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import com.girocerto.ui.components.AppText as Text
 
 import android.app.DownloadManager
@@ -15,7 +17,7 @@ import com.girocerto.app.GiroCertoApp
 @Composable
 internal fun AppUpdatePrompt() {
     val manager = GiroCertoApp.instance.appUpdates
-    val state by manager.state.collectAsState()
+    val state by manager.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val release = state.release ?: return
     if (!state.showPrompt) return
@@ -33,7 +35,7 @@ internal fun AppUpdatePrompt() {
                         else { LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth()); Text("$progress%") }
                     }
                     DownloadPhase.VERIFYING -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                    DownloadPhase.AVAILABLE -> Text("Baixe o APK aqui. O Android pedirá sua confirmação para instalar a atualização.")
+                    DownloadPhase.AVAILABLE -> Text("O APK fica na pasta privada do Giro Certo. Após baixar, toque em Instalar atualização. Na primeira vez, o Android pode pedir autorização para instalar por este app.")
                     else -> Unit
                 }
             }
@@ -43,14 +45,8 @@ internal fun AppUpdatePrompt() {
                 DownloadPhase.AVAILABLE, DownloadPhase.FAILED -> TextButton(onClick = manager::download) {
                     Text(if (state.phase == DownloadPhase.FAILED) "Tentar novamente" else "Baixar atualização")
                 }
-                DownloadPhase.READY -> TextButton(onClick = {
-                    try {
-                        context.startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS))
-                        manager.dismiss()
-                    } catch (_: android.content.ActivityNotFoundException) {
-                        android.widget.Toast.makeText(context, "Abra o app Arquivos e procure ${release.fileName} em Downloads.", android.widget.Toast.LENGTH_LONG).show()
-                    }
-                }) { Text("Abrir Downloads") }
+                DownloadPhase.READY -> TextButton(onClick = manager::install) { Text("Instalar atualização") }
+                DownloadPhase.DOWNLOADING -> TextButton(onClick = manager::cancelDownload) { Text("Cancelar download") }
                 else -> Unit
             }
         },
@@ -63,7 +59,7 @@ internal fun AppUpdatePrompt() {
 @Composable
 internal fun AppUpdateSettings() {
     val manager = GiroCertoApp.instance.appUpdates
-    val state by manager.state.collectAsState()
+    val state by manager.state.collectAsStateWithLifecycle()
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Atualizações", style = MaterialTheme.typography.titleMedium)
