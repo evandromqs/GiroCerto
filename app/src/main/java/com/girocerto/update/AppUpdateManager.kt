@@ -95,7 +95,7 @@ internal class AppUpdateManager(private val context: Context) {
                 if (Build.VERSION.SDK_INT >= 29) request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, release.fileName)
                 val id = downloads.enqueue(request)
                 preferences.edit().putLong("download_id", id).putString("release", serialize(release)).commit()
-                monitor(id, release)
+                monitor(id, release, userInitiated = true)
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 fail("Não foi possível baixar. Confira a conexão, o espaço livre e se o arquivo já existe em Downloads.")
@@ -103,7 +103,7 @@ internal class AppUpdateManager(private val context: Context) {
         }
     }
 
-    private suspend fun monitor(id: Long, release: AppRelease) {
+    private suspend fun monitor(id: Long, release: AppRelease, userInitiated: Boolean = false) {
         try {
             while (true) {
                 val status = downloads.query(DownloadManager.Query().setFilterById(id)).use { cursor ->
@@ -132,7 +132,8 @@ internal class AppUpdateManager(private val context: Context) {
                         return
                     }
                     _state.update { it.copy(phase = DownloadPhase.READY, progress = 100,
-                        message = "${release.fileName} baixado e verificado. Abra Downloads e toque no APK para instalar.", showPrompt = true) }
+                        message = "${release.fileName} baixado e verificado. Abra Downloads e toque no APK para instalar.",
+                        showPrompt = userInitiated || shouldPrompt(release.versionCode)) }
                     return
                 }
                 delay(1_000L)

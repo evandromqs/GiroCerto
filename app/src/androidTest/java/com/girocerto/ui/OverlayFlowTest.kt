@@ -30,9 +30,6 @@ class OverlayFlowTest {
     @Test fun bubbleCanBeDraggedToTrashAndRestored() {
         val pkg = compose.activity.packageName
         android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("appops set $pkg SYSTEM_ALERT_WINDOW allow")).use { it.readBytes() }
-        val info = automation.serviceInfo
-        info.flags = info.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
-        automation.serviceInfo = info
         compose.runOnIdle {
             val prefs = CopilotPreferences(compose.activity)
             prefs.write(prefs.read().copy(enabled = true))
@@ -54,6 +51,7 @@ class OverlayFlowTest {
         SystemClock.sleep(200)
         touch(MotionEvent.ACTION_UP, trash.exactCenterX(), trash.exactCenterY())
         compose.waitUntil(5_000) { OverlayController.hidden(compose.activity) }
+        compose.waitUntil(5_000) { boundsFor("Giro Certo. Toque para abrir; arraste até a lixeira para ocultar.") == null }
         compose.runOnIdle {
             OverlayController.restore(compose.activity)
             OverlayController.startFloatingBubble(compose.activity)
@@ -67,21 +65,30 @@ class OverlayFlowTest {
         var found: Rect? = null
         val deadline = SystemClock.uptimeMillis() + 5_000
         while (found == null && SystemClock.uptimeMillis() < deadline) {
-            for (window in automation.windows) {
-                val root = window.root ?: continue
-                found = find(root, description)
-                if (found != null) break
-            }
+            found = boundsFor(description)
             if (found == null) SystemClock.sleep(100)
         }
         return checkNotNull(found) { "Overlay element unavailable: $description" }
     }
-    private fun find(node: AccessibilityNodeInfo, description: String): Rect? {
-        if (node.contentDescription?.toString() == description) return Rect().also { node.getBoundsInScreen(it) }
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            find(child, description)?.let { return it }
+
+    // Inspect the app's actual attached windows. Accessibility may omit non-focused
+    // application overlays even though they are visible and accept touch events.
+    private fun boundsFor(description: String): Rect? {
+        var result: Rect? = null
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            fun find(view: android.view.View): android.view.View? {
+                if (view.contentDescription?.toString() == description && view.isShown && view.isAttachedToWindow) return view
+                if (view is android.view.ViewGroup) for (i in 0 until view.childCount) find(view.getChildAt(i))?.let { return it }
+                return null
+            }
+            for (root in android.view.inspector.WindowInspector.getGlobalWindowViews()) {
+                val target = find(root) ?: continue
+                val point = IntArray(2)
+                target.getLocationOnScreen(point)
+                result = Rect(point[0], point[1], point[0] + target.width, point[1] + target.height)
+                break
+            }
         }
-        return null
+        return result
     }
 }
