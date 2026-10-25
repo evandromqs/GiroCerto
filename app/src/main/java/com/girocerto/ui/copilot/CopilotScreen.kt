@@ -22,6 +22,7 @@ fun CopilotScreen() {
     val context = LocalContext.current
     val repository = remember(context) { CopilotPreferences(context) }
     var policy by remember { mutableStateOf(repository.read()) }
+    var showReadingDisclosure by remember { mutableStateOf(false) }
     fun update(value: CopilotPolicy) {
         repository.write(value)
         policy = value
@@ -33,9 +34,19 @@ fun CopilotScreen() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Seu copiloto", style = MaterialTheme.typography.headlineMedium)
         Text("Escolha o que acompanhar e ouvir. Você decide sobre cada oferta.", color = TextSecondary)
-        OutlinedButton(onClick = { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)) }, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = { showReadingDisclosure = true }, modifier = Modifier.fillMaxWidth()) {
             Text("Autorizar leitura de ofertas")
         }
+        if (showReadingDisclosure) AlertDialog(
+            onDismissRequest = { showReadingDisclosure = false },
+            title = { Text("Leitura de ofertas na tela") },
+            text = { Text("Ao ativar o serviço de acessibilidade, o Giro Certo lê textos das janelas dos apps de trabalho selecionados: valores, distâncias, tempos e, quando disponíveis, endereços e avaliações. O processamento acontece no aparelho. As análises só são gravadas quando você salva ou ativa o salvamento automático. OCR e comprovantes de tela são opções separadas, desligadas por padrão. O app não aceita corridas nem executa gestos por você. Você pode desativar o serviço nas configurações do Android. Metas e diário funcionam sem essa permissão.") },
+            confirmButton = { TextButton(onClick = {
+                showReadingDisclosure = false
+                context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }) { Text("Entendi, abrir configurações") } },
+            dismissButton = { TextButton(onClick = { showReadingDisclosure = false }) { Text("Agora não") } }
+        )
         OutlinedButton(onClick = { context.startActivity(OverlayController.createOverlayPermissionIntent(context)) }, modifier = Modifier.fillMaxWidth()) {
             Text("Autorizar cartão flutuante")
         }
