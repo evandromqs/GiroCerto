@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Giro Certo</string>
+    <string name="accessibility_service_name">Giro Certo Copiloto</string>
+    <string name="accessibility_service_description">Identifica dados das ofertas de corrida na tela (valor, distância e tempo) para calcular automaticamente lucro líquido, ganho por km e avaliação por semáforo em tempo real.</string>
+</resources>

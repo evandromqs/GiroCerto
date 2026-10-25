@@ -1,0 +1,18 @@
+package com.girocerto.monitoring
+
+/** Suppresses repeat frames independently for each platform, across OCR and accessibility. */
+internal class OfferDeliveryGate(private val intervalMs: Long = 15_000L) {
+    private data class Entry(val result: OfferReaderResult, val time: Long)
+    private val recent = mutableMapOf<String, Entry>()
+
+    fun accepts(packageName: String, result: OfferReaderResult, now: Long): Boolean {
+        if (!result.isComplete) return false
+        recent.entries.removeAll { now - it.value.time >= intervalMs }
+        // The same offer may be recognized by either reader. Its source is not its identity.
+        val identity = result.copy(source = OfferSource.ACCESSIBILITY_SERVICE)
+        val previous = recent[packageName]
+        if (previous?.result == identity) return false
+        recent[packageName] = Entry(identity, now)
+        return true
+    }
+}
