@@ -16,11 +16,20 @@ import org.junit.Test
 
 class OverlayFlowTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @get:Rule val diagnostics = object : org.junit.rules.TestWatcher() {
+        override fun failed(error: Throwable, description: org.junit.runner.Description) {
+            val dir = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir") ?: return
+            java.io.File(dir).mkdirs()
+            java.io.File(dir, "overlay-failure.png").outputStream().use { stream ->
+                automation.takeScreenshot()?.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream)
+            }
+        }
+    }
     private val automation get() = InstrumentationRegistry.getInstrumentation().uiAutomation
 
     @Test fun bubbleCanBeDraggedToTrashAndRestored() {
         val pkg = compose.activity.packageName
-        automation.executeShellCommand("appops set $pkg SYSTEM_ALERT_WINDOW allow").close()
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("appops set $pkg SYSTEM_ALERT_WINDOW allow")).use { it.readBytes() }
         val info = automation.serviceInfo
         info.flags = info.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         automation.serviceInfo = info
@@ -34,10 +43,12 @@ class OverlayFlowTest {
         val down = SystemClock.uptimeMillis()
         fun touch(action: Int, x: Float, y: Float) {
             val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0)
-            automation.injectInputEvent(event, true); event.recycle()
+            event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            assertTrue("Touch injection failed", automation.injectInputEvent(event, true)); event.recycle()
         }
         touch(MotionEvent.ACTION_DOWN, bubble.exactCenterX(), bubble.exactCenterY())
         touch(MotionEvent.ACTION_MOVE, bubble.exactCenterX() + 50, bubble.exactCenterY() + 50)
+        SystemClock.sleep(300)
         val trash = awaitBounds("Solte aqui para ocultar")
         touch(MotionEvent.ACTION_MOVE, trash.exactCenterX(), trash.exactCenterY())
         SystemClock.sleep(200)

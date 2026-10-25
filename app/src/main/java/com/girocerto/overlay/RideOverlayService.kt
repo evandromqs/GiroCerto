@@ -255,12 +255,15 @@ class RideOverlayService : Service() {
 
     private fun showTrashTarget() {
         if (trashTarget != null) return
-        val target = FrameLayout(this)
+        val target = FrameLayout(this).apply {
+            contentDescription = "Solte aqui para ocultar"
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        }
         val icon = android.widget.ImageView(this).apply {
             tag = "trashIcon"
             setImageResource(com.girocerto.app.R.drawable.ic_trash)
             setPadding(dpToPx(18), dpToPx(18), dpToPx(18), dpToPx(18))
-            contentDescription = "Solte aqui para ocultar"
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(Color.WHITE, palette("#C9D5E6"))).apply {
                 shape = GradientDrawable.OVAL; setStroke(dpToPx(2), palette("#102746"))
@@ -278,7 +281,8 @@ class RideOverlayService : Service() {
         val layout = getWindowLayoutParams(dpToPx(144), dpToPx(112), 0, 0).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             x = 0; y = bottomInset + dpToPx(16)
-            flags = flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            // Keep this short-lived target discoverable by accessibility during the drag.
+            // The pointer remains captured by the bubble until ACTION_UP.
         }
         try { windowManager?.addView(target, layout); trashTarget = target }
         catch (_: Exception) { trashTarget = null }

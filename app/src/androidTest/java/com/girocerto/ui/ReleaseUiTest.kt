@@ -35,7 +35,7 @@ class ReleaseUiTest {
         compose.setContent {
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides
                 androidx.compose.ui.unit.Density(context.resources.displayMetrics.density, 1.5f)) {
-                GiroCertoTheme { SimpleSettingsScreen({}, {}, {}) }
+                GiroCertoTheme { androidx.compose.material3.Surface { SimpleSettingsScreen({}, {}, {}) } }
             }
         }
         for (mode in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
@@ -50,7 +50,7 @@ class ReleaseUiTest {
 
     @Test fun switchingDatesPreservesUnsavedEarnings() {
         runBlocking { GiroCertoApp.instance.workRepository.saveProfile(ElectricProfile("Teste", 200.0, .5, .1, 5, 8.0, 100.0, 500.0)) }
-        compose.setContent { GiroCertoTheme { WorkDiaryScreen {} } }
+        compose.setContent { GiroCertoTheme { androidx.compose.material3.Surface { WorkDiaryScreen {} } } }
         compose.onNodeWithText("Uber • recebido (R$)").performScrollTo().performTextReplacement("123,45")
         val today = LocalDate.now()
         selectDate(today.minusDays(1))

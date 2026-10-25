@@ -70,10 +70,10 @@ private fun AppearancePicker() {
     com.girocerto.ui.components.TactileCard(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
             Text("Aparência", style = MaterialTheme.typography.titleMedium)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 com.girocerto.app.theme.ThemeMode.entries.forEach { option ->
                     FilterChip(selected = mode == option, onClick = { com.girocerto.app.theme.AppearancePreferences.set(context, option) },
-                        label = { Text(option.label) }, modifier = Modifier.weight(1f))
+                        label = { Text(option.label, maxLines = 1) })
                 }
             }
         }
