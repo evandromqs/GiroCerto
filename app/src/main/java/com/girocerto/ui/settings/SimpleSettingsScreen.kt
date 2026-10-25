@@ -20,6 +20,7 @@ fun SimpleSettingsScreen(onCopilot: () -> Unit, onProfile: () -> Unit, onAdvance
         SettingsLink(Screen.COPILOT, "Copiloto e permissões", "Leitura de ofertas, janela flutuante e alertas", onCopilot)
         SettingsLink(Screen.GOALS, "Minha moto e metas", "Contrato semanal, custo por km e planejamento", onProfile)
         SettingsLink(Screen.SETTINGS, "Cartão e voz", "Duração, velocidade da fala e bolha flutuante", onAdvanced)
+        com.girocerto.update.AppUpdateSettings()
         Text("Seu perfil e os fechamentos ficam neste aparelho. A leitura de ofertas não registra ganhos realizados automaticamente.", style = MaterialTheme.typography.bodySmall)
     }
 }

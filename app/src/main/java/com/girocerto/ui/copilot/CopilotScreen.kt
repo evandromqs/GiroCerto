@@ -25,6 +25,7 @@ fun CopilotScreen() {
     val connected by com.girocerto.monitoring.GiroCertoAccessibilityService.isServiceRunning.collectAsState()
     val floating by OverlayController.isOverlayActive.collectAsState()
     val reader by com.girocerto.monitoring.GiroCertoAccessibilityService.readerStatus.collectAsState()
+    val observation by com.girocerto.monitoring.GiroCertoAccessibilityService.readerObservation.collectAsState()
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -70,7 +71,22 @@ fun CopilotScreen() {
             !floating -> "Leitura conectada • janela indisponível. Confira a autorização do cartão flutuante."
             else -> "Copiloto ativo • botão flutuante visível"
         }, color = MaterialTheme.colorScheme.primary)
-        if (connected && policy.enabled) Text(reader, style = MaterialTheme.typography.bodySmall)
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Diagnóstico da leitura", style = MaterialTheme.typography.titleMedium)
+                Text(observation, style = MaterialTheme.typography.bodySmall)
+                Text(reader, style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = {
+                    val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                    val details = "Giro Certo $version • Android ${android.os.Build.VERSION.RELEASE}\n" +
+                        "Leitor conectado: $connected • Copiloto ativo: ${policy.enabled} • OCR: ${policy.ocrEnabled} • Janela: $floating\n" +
+                        "$observation\n$reader"
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Diagnóstico Giro Certo", details))
+                    android.widget.Toast.makeText(context, "Diagnóstico copiado", android.widget.Toast.LENGTH_SHORT).show()
+                }) { Text("Copiar diagnóstico") }
+            }
+        }
         Preference("Copiloto ativo", policy.enabled) { update(policy.copy(enabled = it)) }
         Text("Aplicativos acompanhados", style = MaterialTheme.typography.titleMedium)
         Preference("Uber e Uber Eats", policy.uber) { update(policy.copy(uber = it)) }

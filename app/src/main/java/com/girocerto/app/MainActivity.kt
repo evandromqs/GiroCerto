@@ -15,6 +15,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         com.girocerto.overlay.OverlayController.syncCopilot(this)
+        GiroCertoApp.instance.appUpdates.check()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,6 +28,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     AppNavigation()
+                    com.girocerto.update.AppUpdatePrompt()
                 }
             }
         }

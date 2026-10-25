@@ -46,6 +46,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         _isServiceRunning.value = true
         voiceAnnouncer = VoiceAnnouncer(this)
+        reportReader("Leitor conectado • aguardando oferta dos apps habilitados")
 
         OverlayController.connect(this)
         readHandler.removeCallbacks(scanVisibleWindows)
@@ -81,6 +82,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     private fun reportReader(message: String) {
         if (_readerStatus.value != message) {
             _readerStatus.value = message
+            OverlayController.updateReaderStatus(message)
             android.util.Log.i("GiroReader", message)
         }
     }
@@ -97,7 +99,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         // Content can arrive in several frames; retry a bounded read, without
         // retaining AccessibilityEvent or mixing text from different offers.
         val windowId = event.windowId
-        if (!readOfferWindow(packageName, windowId)) {
+        if (!readOfferWindow(packageName, windowId, eventRoot(event, packageName))) {
             retryRead = Runnable {
                 if (!readOfferWindow(packageName, windowId)) {
                     retryRead = Runnable { readOfferWindow(packageName, windowId) }
@@ -108,11 +110,35 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun readOfferWindow(packageName: String, windowId: Int): Boolean {
-        if (!CopilotPreferences(this).read().monitors(packageName)) return true
+    // Some floating windows expose their event source before appearing in getWindows().
+    // Use only this event's own package; never retain nodes across asynchronous retries.
+    private fun eventRoot(event: AccessibilityEvent, packageName: String): AccessibilityNodeInfo? {
+        var node = event.source ?: return null
+        if (node.packageName?.toString() != packageName) {
+            @Suppress("DEPRECATION") node.recycle()
+            return null
+        }
+        repeat(32) {
+            val parent = node.parent ?: return node
+            if (parent.packageName?.toString() != packageName) {
+                @Suppress("DEPRECATION") parent.recycle()
+                return node
+            }
+            @Suppress("DEPRECATION") node.recycle()
+            node = parent
+        }
+        return node
+    }
+
+    private fun readOfferWindow(packageName: String, windowId: Int, sourceRoot: AccessibilityNodeInfo? = null): Boolean {
+        if (!CopilotPreferences(this).read().monitors(packageName)) {
+            @Suppress("DEPRECATION") sourceRoot?.recycle()
+            return true
+        }
         // Inspect the emitting application's window, including its offer popup,
         // rather than assuming the focused root belongs to that application.
         val candidates = mutableListOf<AccessibilityNodeInfo>()
+        sourceRoot?.let { candidates.add(it) }
         try {
             windows.sortedByDescending { it.id == windowId }.forEach { window ->
                 val root = window.root ?: return@forEach
@@ -126,13 +152,16 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 }
             }
             if (candidates.isEmpty()) {
+                _readerObservation.value = "$packageName • evento recebido, janela sem texto acessível"
                 reportReader("$packageName: aguardando janela legível")
-                ocrDelegate.value.read(packageName)
+                readImageFallback(packageName)
                 return false
             }
             for (root in candidates) {
                 val texts = mutableListOf<String>()
                 collectAllTexts(root, texts)
+                _readerObservation.value = "$packageName • ${texts.size} textos acessíveis • " +
+                    java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))
                 val parsed = AccessibilityOfferReader.parse(texts, packageName)
                 if (!parsed.isComplete) {
                     if (parsed.distanceKm != null && parsed.durationMinutes != null && parsed.fare == null) {
@@ -154,7 +183,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 acceptParsedOffer(parsed, packageName)
                 return true
             }
-            ocrDelegate.value.read(packageName)
+            readImageFallback(packageName)
             return false
         } catch (error: Exception) {
             reportReader("Falha de leitura: ${error.javaClass.simpleName}")
@@ -162,6 +191,11 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         } finally {
             candidates.forEach { @Suppress("DEPRECATION") it.recycle() }
         }
+    }
+
+    private fun readImageFallback(packageName: String) {
+        if (CopilotPreferences(this).read().ocrEnabled) ocrDelegate.value.read(packageName)
+        else reportReader("Oferta sem dados suficientes pelo texto. Ative Leitura local de imagem (OCR) no Copiloto para tentar ler o popup.")
     }
 
     private fun acceptParsedOffer(parsed: OfferReaderResult, packageName: String) {
@@ -294,6 +328,9 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             "com.sankuai.meituan.dispatch.driver",
             "com.keeta.driver"
         )
+
+        private val _readerObservation = MutableStateFlow("Nenhuma janela de app de trabalho identificada nesta sessão")
+        val readerObservation: StateFlow<String> = _readerObservation.asStateFlow()
 
         private val _readerStatus = MutableStateFlow("Aguardando oferta real de um app habilitado")
         val readerStatus: StateFlow<String> = _readerStatus.asStateFlow()

@@ -8,6 +8,9 @@ import com.girocerto.data.repository.SettingsRepository
  * Ponto de entrada do aplicativo e provedor de dependências locais (Service Locator leve).
  */
 class GiroCertoApp : Application() {
+    internal lateinit var appUpdates: com.girocerto.update.AppUpdateManager
+        private set
+
     lateinit var workRepository: com.girocerto.data.repository.WorkRepository
         private set
 
@@ -20,6 +23,7 @@ class GiroCertoApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        appUpdates = com.girocerto.update.AppUpdateManager(this)
         settingsRepository = SettingsRepository(this)
         rideRepository = RideRepository(this)
         workRepository = com.girocerto.data.repository.WorkRepository(this)

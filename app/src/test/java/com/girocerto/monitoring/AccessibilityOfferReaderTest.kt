@@ -7,6 +7,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AccessibilityOfferReaderTest {
+    @Test fun uberEnviosMotoShownInUserScreenshotCalculatesRates() {
+        // Transcribed non-personal fields from the reported popup; no addresses or image stored.
+        val lines = listOf("2% de bateria restante no celular.", "Envios Moto", "R$ 16,73",
+            "4,95 (491)", "Verificado", "29 min (10.7 km)", "Aceitar")
+        val result = AccessibilityOfferReader.parse(lines, "com.ubercab.driver")
+        assertTrue(result.isComplete)
+        assertTrue(OfferOcrContext.permits(lines))
+        assertEquals(16.73, result.fare!!, 0.001)
+        assertEquals(10.7, result.distanceKm!!, 0.001)
+        assertEquals(0.0, result.pickupDistanceKm!!, 0.001)
+        assertEquals(29, result.durationMinutes)
+        val analysis = com.girocerto.domain.calculator.RideCalculator.calculate(
+            com.girocerto.domain.model.RideOffer(fare = result.fare!!, distanceKm = result.distanceKm!!,
+                durationMinutes = result.durationMinutes!!), com.girocerto.domain.model.VehicleSettings())
+        assertEquals(1.56, analysis.grossPerKm, 0.001)
+        assertEquals(34.61, analysis.grossPerHour, 0.001)
+    }
+
     @Test fun deliveryWithoutTimeStillCalculatesPerKm() {
         val result = AccessibilityOfferReader.parse(listOf("Nova entrega", "R$ 18,00", "Distância total 6 km", "Aceitar"), "br.com.ifood.driver.app")
         assertTrue(result.isComplete)

@@ -54,6 +54,8 @@ object OverlayController {
         setOverlayActive(false)
     }
 
+    fun updateReaderStatus(message: String) { boundService?.updateReaderStatus(message) }
+
     fun syncCopilot(context: Context) {
         if (owner == null) return
         if (CopilotPreferences(context).read().enabled && canDrawOverlays(context)) boundService?.ensureBubble()

@@ -78,15 +78,16 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          cp app/build/outputs/apk/release/app-release.apk release/GiroCerto.apk
+          cp app/build/outputs/apk/release/app-release.apk "release/GiroCerto-$VERSION_NAME.apk"
           cd release
-          sha256sum GiroCerto.apk > SHA256SUMS.txt
+          sha256sum "GiroCerto-$VERSION_NAME.apk" > SHA256SUMS.txt
           python3 - <<'PY'
           import hashlib, json, os
-          digest = hashlib.sha256(open('GiroCerto.apk', 'rb').read()).hexdigest()
+          filename = 'GiroCerto-' + os.environ['VERSION_NAME'] + '.apk'
+          digest = hashlib.sha256(open(filename, 'rb').read()).hexdigest()
           tag = 'v' + os.environ['VERSION_NAME']
           json.dump({'versionCode': int(os.environ['VERSION_CODE']), 'versionName': os.environ['VERSION_NAME'],
-                     'sha256': digest, 'apkUrl': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{tag}/GiroCerto.apk"},
+                     'sha256': digest, 'apkUrl': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{tag}/{filename}"},
                     open('update.json', 'w'), indent=2)
           PY
       - name: Publish GitHub Release
@@ -94,6 +95,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="v$VERSION_NAME"
-          gh release create "$tag" release/GiroCerto.apk release/SHA256SUMS.txt release/update.json \
+          gh release create "$tag" "release/GiroCerto-$VERSION_NAME.apk" release/SHA256SUMS.txt release/update.json \
             --verify-tag=false --target "$GITHUB_SHA" --title "Giro Certo $VERSION_NAME" \
             --notes "APK release assinado. Compilação $GITHUB_RUN_NUMBER; commit $GITHUB_SHA." --latest

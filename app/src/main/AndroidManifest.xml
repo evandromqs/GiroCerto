@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Bundled OCR runs locally; this version has no network updater or backend. -->
-    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <!-- Only release metadata and APK downloads use the network. OCR remains local. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <!-- Permissão para exibir a Janela Flutuante com indicadores da análise sob consentimento explícito do usuário -->

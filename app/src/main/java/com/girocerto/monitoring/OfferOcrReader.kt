@@ -68,18 +68,14 @@ class OfferOcrReader(
             if (!matches) continue
             val bounds = android.graphics.Rect().also { window.getBoundsInScreen(it) }
             if (bounds.isEmpty || (expected != null && bounds != expected.bounds)) continue
-            val masks = mutableListOf<android.graphics.Rect>()
-            val covered = windows.any { above ->
+            val masks = windows.filter { it.layer > window.layer }.mapNotNull { above ->
                 val area = android.graphics.Rect().also { above.getBoundsInScreen(it) }
-                if (above.layer <= window.layer || !android.graphics.Rect.intersects(bounds, area)) false
-                else {
-                    val overlayRoot = above.root
-                    val own = try { overlayRoot?.packageName?.toString() == service.packageName }
-                        finally { @Suppress("DEPRECATION") overlayRoot?.recycle() }
-                    if (own) { masks.add(area); false } else true
-                }
+                if (android.graphics.Rect.intersects(bounds, area)) area else null
             }
-            if (!covered) return Target(window.id, bounds, masks)
+            // A notification or floating button only hides its own area, not the whole offer.
+            if (OcrWindowRegion.visibleParts(bounds.region(), masks.map { it.region() }).isNotEmpty()) {
+                return Target(window.id, bounds, masks)
+            }
 
         }
         return null
@@ -123,11 +119,14 @@ class OfferOcrReader(
                         hardware = Bitmap.wrapHardwareBuffer(buffer, result.colorSpace)
                         full = hardware?.copy(Bitmap.Config.ARGB_8888, true)
                         val source = full ?: throw IllegalStateException("No bitmap")
-                        if (Build.VERSION.SDK_INT < 34) {
-                            // Mask both pre/post-capture positions if our bubble moved during capture.
-                            val canvas = android.graphics.Canvas(source)
-                            val paint = android.graphics.Paint().apply { color = android.graphics.Color.BLACK }
-                            (selected.masks + current.masks).forEach { canvas.drawRect(it, paint) }
+                        // Exclude covers from both snapshots, including notifications and our bubble.
+                        // API 34 window captures need coordinates relative to the target window.
+                        val canvas = android.graphics.Canvas(source)
+                        val paint = android.graphics.Paint().apply { color = android.graphics.Color.BLACK }
+                        OcrWindowRegion.masks(selected.bounds.region(),
+                            (selected.masks + current.masks).map { it.region() },
+                            Build.VERSION.SDK_INT >= 34, source.width, source.height).forEach {
+                            canvas.drawRect(it.left.toFloat(), it.top.toFloat(), it.right.toFloat(), it.bottom.toFloat(), paint)
                         }
                         if (Build.VERSION.SDK_INT >= 34) {
                             crop = source; full = null
@@ -150,7 +149,9 @@ class OfferOcrReader(
                                     if (OfferOcrContext.permits(lines) && parsed.isComplete) {
                                         report("OCR: oferta completa reconhecida")
                                         offerReady(parsed.copy(source = OfferSource.OCR_FALLBACK), pkg)
-                                    } else report("OCR: oferta incompleta ou valores ambíguos")
+                                    } else report(if (!parsed.isComplete)
+                                        "OCR: ${lines.size} textos; faltam ${parsed.missingFields.joinToString().ifEmpty { "dados da oferta" }}"
+                                        else "OCR: valores ambíguos ou botão Aceitar não reconhecido")
                                 } else report("OCR: resultado descartado; janela mudou")
                             }
                             .addOnFailureListener { report("OCR: falha no reconhecimento local") }
@@ -163,13 +164,22 @@ class OfferOcrReader(
                     }
                 }
                 override fun onFailure(errorCode: Int) {
-                    report("OCR: captura indisponível (código " + errorCode + ")"); finish()
+                    report(when (errorCode) {
+                        AccessibilityService.ERROR_TAKE_SCREENSHOT_NO_ACCESSIBILITY_ACCESS ->
+                            "OCR: Android não liberou captura. Desative e reative a acessibilidade do Giro Certo após atualizar."
+                        AccessibilityService.ERROR_TAKE_SCREENSHOT_SECURE_WINDOW ->
+                            "OCR: esta janela protege o conteúdo contra captura"
+                        else -> "OCR: captura indisponível (código $errorCode)"
+                    })
+                    finish()
                 }
             }
             if (Build.VERSION.SDK_INT >= 34) service.takeScreenshotOfWindow(selected.id, service.mainExecutor, callback)
             else service.takeScreenshot(Display.DEFAULT_DISPLAY, service.mainExecutor, callback)
         } catch (_: Exception) { report("OCR: captura indisponível"); finish() }
     }
+    private fun android.graphics.Rect.region() = OcrRegion(left, top, right, bottom)
+
     private fun finish() { busy = false; if (closed) recognizer.close() }
     fun close() {
         closed = true

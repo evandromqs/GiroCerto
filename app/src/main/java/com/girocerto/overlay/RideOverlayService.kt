@@ -77,6 +77,9 @@ class RideOverlayService : Service() {
     inner class LocalBinder : android.os.Binder() { val service get() = this@RideOverlayService }
     override fun onBind(intent: Intent?): IBinder = LocalBinder()
     fun ensureBubble() { if (currentView?.isAttachedToWindow != true) showBubbleMode() }
+    fun updateReaderStatus(message: String) {
+        currentView?.findViewWithTag<TextView>("readerStatus")?.text = message
+    }
     fun dismiss() { removeOverlay(); stopSelf() }
 
 
@@ -345,7 +348,8 @@ class RideOverlayService : Service() {
 
         // Status de monitoramento
         val statusText = TextView(this).apply {
-            text = "Leitura de ofertas • controle manual"
+            tag = "readerStatus"
+            text = com.girocerto.monitoring.GiroCertoAccessibilityService.readerStatus.value
             setTextColor(Color.parseColor("#B5C9C7"))
             textSize = 11f
             setPadding(0, dpToPx(4), 0, dpToPx(10))
