@@ -1,8 +1,12 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
 }
+
+val releaseVersion = Properties().apply { rootProject.file("version.properties").inputStream().use { load(it) } }
 
 android {
     namespace = "com.girocerto.app"
@@ -11,9 +15,17 @@ android {
         applicationId = "com.girocerto.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = providers.environmentVariable("VERSION_CODE").orNull?.toInt() ?: 7
-        versionName = providers.environmentVariable("VERSION_NAME").orNull ?: "1.0.7"
+        versionCode = releaseVersion.getProperty("versionCode").toInt()
+        versionName = releaseVersion.getProperty("versionName")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    testOptions {
+        managedDevices {
+            localDevices {
+                create("pixel2api30") { device = "Pixel 2"; apiLevel = 30; systemImageSource = "aosp" }
+            }
+        }
     }
 
     signingConfigs {

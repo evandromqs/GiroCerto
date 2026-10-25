@@ -24,7 +24,9 @@ fun SimpleSettingsScreen(onCopilot: () -> Unit, onProfile: () -> Unit, onAdvance
         SettingsLink(Screen.SETTINGS, "Cartão e voz", "Duração, velocidade da fala e bolha flutuante", onAdvanced)
         AppearancePicker()
         com.girocerto.update.AppUpdateSettings()
-        Text("Seu perfil e os fechamentos ficam neste aparelho. A leitura de ofertas não registra ganhos realizados automaticamente.", style = MaterialTheme.typography.bodySmall)
+        VersionHistorySection()
+        DataExportSection()
+        Text("Seu perfil e os fechamentos ficam no aparelho e podem participar do backup do Android, conforme suas configurações. Ofertas e estados de permissões não entram nesse backup. A leitura de ofertas não registra ganhos realizados automaticamente.", style = MaterialTheme.typography.bodySmall)
     }
 }
 

@@ -88,6 +88,7 @@ fun WorkDiaryScreen(onProfile: () -> Unit) {
     val profile by repo.profile.collectAsState()
     val days by repo.days.collectAsState()
     var selectedDate by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
+    val dayDrafts = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     val date = LocalDate.parse(selectedDate)
     val context = LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
@@ -101,7 +102,7 @@ fun WorkDiaryScreen(onProfile: () -> Unit) {
         if (profile == null) {
             Text("Cadastre os custos da sua moto antes do primeiro fechamento.")
             Button(onClick = onProfile) { Text("Criar perfil") }
-        } else key(selectedDate) {
+        } else dayDrafts.SaveableStateProvider(selectedDate) {
             DayEditor(date, days.firstOrNull { it.date == date }, profile!!)
         }
         Text("Dias registrados", style = MaterialTheme.typography.titleMedium)
@@ -140,6 +141,10 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (platform !in selectedPlatforms) Text("App desmarcado, com valores neste dia. O registro foi preservado.", style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    com.girocerto.ui.components.PlatformIcon(platform)
+                    Text(platform.label, style = MaterialTheme.typography.titleMedium)
+                }
                 MoneyField("${platform.label} • recebido (R$)", revenueFields[i], {
                     revenueFields = ArrayList(revenueFields).apply { set(i, it) }; message = null
                 })
@@ -218,6 +223,8 @@ private fun WorkPlatformPicker() {
                         Checkbox(checked = platform in choices, enabled = !saving, onCheckedChange = {
                             choices = if (it) choices + platform else choices - platform
                         })
+                        com.girocerto.ui.components.PlatformIcon(platform)
+                        Spacer(Modifier.width(12.dp))
                         Text(platform.label)
                     }
                 }

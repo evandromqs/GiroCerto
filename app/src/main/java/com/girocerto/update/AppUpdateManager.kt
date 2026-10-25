@@ -39,7 +39,7 @@ internal class AppUpdateManager(private val context: Context) {
         if (saved != null && saved.isNewerThan(installedCode) && id > 0) {
             _state.value = UpdateState(release = saved, phase = DownloadPhase.DOWNLOADING)
             downloadJob = scope.launch { monitor(id, saved) }
-        } else preferences.edit().clear().apply()
+        } else clearDownload()
     }
 
     fun check(force: Boolean = false) {
@@ -53,8 +53,8 @@ internal class AppUpdateManager(private val context: Context) {
                 val release = parse(fetchManifest())
                 if (release.isNewerThan(installedCode)) {
                     _state.update { current ->
-                        if (current.release == release) current.copy(checking = false, showPrompt = true)
-                        else UpdateState(release = release, message = "Nova versão disponível: ${release.versionName}", showPrompt = true)
+                        if (current.release == release) current.copy(checking = false, showPrompt = force || shouldPrompt(release.versionCode))
+                        else UpdateState(release = release, message = "Nova versão disponível: ${release.versionName}", showPrompt = force || shouldPrompt(release.versionCode))
                     }
                 } else _state.update { UpdateState(message = "Você já usa a versão mais recente.") }
             } catch (error: Exception) {
@@ -64,7 +64,14 @@ internal class AppUpdateManager(private val context: Context) {
         }
     }
 
-    fun dismiss() { _state.update { it.copy(showPrompt = false) } }
+    private fun clearDownload() { preferences.edit().remove("release").remove("download_id").apply() }
+    private fun shouldPrompt(version: Long) = UpdateReminder.shouldPrompt(version, preferences.getLong("dismissed_version", -1),
+        preferences.getLong("remind_after", 0), System.currentTimeMillis())
+    fun dismiss() {
+        _state.value.release?.let { preferences.edit().putLong("dismissed_version", it.versionCode)
+            .putLong("remind_after", System.currentTimeMillis() + UpdateReminder.DELAY_MS).apply() }
+        _state.update { it.copy(showPrompt = false) }
+    }
     fun open() {
         if (_state.value.release != null) _state.update { it.copy(showPrompt = true) }
         else check(force = true)
@@ -120,7 +127,7 @@ internal class AppUpdateManager(private val context: Context) {
                     val checksum = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
                     if (checksum != release.sha256) {
                         downloads.remove(id)
-                        preferences.edit().clear().commit()
+                        clearDownload()
                         fail("O arquivo não passou na verificação. Baixe novamente.")
                         return
                     }

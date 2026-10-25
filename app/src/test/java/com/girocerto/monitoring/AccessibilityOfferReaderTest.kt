@@ -7,6 +7,28 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AccessibilityOfferReaderTest {
+    @Test fun ignoresLabeledBalanceAndRejectsUnknownCompetingPrices() {
+        val offer = AccessibilityOfferReader.parse(listOf("Saldo R$ 250,00", "R$ 16,73", "10.7 km", "29 min", "Aceitar"), "com.ubercab.driver")
+        assertEquals(16.73, offer.fare!!, .001)
+        val ambiguous = AccessibilityOfferReader.parse(listOf("R$ 250,00", "R$ 16,73", "10.7 km", "Aceitar"), "com.ubercab.driver")
+        assertFalse(ambiguous.isComplete)
+    }
+    @Test fun repeatedNodesDoNotDoubleDistanceOrTime() {
+        val offer = AccessibilityOfferReader.parse(listOf("R$ 20,00", "10 km", "20 min", "10 km", "20 min", "Aceitar"), "com.ubercab.driver")
+        assertEquals(10.0, offer.distanceKm!! + offer.pickupDistanceKm!!, .001)
+        assertEquals(20, offer.durationMinutes)
+    }
+    @Test fun explicitTimeTotalOverridesLegs() {
+        val offer = AccessibilityOfferReader.parse(listOf("R$ 20,00", "Total 10 km", "Embarque 5 min", "Viagem 20 min", "Tempo total 25 min"), "com.ubercab.driver")
+        assertEquals(25, offer.durationMinutes)
+    }
+    @Test fun numbersInsideUnrelatedTextAreNotFares() {
+        val offer = AccessibilityOfferReader.parse(listOf("Saldo anterior 80,50", "10 km", "Aceitar"), "com.ubercab.driver")
+        assertFalse(offer.isComplete)
+    }
+    @Test fun currentKeetaPackageIsRecognized() {
+        assertEquals("Keeta", AccessibilityOfferReader.parse(listOf("R$ 20,00", "10 km"), "com.sankuai.sailor.courier").appName)
+    }
     @Test fun uberEnviosMotoShownInUserScreenshotCalculatesRates() {
         // Transcribed non-personal fields from the reported popup; no addresses or image stored.
         val lines = listOf("2% de bateria restante no celular.", "Envios Moto", "R$ 16,73",

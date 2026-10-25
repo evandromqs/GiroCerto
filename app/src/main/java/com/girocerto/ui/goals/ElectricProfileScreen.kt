@@ -32,8 +32,8 @@ fun MoneyField(label: String, value: String, onChange: (String) -> Unit, modifie
 @Composable
 fun SummaryLine(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.titleSmall)
+        Text(label, Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Start, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End, style = MaterialTheme.typography.titleSmall)
     }
 }
 
@@ -140,8 +140,8 @@ private fun ProfileProjection(p: ElectricProfile) {
             SummaryLine("Buscar por km", Formatters.formatPerKm(p.targetPerKm))
             SummaryLine("Contrato semanal", Formatters.formatCurrency(p.weeklyRent))
             SummaryLine("Custo variável por km", Formatters.formatPerKm(p.variablePerKm))
-            Text("O fixo semanal é dividido entre ${p.workDays} dias de trabalho. A meta cobre o fixo, todos os km previstos e o valor que você quer guardar. É uma projeção, não garantia de ganho.", style = MaterialTheme.typography.bodySmall)
-            Text("O copiloto usa esses custos por km e essas metas. O fixo semanal é descontado no fechamento do dia, não em cada oferta.", style = MaterialTheme.typography.bodySmall)
+            Text("O fixo semanal é dividido entre ${p.workDays} dias de trabalho. A meta cobre o fixo, todos os km previstos e o valor que você quer guardar. É uma projeção, não garantia de ganho.", style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.Justify, modifier = Modifier.fillMaxWidth())
+            Text("O copiloto usa esses custos por km e essas metas. O fixo semanal é descontado no fechamento do dia, não em cada oferta.", style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.Justify, modifier = Modifier.fillMaxWidth())
         }
     }
 }

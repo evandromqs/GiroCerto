@@ -415,12 +415,10 @@ class RideOverlayService : Service() {
         }
         root.addView(statusText)
 
-        // Lucro acumulado de hoje
-        val summary = GiroCertoApp.instance.rideRepository.getTodaySummary(
-            GiroCertoApp.instance.settingsRepository.settings.value.dailyFixedCost
-        )
+        val today = GiroCertoApp.instance.workRepository.days.value.firstOrNull { it.date == java.time.LocalDate.now() }
         val profitText = TextView(this).apply {
-            text = String.format(Locale.GERMANY, "Estimativa hoje: R$ %.2f (%d ofertas)", summary.totalEstimatedProfit, summary.totalRides)
+            text = today?.let { String.format(Locale.GERMANY, "Saldo registrado hoje: R$ %.2f", it.net) }
+                ?: "Hoje: ganhos ainda não registrados"
             setTextColor(palette("#F9FAFB"))
             gravity = Gravity.CENTER
             textSize = 12f

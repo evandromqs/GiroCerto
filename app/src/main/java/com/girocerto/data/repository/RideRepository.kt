@@ -34,12 +34,17 @@ class RideRepository(
     private val writeMutex = Mutex()
     private val atomicHistory by lazy { AtomicFile(historyFile) }
 
+    private val _loadError = MutableStateFlow<String?>(null)
+    val loadError = _loadError.asStateFlow()
+
     private val _rides = MutableStateFlow<List<RideAnalysis>>(emptyList())
     val rides: StateFlow<List<RideAnalysis>> = _rides.asStateFlow()
 
     init {
         loadHistory()
     }
+
+    fun retryLoad() { _loadError.value = null; loadHistory() }
 
     private fun loadHistory() {
         try {
@@ -60,11 +65,13 @@ class RideRepository(
             }
             _rides.value = list.sortedByDescending { it.timestamp }
         } catch (_: Exception) {
+            _loadError.value = "Não foi possível abrir o histórico. O arquivo original foi preservado; novos salvamentos estão bloqueados."
             _rides.value = emptyList()
         }
     }
 
     private fun persistToFile(items: List<RideAnalysis>) {
+        if (_loadError.value != null) throw java.io.IOException("Histórico indisponível; original preservado")
         val jsonArray = JSONArray()
         items.forEach { jsonArray.put(toJson(it)) }
         val bytes = jsonArray.toString().toByteArray(Charsets.UTF_8)

@@ -99,9 +99,13 @@ fun CopilotScreen() {
         Text("Arraste a bolha até a lixeira no rodapé para ocultar a janela. A leitura continua; você pode mostrar a janela novamente aqui.", style = MaterialTheme.typography.bodySmall)
         Preference("Copiloto ativo", policy.enabled) { update(policy.copy(enabled = it)) }
         Text("Aplicativos acompanhados", style = MaterialTheme.typography.titleMedium)
-        Preference("Uber e Uber Eats", policy.uber) { update(policy.copy(uber = it)) }
-        Preference("99 e 99Food", policy.ninetyNine) { update(policy.copy(ninetyNine = it)) }
+        Preference("Uber e Uber Eats", policy.uber, com.girocerto.domain.model.WorkPlatform.UBER) { update(policy.copy(uber = it)) }
+        Preference("99 e 99Food", policy.ninetyNine, com.girocerto.domain.model.WorkPlatform.NINETY_NINE) { update(policy.copy(ninetyNine = it)) }
         Preference("inDrive", policy.inDrive) { update(policy.copy(inDrive = it)) }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            com.girocerto.ui.components.PlatformIcon(com.girocerto.domain.model.WorkPlatform.IFOOD)
+            com.girocerto.ui.components.PlatformIcon(com.girocerto.domain.model.WorkPlatform.KEETA)
+        }
         Preference("iFood e Keeta", policy.otherApps) { update(policy.copy(otherApps = it)) }
         Text("Alertas por classificação", style = MaterialTheme.typography.titleMedium)
         Text("Também é necessário ativar a voz nos ajustes gerais.", style = MaterialTheme.typography.bodySmall)
@@ -134,9 +138,10 @@ fun CopilotScreen() {
 }
 
 @Composable
-private fun Preference(label: String, checked: Boolean, change: (Boolean) -> Unit) {
+private fun Preference(label: String, checked: Boolean, platform: com.girocerto.domain.model.WorkPlatform? = null, change: (Boolean) -> Unit) {
     TactileCard(modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            platform?.let { com.girocerto.ui.components.PlatformIcon(it); Spacer(Modifier.width(12.dp)) }
             Text(label, Modifier.weight(1f))
             Switch(checked = checked, onCheckedChange = change)
         }

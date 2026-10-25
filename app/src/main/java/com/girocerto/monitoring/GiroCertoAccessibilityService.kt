@@ -71,12 +71,15 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                         root?.recycle()
                         if (pkg in TARGET_PACKAGES) packages[pkg!!] = window.id
                     }
+                    scanDelay = if (packages.isEmpty()) 5_000L else 2_500L
                     packages.forEach { (pkg, id) -> readOfferWindow(pkg, id) }
                 }
             } catch (error: Exception) { reportReader("Falha ao observar janelas: ${error.javaClass.simpleName}") }
-            finally { readHandler.postDelayed(this, 1_500L) }
+            finally { readHandler.postDelayed(this, scanDelay) }
         }
     }
+    private var lastEventRead = -500L
+    private var scanDelay = 3_000L
     private var lastFormatTrace: String? = null
 
     private fun reportReader(message: String) {
@@ -95,6 +98,9 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             reportReader("Monitoramento pausado para $packageName")
             return
         }
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastEventRead < 400L) return
+        lastEventRead = now
         retryRead?.let { readHandler.removeCallbacks(it) }
         // Content can arrive in several frames; retry a bounded read, without
         // retaining AccessibilityEvent or mixing text from different offers.
@@ -159,7 +165,10 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             }
             for (root in candidates) {
                 val texts = mutableListOf<String>()
-                collectAllTexts(root, texts)
+                if (!collectAllTexts(root, texts, ReadBudget())) {
+                    reportReader("Janela extensa: leitura parcial descartada; tentando OCR")
+                    continue
+                }
                 _readerObservation.value = "$packageName • ${texts.size} textos acessíveis • " +
                     java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))
                 val parsed = AccessibilityOfferReader.parse(texts, packageName)
@@ -178,6 +187,10 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                     }
                     reportReader("${parsed.appName}: ${texts.size} textos; " +
                         if (texts.isEmpty()) "tela sem texto acessível" else "aguardando ${parsed.missingFields.joinToString()}")
+                    continue
+                }
+                if (!OfferScreenContext.hasOfferAction(texts)) {
+                    reportReader("Valores lidos, mas sem confirmação de uma oferta na tela")
                     continue
                 }
                 acceptParsedOffer(parsed, packageName)
@@ -271,25 +284,21 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun collectAllTexts(node: AccessibilityNodeInfo?, texts: MutableList<String>) {
-        if (node == null) return
-
-        val text = node.text?.toString()?.trim()
-        val contentDesc = node.contentDescription?.toString()?.trim()
-
-        if (!text.isNullOrBlank()) {
-            texts.add(text)
-        }
-        if (!contentDesc.isNullOrBlank() && contentDesc != text) {
-            texts.add(contentDesc)
-        }
-
+    private class ReadBudget {
+        var nodes = 0
+        val started = android.os.SystemClock.uptimeMillis()
+        fun permits(depth: Int) = ++nodes <= 512 && depth <= 40 && android.os.SystemClock.uptimeMillis() - started < 50
+    }
+    private fun collectAllTexts(node: AccessibilityNodeInfo, texts: MutableList<String>, budget: ReadBudget, depth: Int = 0): Boolean {
+        if (!budget.permits(depth)) return false
+        node.text?.toString()?.trim()?.takeIf { it.isNotBlank() }?.let { texts.add(it.take(500)) }
+        node.contentDescription?.toString()?.trim()?.takeIf { it.isNotBlank() && it != node.text?.toString()?.trim() }?.let { texts.add(it.take(500)) }
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            collectAllTexts(child, texts)
-            @Suppress("DEPRECATION")
-            child.recycle()
+            try { if (!collectAllTexts(child, texts, budget, depth + 1)) return false }
+            finally { @Suppress("DEPRECATION") child.recycle() }
         }
+        return true
     }
 
     override fun onInterrupt() {
@@ -328,7 +337,8 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             "sinet.startup.indriver",
             // Keeta
             "com.sankuai.meituan.dispatch.driver",
-            "com.keeta.driver"
+            "com.keeta.driver",
+            "com.sankuai.sailor.courier"
         )
 
         private val _readerObservation = MutableStateFlow("Nenhuma janela de app de trabalho identificada nesta sessão")

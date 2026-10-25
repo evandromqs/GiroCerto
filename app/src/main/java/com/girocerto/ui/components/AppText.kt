@@ -11,7 +11,7 @@ import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.TextUnit
 
-/** Center short labels and titles; justify explanatory paragraphs without changing inputs. */
+/** Alignment follows the semantic typography or an explicit call-site choice, never text length. */
 @Composable
 fun AppText(text: String, modifier: Modifier = Modifier, color: Color = Color.Unspecified,
     fontSize: TextUnit = TextUnit.Unspecified, fontStyle: FontStyle? = null, fontWeight: FontWeight? = null,
@@ -20,12 +20,12 @@ fun AppText(text: String, modifier: Modifier = Modifier, color: Color = Color.Un
     overflow: TextOverflow = TextOverflow.Clip, softWrap: Boolean = true, maxLines: Int = Int.MAX_VALUE,
     minLines: Int = 1, onTextLayout: ((TextLayoutResult) -> Unit)? = null, style: TextStyle = LocalTextStyle.current
 ) {
-    val paragraph = text.length > 100 && maxLines > 1
+    val paragraph = textAlign == TextAlign.Justify
     val heading = style.fontSize != TextUnit.Unspecified && style.fontSize.value >= 22
     MaterialText(text = text, modifier = if (paragraph || heading) modifier.fillMaxWidth() else modifier,
         color = color, fontSize = fontSize, fontStyle = fontStyle, fontWeight = fontWeight,
         fontFamily = fontFamily, letterSpacing = letterSpacing, textDecoration = textDecoration,
-        textAlign = textAlign ?: if (paragraph) TextAlign.Justify else TextAlign.Center,
+        textAlign = textAlign ?: style.textAlign.takeUnless { it == TextAlign.Unspecified } ?: TextAlign.Start,
         lineHeight = lineHeight, overflow = overflow, softWrap = softWrap, maxLines = maxLines,
         minLines = minLines, onTextLayout = onTextLayout, style = style)
 }

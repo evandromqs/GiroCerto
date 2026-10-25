@@ -76,9 +76,19 @@ object AccessibilityOfferReader {
         val appName = resolveAppName(packageName, rawLines)
         val cleanedLines = joinAdjacentMeasurementNodes(rawLines.map {
             it.replace('\u00A0', ' ').replace('\u202F', ' ').trim()
-        }.filter { it.isNotBlank() })
+        }.filter { it.isNotBlank() }).distinct()
 
-        var fare: Double? = null
+        val eligibleLines = cleanedLines.filterNot {
+            Regex("(?i)\\b(saldo|carteira|ganhos de hoje|ganhos da semana|promoção|bônus)\\b").containsMatchIn(it)
+        }
+        val prices = eligibleLines.flatMap { line ->
+            val matcher = FARE_PATTERN.matcher(line)
+            buildList { while (matcher.find()) add(parseCurrency(matcher.group(1))) }
+        }.distinct()
+        if (prices.size > 1) return OfferReaderResult(appName = appName,
+            error = "Mais de um valor monetário na janela; aguardando oferta inequívoca",
+            missingFields = listOf("Valor da oferta"), source = OfferSource.ACCESSIBILITY_SERVICE)
+        var fare: Double? = prices.singleOrNull()
         var tripDistanceKm: Double? = null
         var pickupDistanceKm: Double? = null
         var durationMinutes: Int? = null
@@ -91,8 +101,9 @@ object AccessibilityOfferReader {
         val detectedDistances = mutableListOf<Pair<Double, Boolean>>() // (distância, éEmbarque)
         val detectedDurations = mutableListOf<Int>()
         val explicitTotals = mutableListOf<Double>()
+        val totalDurations = mutableListOf<Int>()
 
-        for (line in cleanedLines) {
+        for (line in eligibleLines) {
             val lowerLine = line.lowercase(Locale.ROOT)
 
             // 1. Extração de Tarifa (R$)
@@ -136,14 +147,14 @@ object AccessibilityOfferReader {
                 val mins = hourMatcher.group(2)?.toIntOrNull() ?: 0
                 val totalMins = (hours * 60) + mins
                 if (totalMins > 0) {
-                    detectedDurations.add(totalMins)
+                    if (lowerLine.contains("total")) totalDurations.add(totalMins) else detectedDurations.add(totalMins)
                 }
             } else {
                 val minMatcher = DURATION_MIN_PATTERN.matcher(line)
                 while (minMatcher.find()) {
                     val mins = minMatcher.group(1)?.toIntOrNull() ?: 0
                     if (mins > 0 && mins < 600) {
-                        detectedDurations.add(mins)
+                        if (lowerLine.contains("total")) totalDurations.add(mins) else detectedDurations.add(mins)
                     }
                 }
             }
@@ -187,12 +198,12 @@ object AccessibilityOfferReader {
 
         // Se ainda não encontrou tarifa com "R$", tenta valor numérico solto proeminente
         if (fare == null) {
-            for (line in cleanedLines) {
+            for (line in eligibleLines) {
                 if (line.contains("km", true) || line.contains("min", true) ||
                     line.contains("★") || line.contains("⭐") || line.contains("nota", true) || line.contains("avalia", true)) continue
                 if (line.trim().matches(Regex("[45][.,][0-9]{1,2}"))) continue
                 val isolatedMatcher = ISOLATED_FARE_PATTERN.matcher(line)
-                if (isolatedMatcher.find()) {
+                if (isolatedMatcher.matches()) {
                     val candidate = parseCurrency(isolatedMatcher.group(1))
                     if (candidate in 4.0..500.0) {
                         fare = candidate
@@ -226,7 +237,9 @@ object AccessibilityOfferReader {
         }
 
         // Consolidação de Duração
-        if (detectedDurations.isNotEmpty()) {
+        if (totalDurations.distinct().size == 1) {
+            durationMinutes = totalDurations.first()
+        } else if (totalDurations.isEmpty() && detectedDurations.isNotEmpty()) {
             // Em caso de duração de embarque + corrida, consideramos o tempo total ou o maior tempo
             durationMinutes = if (detectedDurations.size > 1 && detectedDurations.size <= 3) {
                 detectedDurations.sum()
@@ -292,7 +305,7 @@ object AccessibilityOfferReader {
             packageName == "com.app99.driver" || packageName.contains("taxis99") -> "99"
             packageName.contains("indriver") -> "inDrive"
             packageName.contains("ifood") -> "iFood"
-            packageName.contains("keeta") || packageName.contains("meituan") -> "Keeta"
+            packageName.contains("keeta") || packageName.contains("meituan") || packageName == "com.sankuai.sailor.courier" -> "Keeta"
             packageName.contains("girocerto") -> "Giro Certo (Simulação)"
             else -> {
                 val fullText = lines.joinToString(" ")

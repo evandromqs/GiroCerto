@@ -1,0 +1,26 @@
+[
+  {
+    "platform": "uber",
+    "listing": "https://play.google.com/store/apps/details?id=com.ubercab.driver&hl=pt_BR&gl=BR",
+    "asset": "https://play-lh.googleusercontent.com/GmZcSFlxM7gw-5C36SIV4Wo_k5NJdyXvYW0Uu5CEEhvoefMc3aY_hNI12ms55OtA2GkfBClGw72FxJ0PonB3yg=s0-br30",
+    "file": "platform_uber.png"
+  },
+  {
+    "platform": "ninety_nine",
+    "listing": "https://play.google.com/store/apps/details?id=com.app99.driver&hl=pt_BR&gl=BR",
+    "asset": "https://play-lh.googleusercontent.com/MLW08yBNRgmH06a62FIn0bDrBqVfrtYSMaYykAtCdc_6bwZTyON_gCcq7nsp8ZY8gFEd8JP2qjnmoAFAYhGAzg=s0-br30",
+    "file": "platform_ninety_nine.png"
+  },
+  {
+    "platform": "ifood",
+    "listing": "https://play.google.com/store/apps/details?id=br.com.ifood.driver.app&hl=pt_BR&gl=BR",
+    "asset": "https://play-lh.googleusercontent.com/SVbgs4pN_F8CpJdqMueLe6Zs0EuYHqoLkKVSbN6pQuGlGR_U2wLZb_Cp5zCezbvGzxZB4b4WcAft0GYezYhv=s0-br30",
+    "file": "platform_ifood.png"
+  },
+  {
+    "platform": "keeta",
+    "listing": "https://play.google.com/store/apps/details?id=com.sankuai.sailor.courier&hl=pt_BR&gl=BR",
+    "asset": "https://play-lh.googleusercontent.com/DHidh7arqLbhUVISGmnR7NvMcrVnT-Z7c4uYU4QEwpz9CPkVCmqKYD-IFJeU_mG4Xdx1NPCgVmix81yZdDFXRg=s0-br30",
+    "file": "platform_keeta.png"
+  }
+]

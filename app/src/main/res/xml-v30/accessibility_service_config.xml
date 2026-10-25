@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/accessibility_service_description"
-    android:packageNames="com.ubercab.driver,com.ubermoto.driver,com.ubereats.driver,com.taxis99,com.app99.driver,com.didiglobal.driver,com.didiglobal.food.driver,br.com.ifood.driver.app,br.com.ifood.driver,sinet.startup.indriver,com.sankuai.meituan.dispatch.driver,com.keeta.driver"
+    android:packageNames="com.ubercab.driver,com.ubermoto.driver,com.ubereats.driver,com.taxis99,com.app99.driver,com.didiglobal.driver,com.didiglobal.food.driver,br.com.ifood.driver.app,br.com.ifood.driver,sinet.startup.indriver,com.sankuai.meituan.dispatch.driver,com.keeta.driver,com.sankuai.sailor.courier"
     android:accessibilityEventTypes="typeWindowContentChanged|typeWindowStateChanged|typeWindowsChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="300"

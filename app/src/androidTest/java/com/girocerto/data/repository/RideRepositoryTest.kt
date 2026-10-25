@@ -26,6 +26,24 @@ class RideRepositoryTest {
     }
     private fun offer() = RideCalculator.calculate(RideOffer(30.0, 10.0, 30), VehicleSettings())
 
+    @Test fun corruptHistoryIsPreservedAndCannotBeOverwritten() = runBlocking {
+        val context = context()
+        val file = File(context.filesDir, "girocerto_rides_history.json")
+        val original = "[{broken-history"
+        file.writeText(original)
+        val repository = RideRepository(context)
+        org.junit.Assert.assertNotNull(repository.loadError.value)
+        try { repository.saveRide(offer()); org.junit.Assert.fail("Must reject overwrite") }
+        catch (_: java.io.IOException) { }
+        assertEquals(original, file.readText())
+        repository.retryLoad()
+        org.junit.Assert.assertNotNull(repository.loadError.value)
+        file.writeText("[]")
+        repository.retryLoad()
+        org.junit.Assert.assertNull(repository.loadError.value)
+        repository.saveRide(offer())
+        assertEquals(1, RideRepository(context).rides.value.size)
+    }
     @Test fun concurrentSavesSurviveReloadWithUniqueIds() = runBlocking {
         val context = context()
         val repository = RideRepository(context)

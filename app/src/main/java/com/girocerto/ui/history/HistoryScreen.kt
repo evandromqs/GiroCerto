@@ -31,6 +31,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import com.girocerto.ui.profile.PassengerMessagePreferences
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import android.content.Intent
@@ -72,6 +73,7 @@ fun HistoryScreen(
 ) {
     val rideRepo = GiroCertoApp.instance.rideRepository
     val rides by rideRepo.rides.collectAsState()
+    val loadError by rideRepo.loadError.collectAsState()
     var platformFilter by rememberSaveable { mutableStateOf("Todos") }
     var periodFilter by rememberSaveable { mutableStateOf("Todo período") }
     val platforms = listOf("Todos") + rides.map { it.offer.appName }.distinct().sorted()
@@ -99,6 +101,10 @@ fun HistoryScreen(
             .padding(16.dp)
     ) {
         SnackbarHost(hostState = snackbarHostState)
+        loadError?.let { message ->
+            Text(message, modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = rideRepo::retryLoad) { Text("Tentar recuperar histórico") }
+        }
 
         // Barra Superior do Histórico
         Row(
