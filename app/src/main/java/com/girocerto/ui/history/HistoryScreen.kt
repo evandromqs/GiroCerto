@@ -110,7 +110,7 @@ fun HistoryScreen(
         if (loading) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
         loadError?.let { message ->
             Text(message, modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = rideRepo::retryLoad) { Text("Tentar recuperar histórico") }
+            TextButton(onClick = { rideRepo.retryLoad() }) { Text("Tentar recuperar histórico") }
         }
 
         // Barra Superior do Histórico

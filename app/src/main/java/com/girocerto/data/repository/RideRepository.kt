@@ -49,9 +49,9 @@ class RideRepository(
         if (deferLoading) scope.launch { loadHistory(); _loading.value = false; ready.complete(Unit) }
         else { loadHistory(); _loading.value = false; ready.complete(Unit) }
     }
-    fun retryLoad() { scope.launch { ready.await(); writeMutex.withLock {
+    fun retryLoad(): Job = scope.launch { ready.await(); writeMutex.withLock {
         _loading.value = true; _loadError.value = null; loadHistory(); _loading.value = false
-    } } }
+    } }
 
     private fun loadHistory() {
         try {

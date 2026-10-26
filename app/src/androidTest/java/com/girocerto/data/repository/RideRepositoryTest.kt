@@ -36,10 +36,10 @@ class RideRepositoryTest {
         try { repository.saveRide(offer()); org.junit.Assert.fail("Must reject overwrite") }
         catch (_: java.io.IOException) { }
         assertEquals(original, file.readText())
-        repository.retryLoad()
+        repository.retryLoad().join()
         org.junit.Assert.assertNotNull(repository.loadError.value)
         file.writeText("[]")
-        repository.retryLoad()
+        repository.retryLoad().join()
         org.junit.Assert.assertNull(repository.loadError.value)
         repository.saveRide(offer())
         assertEquals(1, RideRepository(context).rides.value.size)
