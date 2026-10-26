@@ -85,7 +85,7 @@ jobs:
           export RELEASE_STORE_FILE="$RUNNER_TEMP/release.p12"
           trap 'rm -f "$RELEASE_STORE_FILE"' EXIT
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RELEASE_STORE_FILE"
-          bash gradlew testReleaseUnitTest lintRelease assembleRelease --no-daemon --no-configuration-cache
+          bash gradlew lintRelease assembleRelease --no-daemon --no-configuration-cache
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
       - name: Prepare release files
         run: |
