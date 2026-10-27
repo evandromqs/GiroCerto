@@ -9,9 +9,14 @@ import com.girocerto.ui.goals.GoalsScreen
 import com.girocerto.ui.copilot.CopilotScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -36,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.girocerto.app.theme.BackgroundDark
 import com.girocerto.app.theme.BorderDark
@@ -84,10 +90,12 @@ fun AppNavigation() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    BackHandler(currentScreen != Screen.HOME) {
+    fun goBack() {
         currentScreen = navigationHistory.lastOrNull()?.let { Screen.valueOf(it) } ?: Screen.HOME
         navigationHistory = ArrayList(navigationHistory.dropLast(1))
     }
+    BackHandler(currentScreen != Screen.HOME) { goBack() }
+    val rootTabs = listOf(Screen.HOME, Screen.DIARY, Screen.GOALS, Screen.SETTINGS)
     Scaffold(
         bottomBar = {
             NavigationBar(
@@ -95,7 +103,7 @@ fun AppNavigation() {
                 contentColor = TextPrimary
             ) {
                 listOf(Screen.HOME, Screen.DIARY, Screen.GOALS, Screen.SETTINGS).forEach { screen ->
-                    val selected = currentScreen == screen || (screen == Screen.SETTINGS && currentScreen in listOf(Screen.COPILOT, Screen.ADVANCED, Screen.PROFILE))
+                    val selected = currentScreen == screen || (screen == Screen.SETTINGS && currentScreen == Screen.ADVANCED)
 
 
                     NavigationBarItem(
@@ -118,13 +126,29 @@ fun AppNavigation() {
             }
         }
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(BackgroundDark)
                 .padding(innerPadding)
         ) {
-            AnimatedContent(targetState = currentScreen, label = "Troca de tela",
+            if (currentScreen !in rootTabs) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    TextButton(onClick = { goBack() }) { Text("Voltar") }
+                    Text(
+                        when (currentScreen) {
+                            Screen.HISTORY -> "Ofertas analisadas"
+                            Screen.ADVANCED -> "Cartão e voz"
+                            else -> currentScreen.title
+                        },
+                        modifier = Modifier.weight(1f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.width(72.dp))
+                }
+            }
+            AnimatedContent(modifier = Modifier.weight(1f), targetState = currentScreen, label = "Troca de tela",
                 transitionSpec = { (fadeIn(tween(180)) + slideInHorizontally(tween(220)) { it / 16 }) togetherWith fadeOut(tween(120)) }) { screen ->
             stateHolder.SaveableStateProvider(screen.name) {
             when (screen) {

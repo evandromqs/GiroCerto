@@ -22,7 +22,12 @@ object OfferOcrContext {
         val currencyTokens = Regex("""(?i)(?:R\$|BRL)""").findAll(text).count()
         val matches = Regex("""(?i)(?:R\$|BRL)\s*([0-9]{1,4}[.,][0-9]{2})(?![0-9.,])""")
             .findAll(text).toList()
-        val prices = matches.map { it.groupValues[1].replace(',', '.').toDouble() }.toSet()
+        val amounts = matches.map { it.groupValues[1].replace(',', '.').toDouble() }
+        val maxFare = amounts.maxOrNull()
+        val included = AccessibilityOfferReader.includedBonusFares(lines)
+        val prices = amounts.filterNot { fare ->
+            maxFare != null && fare < maxFare && included.any { kotlin.math.abs(it - fare) < 0.001 }
+        }.toSet()
         // Unknown currency formatting is ambiguous too: do not silently ignore a balance.
         if (matches.size != currencyTokens || prices.size != 1) return false
         return Regex("""\b(aceitar|selecionar|nova entrega|nova corrida|nova viagem|solicitação de viagem)\b""").containsMatchIn(text)

@@ -33,17 +33,23 @@ fun CopilotScreen() {
     val floating by OverlayController.isOverlayActive.collectAsStateWithLifecycle()
     val reader by com.girocerto.monitoring.GiroCertoAccessibilityService.readerStatus.collectAsStateWithLifecycle()
     val observation by com.girocerto.monitoring.GiroCertoAccessibilityService.readerObservation.collectAsStateWithLifecycle()
+    var overlayAllowed by remember { mutableStateOf(OverlayController.canDrawOverlays(context)) }
+    var readingAllowed by remember { mutableStateOf(com.girocerto.monitoring.GiroCertoAccessibilityService.isAccessibilityEnabled(context)) }
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 policy = repository.read()
+                overlayAllowed = OverlayController.canDrawOverlays(context)
+                readingAllowed = com.girocerto.monitoring.GiroCertoAccessibilityService.isAccessibilityEnabled(context)
                 OverlayController.syncCopilot(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    var showMore by remember { mutableStateOf(false) }
+    var showDetails by remember { mutableStateOf(false) }
     var showReadingDisclosure by remember { mutableStateOf(false) }
     fun update(value: CopilotPolicy) {
         repository.write(value)
@@ -53,11 +59,19 @@ fun CopilotScreen() {
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         update(policy.copy(notifyOffers = granted))
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.Start) {
         Text("Seu copiloto", style = MaterialTheme.typography.headlineMedium)
-        Text("Escolha o que acompanhar e ouvir. Você decide sobre cada oferta.", color = TextSecondary)
+        Text("Escolha o que acompanhar e ouvir. Você decide sobre cada oferta.", color = TextSecondary, modifier = Modifier.fillMaxWidth())
+        Text(when {
+            !policy.enabled -> "Copiloto pausado"
+            !connected && !readingAllowed -> "Falta autorizar a leitura de ofertas"
+            hidden -> "Janela flutuante ocultada por você"
+            !overlayAllowed -> "Falta autorizar o cartão flutuante"
+            !floating -> "Leitura conectada. O botão flutuante ainda não apareceu."
+            else -> "Copiloto ativo. O botão flutuante está visível."
+        }, color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth())
         OutlinedButton(onClick = { showReadingDisclosure = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Autorizar leitura de ofertas")
+            Text(if (readingAllowed || connected) "Leitura de ofertas • permitida" else "Autorizar leitura de ofertas")
         }
         if (showReadingDisclosure) AlertDialog(
             onDismissRequest = { showReadingDisclosure = false },
@@ -70,72 +84,69 @@ fun CopilotScreen() {
             dismissButton = { TextButton(onClick = { showReadingDisclosure = false }) { Text("Agora não") } }
         )
         OutlinedButton(onClick = { context.startActivity(OverlayController.createOverlayPermissionIntent(context)) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Autorizar cartão flutuante")
-        }
-        Text(when {
-            !policy.enabled -> "Copiloto pausado"
-            !connected -> "Falta ativar a leitura de ofertas nas configurações do Android"
-            hidden -> "Janela flutuante ocultada por você"
-            !floating -> "Leitura conectada • janela indisponível. Confira a autorização do cartão flutuante."
-            else -> "Copiloto ativo • botão flutuante visível"
-        }, color = MaterialTheme.colorScheme.primary)
-        OutlinedCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Content), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Diagnóstico da leitura", style = MaterialTheme.typography.titleMedium)
-                Text(observation, style = MaterialTheme.typography.bodySmall)
-                Text(reader, style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = {
-                    val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName
-                    val details = "Giro Certo $version • Android ${android.os.Build.VERSION.RELEASE}\n" +
-                        "Leitor conectado: $connected • Copiloto ativo: ${policy.enabled} • OCR: ${policy.ocrEnabled} • Janela: $floating\n" +
-                        "$observation\n$reader"
-                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Diagnóstico Giro Certo", details))
-                    android.widget.Toast.makeText(context, "Diagnóstico copiado", android.widget.Toast.LENGTH_SHORT).show()
-                }) { Text("Copiar diagnóstico") }
-            }
+            Text(if (overlayAllowed) "Cartão flutuante • permitido" else "Autorizar cartão flutuante")
         }
         if (hidden) Button(onClick = { OverlayController.restore(context) }, modifier = Modifier.fillMaxWidth()) {
             Text("Mostrar botão flutuante")
         }
-        Text("Arraste a bolha até a lixeira no rodapé para ocultar a janela. A leitura continua; você pode mostrar a janela novamente aqui.", style = MaterialTheme.typography.bodySmall)
+        Text("Arraste a bolha até a lixeira para ocultar a janela. A leitura continua.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
         Preference("Copiloto ativo", policy.enabled) { update(policy.copy(enabled = it)) }
         Text("Aplicativos acompanhados", style = MaterialTheme.typography.titleMedium)
         Preference("Uber e Uber Eats", policy.uber, com.girocerto.domain.model.WorkPlatform.UBER) { update(policy.copy(uber = it)) }
         Preference("99 e 99Food", policy.ninetyNine, com.girocerto.domain.model.WorkPlatform.NINETY_NINE) { update(policy.copy(ninetyNine = it)) }
         Preference("inDrive", policy.inDrive) { update(policy.copy(inDrive = it)) }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            com.girocerto.ui.components.PlatformIcon(com.girocerto.domain.model.WorkPlatform.IFOOD)
-            com.girocerto.ui.components.PlatformIcon(com.girocerto.domain.model.WorkPlatform.KEETA)
-        }
         Preference("iFood e Keeta", policy.otherApps) { update(policy.copy(otherApps = it)) }
-        Text("Alertas por classificação", style = MaterialTheme.typography.titleMedium)
-        Text("Também é necessário ativar a voz nos ajustes gerais.", style = MaterialTheme.typography.bodySmall)
-        Preference("Ouvir ofertas verdes", policy.speakGreen) { update(policy.copy(speakGreen = it)) }
-        Preference("Ouvir ofertas amarelas", policy.speakYellow) { update(policy.copy(speakYellow = it)) }
-        Preference("Ouvir ofertas vermelhas", policy.speakRed) { update(policy.copy(speakRed = it)) }
-        Preference("Notificar novas análises", policy.notifyOffers) { enabled ->
-            if (enabled && android.os.Build.VERSION.SDK_INT >= 33) permission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-            else update(policy.copy(notifyOffers = enabled))
+        TextButton(onClick = { showMore = !showMore }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (showMore) "Ocultar mais opções" else "Mais opções")
         }
-        Text("Nota preferencial do passageiro", style = MaterialTheme.typography.titleMedium)
-        Text(if (policy.minimumPassengerRating == 0.0) "Alerta desativado" else "Avisar abaixo de %.1f".format(policy.minimumPassengerRating))
-        Slider(value = policy.minimumPassengerRating.toFloat(), valueRange = 0f..5f, steps = 49,
-            onValueChange = { update(policy.copy(minimumPassengerRating = kotlin.math.round(it * 10.0) / 10.0)) })
-        Text("Somente um aviso quando a nota estiver disponível. Não rejeita ofertas nem altera o cálculo de lucro.", style = MaterialTheme.typography.bodySmall)
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            Preference("Salvar comprovante visual", policy.captureOfferScreenshot) { update(policy.copy(captureOfferScreenshot = it)) }
-            Text("Desativado por padrão. Ao ativar, cada oferta detectada pode salvar uma imagem visível da tela inteira na galeria, em Imagens/GiroCerto. Dados de outros apps podem aparecer. Não grava vídeo ou áudio. Intervalo mínimo de 30 segundos; ofertas iguais em dois minutos geram uma imagem.", style = MaterialTheme.typography.bodySmall)
-        } else {
-            Text("Comprovantes visuais exigem Android 11 ou mais recente.", style = MaterialTheme.typography.bodySmall)
+        if (showMore) {
+            Text("Alertas por classificação", style = MaterialTheme.typography.titleMedium)
+            Text("A voz geral continua em Cartão e voz.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
+            Preference("Ouvir ofertas verdes", policy.speakGreen) { update(policy.copy(speakGreen = it)) }
+            Preference("Ouvir ofertas amarelas", policy.speakYellow) { update(policy.copy(speakYellow = it)) }
+            Preference("Ouvir ofertas vermelhas", policy.speakRed) { update(policy.copy(speakRed = it)) }
+            Preference("Notificar novas análises", policy.notifyOffers) { enabled ->
+                if (enabled && android.os.Build.VERSION.SDK_INT >= 33) permission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                else update(policy.copy(notifyOffers = enabled))
+            }
+            Text("Nota do passageiro", style = MaterialTheme.typography.titleMedium)
+            Text(if (policy.minimumPassengerRating == 0.0) "Aviso desligado" else "Avisar abaixo de %.1f".format(policy.minimumPassengerRating), modifier = Modifier.fillMaxWidth())
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0.0, 4.0, 4.5, 4.8, 5.0, policy.minimumPassengerRating).distinct().sorted().forEach { rating ->
+                    FilterChip(selected = policy.minimumPassengerRating == rating, onClick = {
+                        update(policy.copy(minimumPassengerRating = rating))
+                    }, label = { Text(if (rating == 0.0) "Desligado" else "%.1f".format(rating)) })
+                }
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                Preference("Leitura local de imagem (OCR)", policy.ocrEnabled) { update(policy.copy(ocrEnabled = it)) }
+                Preference("Salvar comprovante visual", policy.captureOfferScreenshot) { update(policy.copy(captureOfferScreenshot = it)) }
+            } else Text("OCR e comprovantes exigem Android 11 ou mais recente.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
+            Preference("Salvar análises automaticamente", policy.autoSave) { update(policy.copy(autoSave = it)) }
+            TextButton(onClick = { showDetails = true }) { Text("Saiba mais") }
+            OutlinedCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Content), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Diagnóstico da leitura", style = MaterialTheme.typography.titleMedium)
+                    Text(observation, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
+                    Text(reader, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
+                    TextButton(onClick = {
+                        val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                        val details = "Giro Certo $version • Android ${android.os.Build.VERSION.RELEASE}\n" +
+                            "Leitor conectado: $connected • Copiloto ativo: ${policy.enabled} • OCR: ${policy.ocrEnabled} • Janela: $floating\n" +
+                            "$observation\n$reader"
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Diagnóstico Giro Certo", details))
+                        android.widget.Toast.makeText(context, "Diagnóstico copiado", android.widget.Toast.LENGTH_SHORT).show()
+                    }) { Text("Copiar diagnóstico") }
+                }
+            }
         }
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            Preference("Leitura local de imagem (OCR)", policy.ocrEnabled) { update(policy.copy(ocrEnabled = it)) }
-            Text("Opcional, desativada por padrão. Quando faltarem textos acessíveis, lê uma imagem da tela no aparelho para identificar a oferta. Android 11 ou superior. A imagem fica apenas na memória: não é salva, enviada ou gravada. O comprovante visual é uma opção separada.", style = MaterialTheme.typography.bodySmall)
-        }
-        Text("Histórico", style = MaterialTheme.typography.titleMedium)
-        Preference("Salvar análises automaticamente", policy.autoSave) { update(policy.copy(autoSave = it)) }
-        Text("Desativado por padrão. Quando ativado, salva ofertas analisadas neste aparelho; isso não significa que a corrida foi aceita ou realizada. Ofertas iguais em até dois minutos são guardadas uma vez.", style = MaterialTheme.typography.bodySmall)
+        if (showDetails) AlertDialog(
+            onDismissRequest = { showDetails = false },
+            title = { Text("Como essas opções funcionam") },
+            text = { Text("O aviso de nota só aparece quando a avaliação está disponível. Ele não rejeita a oferta nem muda o lucro.\n\nA leitura por imagem fica no aparelho e não é gravada. O comprovante visual é separado: pode salvar uma imagem da tela em Imagens/GiroCerto, no máximo uma a cada 30 segundos.\n\nSalvar automaticamente guarda a análise neste aparelho. Isso não significa que a corrida foi aceita.") },
+            confirmButton = { TextButton(onClick = { showDetails = false }) { Text("Entendi") } }
+        )
     }
 }
 

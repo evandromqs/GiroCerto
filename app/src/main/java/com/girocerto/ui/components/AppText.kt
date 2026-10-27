@@ -20,10 +20,11 @@ fun AppText(text: String, modifier: Modifier = Modifier, color: Color = Color.Un
     overflow: TextOverflow = TextOverflow.Clip, softWrap: Boolean = true, maxLines: Int = Int.MAX_VALUE,
     minLines: Int = 1, onTextLayout: ((TextLayoutResult) -> Unit)? = null, style: TextStyle = LocalTextStyle.current
 ) {
-    MaterialText(text = text, modifier = modifier,
+    val align = textAlign ?: style.textAlign.takeUnless { it == TextAlign.Unspecified } ?: TextAlign.Start
+    MaterialText(text = text, modifier = if (align == TextAlign.Center) modifier.fillMaxWidth() else modifier,
         color = color, fontSize = fontSize, fontStyle = fontStyle, fontWeight = FontWeight.Medium,
         fontFamily = fontFamily, letterSpacing = letterSpacing, textDecoration = textDecoration,
-        textAlign = textAlign ?: style.textAlign.takeUnless { it == TextAlign.Unspecified } ?: TextAlign.Start,
+        textAlign = align,
         lineHeight = lineHeight, overflow = overflow, softWrap = softWrap, maxLines = maxLines,
         minLines = minLines, onTextLayout = onTextLayout, style = style)
 }

@@ -34,6 +34,10 @@ class OfferOcrContextTest {
         val filtered = synthetic.filter { OfferOcrContext.acceptsLine(it.first, it.second, 1000) }.map { it.first }
         assertTrue(OfferOcrContext.permits(filtered))
     }
+    @Test fun includedBonusUnderTheMainFareStaysUnambiguous() {
+        assertTrue(OfferOcrContext.permits(listOf("Aceitar (2)", "R$22,58", "Inclui R$4,00 Bônus", "Distância total 7,6 km")))
+    }
+
     @Test fun headerBoundaryAndUnknownBoundsAreConservative() {
         assertFalse(OfferOcrContext.acceptsLine("R$ 20,00", 75, 1000))
         assertTrue(OfferOcrContext.acceptsLine("R$ 20,00", 76, 1000))

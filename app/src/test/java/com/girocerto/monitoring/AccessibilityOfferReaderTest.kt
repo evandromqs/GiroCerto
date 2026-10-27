@@ -251,6 +251,45 @@ class AccessibilityOfferReaderTest {
         assertEquals(0.6, result.pickupDistanceKm!!, 0.001)
         assertEquals(75, result.durationMinutes!!)
     }
+    @Test fun ninetyNineRouteKeepsDisplayedTotalAndIgnoresIncludedBonus() {
+        val lines = listOf(
+            "2 | Pedidos na rota",
+            "R$22,58",
+            "Inclui R$4,00 Bônus",
+            "Distância total 7,6 km",
+            "7,6 km",
+            "Cantinho nordestino",
+            "Aceitar (2)"
+        )
+        val result = AccessibilityOfferReader.parse(lines, "com.app99.driver")
+        assertTrue(result.isComplete)
+        assertEquals("99", result.appName)
+        assertEquals(22.58, result.fare!!, 0.001)
+        assertEquals(7.6, result.distanceKm!!, 0.001)
+        assertEquals(0.0, result.pickupDistanceKm!!, 0.001)
+        assertEquals(null, result.durationMinutes)
+        assertTrue(OfferScreenContext.hasOfferAction(lines))
+        assertTrue(OfferOcrContext.permits(lines))
+    }
+
+    @Test fun splitIncludedBonusDoesNotReplaceTheLargerFare() {
+        val result = AccessibilityOfferReader.parse(
+            listOf("R$22,58", "Inclui", "R$4,00", "Bônus", "Distância total 7,6 km", "Aceitar (2)"),
+            "com.app99.driver"
+        )
+        assertTrue(result.isComplete)
+        assertEquals(22.58, result.fare!!, 0.001)
+        assertEquals(7.6, result.distanceKm!!, 0.001)
+    }
+
+    @Test fun includedAmountDoesNotHideARealSecondFare() {
+        val result = AccessibilityOfferReader.parse(
+            listOf("R$ 18,00", "R$ 250,00", "Inclui R$ 4,00 Bônus", "10 km", "Aceitar"),
+            "com.app99.driver"
+        )
+        assertFalse(result.isComplete)
+    }
+
     @Test fun nonAdjacentUnitsAreNotInvented() {
         val result = AccessibilityOfferReader.parse(listOf("R$", "28,50", "7", "outro texto", "km", "20", "outro texto", "min"), "com.app99.driver")
         assertFalse(result.isComplete)

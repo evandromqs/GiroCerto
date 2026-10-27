@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.10",
+    "changes": [
+      "Títulos centralizados e parágrafos alinhados à esquerda, com semáforo verde, amarelo e vermelho também nas telas.",
+      "Cartão flutuante mais curto, aberto no topo, com detalhes sob demanda e o mesmo rótulo Atenção.",
+      "Copiloto com permissões visíveis, opções avançadas recolhidas e escolhas fixas de nota e duração do cartão.",
+      "Início mostra quanto falta ou passou da meta. O diário começa pela data, pelos quilômetros e pelas horas.",
+      "Rota da 99 mantém o valor exibido e a distância total quando o bônus incluso aparece separado."
+    ]
+  },
+  {
     "version": "1.0.9",
     "changes": [
       "Poppins Medium, margens e espaçamentos padronizados, parágrafos justificados e transições suaves entre telas.",

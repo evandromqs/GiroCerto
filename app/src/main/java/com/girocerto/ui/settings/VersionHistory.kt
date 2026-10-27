@@ -27,7 +27,7 @@ fun VersionHistorySection() {
             }
             if (expanded) versionHistory.forEach { release ->
                 Text("Versão ${release.version}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-                Text(release.changes, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Justify)
+                Text(release.changes, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
                 HorizontalDivider()
             }
         }

@@ -20,8 +20,8 @@ private val DarkScheme = darkColorScheme(
     surface = Color(0xFF152238), onSurface = Color(0xFFF7F9FC),
     surfaceVariant = Color(0xFF1D304B), onSurfaceVariant = Color(0xFFC4CFDF),
     outline = Color(0xFF8B9CB3), outlineVariant = Color(0xFF3C506B),
-    error = Color.White, onError = Color.Black,
-    errorContainer = Color(0xFF28374B), onErrorContainer = Color.White,
+    error = Color(0xFFFDA4AF), onError = Color(0xFF3B0610),
+    errorContainer = Color(0xFF5C1220), onErrorContainer = Color(0xFFFFE4E8),
     surfaceContainer = Color(0xFF152238), surfaceContainerHigh = Color(0xFF20314A)
 )
 private val LightScheme = lightColorScheme(
@@ -34,8 +34,8 @@ private val LightScheme = lightColorScheme(
     surface = Color.White, onSurface = Color(0xFF10151D),
     surfaceVariant = Color(0xFFE7EDF5), onSurfaceVariant = Color(0xFF42536B),
     outline = Color(0xFF65758A), outlineVariant = Color(0xFFC6D1DF),
-    error = Color(0xFF10151D), onError = Color.White,
-    errorContainer = Color(0xFFE0E5ED), onErrorContainer = Color.Black,
+    error = Color(0xFFB42336), onError = Color.White,
+    errorContainer = Color(0xFFFDE8EB), onErrorContainer = Color(0xFF3B0610),
     surfaceContainer = Color.White, surfaceContainerHigh = Color(0xFFE7EDF5)
 )
 

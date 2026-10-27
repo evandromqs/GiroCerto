@@ -531,7 +531,7 @@ class RideOverlayService : Service() {
             width = cardWidth,
             height = WindowManager.LayoutParams.WRAP_CONTENT,
             x = targetX,
-            y = dpToPx(80)
+            y = dpToPx(28)
         )
         params = layoutParams
 
@@ -596,29 +596,26 @@ class RideOverlayService : Service() {
         }.apply { isFillViewport = false; addView(content) }
         root.addView(scroll)
         fun add(view: View, top: Int = 12) { content.addView(view, LinearLayout.LayoutParams(-1,-2).apply { topMargin = dpToPx(top) }) }
-        add(label(name = "statusBadge", size = 14f).apply {
+        add(label(name = "statusBadge", size = 16f).apply {
             gravity = Gravity.CENTER; setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
         })
-        add(label(name = "offerSummary", size = 13f))
-        val metrics = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        listOf("valKm" to "R$/km", "valHour" to "R$/hora", "valProfit" to "Saldo¹").forEachIndexed { index, (tag, title) ->
-            val box = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
-                setPadding(dpToPx(4), dpToPx(12), dpToPx(4), dpToPx(12))
-                background = GradientDrawable().apply { setColor(palette("#101818")); cornerRadius = dpToPx(12).toFloat(); setStroke(dpToPx(1), palette("#4B5563")) }
-                addView(label(name = tag, size = 18f).apply {
-                    gravity = Gravity.CENTER; maxLines = 1
-                    setAutoSizeTextTypeUniformWithConfiguration(12,18,1,android.util.TypedValue.COMPLEX_UNIT_SP)
-                }, LinearLayout.LayoutParams(-1,-2))
-                addView(label(title, size = 11f).apply { gravity = Gravity.CENTER }, LinearLayout.LayoutParams(-1,-2).apply { topMargin = dpToPx(4) })
-            }
-            metrics.addView(box, LinearLayout.LayoutParams(0,-2,1f).apply { if(index>0) leftMargin = dpToPx(8) })
+        add(label(name = "offerSummary", size = 13f).apply { gravity = Gravity.START })
+        val glance = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        listOf("valKm" to "R$/km", "valProfit" to "Lucro").forEachIndexed { index, (tag, title) ->
+            glance.addView(metricBox(tag, title), LinearLayout.LayoutParams(0, -2, 1f).apply { if (index > 0) leftMargin = dpToPx(8) })
         }
-        add(metrics)
-        add(label(name = "decisionReason", size = 13f).apply {
-            justificationMode = android.graphics.text.LineBreaker.JUSTIFICATION_MODE_INTER_WORD
-        })
-        add(label("¹ Saldo estimado da oferta, antes do contrato semanal. Você decide se aceita a corrida.", size = 11f))
+        add(glance)
+        val details = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; tag = "details"; visibility = View.GONE
+        }
+        details.addView(metricBox("valHour", "R$/hora"), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(8) })
+        details.addView(label(name = "decisionReason", size = 13f).apply {
+            gravity = Gravity.START
+            justificationMode = android.graphics.text.LineBreaker.JUSTIFICATION_MODE_NONE
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(12) })
+        details.addView(label("Lucro estimado da oferta, antes do contrato semanal. Você decide se aceita a corrida.", size = 11f).apply {
+            gravity = Gravity.START
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(8) })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         actions.addView(action("Salvar análise", "saveBtn") {
             currentAnalysis?.let { analysis -> serviceScope.launch {
@@ -632,8 +629,31 @@ class RideOverlayService : Service() {
                     .onFailure { Toast.makeText(this,"Nenhum aplicativo de mapas disponível.",Toast.LENGTH_SHORT).show() }
             }
         }, LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin = dpToPx(8) })
-        add(actions)
+        details.addView(actions, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(12) })
+        add(action("Ver detalhes", "detailsBtn") {
+            val open = details.visibility != View.VISIBLE
+            details.visibility = if (open) View.VISIBLE else View.GONE
+            (currentView?.findViewWithTag<Button>("detailsBtn"))?.text = if (open) "Ocultar detalhes" else "Ver detalhes"
+        })
+        add(details, 8)
         return root
+    }
+
+    private fun metricBox(tag: String, title: String) = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
+        setPadding(dpToPx(4), dpToPx(12), dpToPx(4), dpToPx(12))
+        background = GradientDrawable().apply { setColor(palette("#101818")); cornerRadius = dpToPx(12).toFloat(); setStroke(dpToPx(1), palette("#4B5563")) }
+        addView(TextView(this@RideOverlayService).apply {
+            this.tag = tag; textSize = 18f; gravity = Gravity.CENTER; maxLines = 1
+            typeface = resources.getFont(com.girocerto.app.R.font.poppins_medium)
+            setTextColor(palette("#F9FAFB")); includeFontPadding = false
+            setAutoSizeTextTypeUniformWithConfiguration(12, 18, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+        }, LinearLayout.LayoutParams(-1, -2))
+        addView(TextView(this@RideOverlayService).apply {
+            text = title; textSize = 11f; gravity = Gravity.CENTER
+            typeface = resources.getFont(com.girocerto.app.R.font.poppins_medium)
+            setTextColor(palette("#F9FAFB")); includeFontPadding = false
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(4) })
     }
 
     private fun updateOfferCardContents(
@@ -673,11 +693,11 @@ class RideOverlayService : Service() {
         valHour?.contentDescription = if ((currentAnalysis?.offer?.durationMinutes ?: 0) > 0) "Rendimento por hora" else "Tempo não informado"
         valProfit?.text = String.format(Locale.GERMANY, "%.2f", profit)
 
-        val (colorHex, text) = when (status) {
-            TrafficLightStatus.GREEN -> Pair("#22C55E", "COMPENSA")
-            TrafficLightStatus.YELLOW -> Pair("#FACC15", "ATENÇÃO / LIMITE")
-            TrafficLightStatus.RED -> Pair("#EF4444", "NÃO COMPENSA")
-            TrafficLightStatus.INVALID -> Pair("#6B7280", "DADOS INCOMPLETOS")
+        val text = when (status) {
+            TrafficLightStatus.GREEN -> "Compensa"
+            TrafficLightStatus.YELLOW -> "Atenção"
+            TrafficLightStatus.RED -> "Não compensa"
+            TrafficLightStatus.INVALID -> "Dados incompletos"
         }
 
         statusBadge?.apply {

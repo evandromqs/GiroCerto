@@ -78,7 +78,7 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
         inputNumber(extra) ?: -1.0, days.toIntOrNull() ?: 0, inputNumber(hours) ?: -1.0,
         inputNumber(km) ?: -1.0, inputNumber(goal) ?: -1.0)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(com.girocerto.app.theme.AppSpacing.Screen),
-        verticalArrangement = Arrangement.spacedBy(com.girocerto.app.theme.AppSpacing.Section), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+        verticalArrangement = Arrangement.spacedBy(com.girocerto.app.theme.AppSpacing.Section), horizontalAlignment = androidx.compose.ui.Alignment.Start) {
         Text("Minha moto e metas", style = MaterialTheme.typography.headlineMedium)
         if (saved != null && !editing) {
             val profile = saved!!
@@ -143,7 +143,7 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
 @Composable
 private fun ProfileProjection(p: ElectricProfile) {
     Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+        Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.Start) {
             Text("Meta de faturamento por dia", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(Formatters.formatCurrency(p.dailyGrossGoal), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
             SummaryLine("Para sobrar na semana", Formatters.formatCurrency(p.weeklyNetGoal))
@@ -153,8 +153,8 @@ private fun ProfileProjection(p: ElectricProfile) {
             SummaryLine("Buscar por km", Formatters.formatPerKm(p.targetPerKm))
             SummaryLine("Contrato semanal", Formatters.formatCurrency(p.weeklyRent))
             SummaryLine("Custo variável por km", Formatters.formatPerKm(p.variablePerKm))
-            Text("O fixo semanal é dividido entre ${p.workDays} dias de trabalho. A meta cobre o fixo, todos os km previstos e o valor que você quer guardar. É uma projeção, não garantia de ganho.", style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.Justify, modifier = Modifier.fillMaxWidth())
-            Text("O copiloto usa esses custos por km e essas metas. O fixo semanal é descontado no fechamento do dia, não em cada oferta.", style = MaterialTheme.typography.bodySmall, textAlign = androidx.compose.ui.text.style.TextAlign.Justify, modifier = Modifier.fillMaxWidth())
+            Text("O fixo semanal é dividido entre ${p.workDays} dias de trabalho. A meta cobre o fixo, todos os km previstos e o valor que você quer guardar. É uma projeção, não garantia de ganho.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
+            Text("O copiloto usa esses custos por km e essas metas. O fixo semanal é descontado no fechamento do dia, não em cada oferta.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
         }
     }
 }

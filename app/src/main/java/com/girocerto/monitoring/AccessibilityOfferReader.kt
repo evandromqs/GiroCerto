@@ -82,7 +82,10 @@ object AccessibilityOfferReader {
         // The collector removes parent aggregates; otherwise fail closed and retry via OCR.
         val measurements = cleanedLines.filter { DISTANCE_KM_PATTERN.matcher(it).find() || DURATION_MIN_PATTERN.matcher(it).find() }
         val repeated = measurements.groupingBy { it }.eachCount().any { (line, count) -> count > 1 && !line.contains("total", true) }
-        val aggregates = measurements.any { parent -> measurements.any { child -> parent != child && Regex("(?<![0-9A-Za-z.,])" + Regex.escape(child) + "(?![0-9A-Za-z])").containsMatchIn(parent) } }
+        val aggregates = measurements.any { parent -> measurements.any { child ->
+            parent != child && !parent.contains("total", true) &&
+                Regex("(?<![0-9A-Za-z.,])" + Regex.escape(child) + "(?![0-9A-Za-z])").containsMatchIn(parent)
+        } }
         if (repeated || aggregates) return OfferReaderResult(appName = appName,
             error = "Medidas repetidas ou agrupadas; aguardando leitura inequívoca",
             missingFields = listOf("Trajeto inequívoco"), source = OfferSource.ACCESSIBILITY_SERVICE)
@@ -90,10 +93,13 @@ object AccessibilityOfferReader {
         val eligibleLines = cleanedLines.filterNot {
             Regex("(?i)\\b(saldo|carteira|ganhos de hoje|ganhos da semana|promoção|bônus)\\b").containsMatchIn(it)
         }
-        val prices = eligibleLines.flatMap { line ->
+        val priced = eligibleLines.flatMap { line ->
             val matcher = FARE_PATTERN.matcher(line)
             buildList { while (matcher.find()) add(parseCurrency(matcher.group(1))) }
-        }.distinct()
+        }
+        val maxFare = priced.maxOrNull()
+        val included = includedBonusFares(cleanedLines)
+        val prices = priced.filterNot { fare -> maxFare != null && fare < maxFare && fare in included }.distinct()
         if (prices.size > 1) return OfferReaderResult(appName = appName,
             error = "Mais de um valor monetário na janela; aguardando oferta inequívoca",
             missingFields = listOf("Valor da oferta"), source = OfferSource.ACCESSIBILITY_SERVICE)
@@ -269,6 +275,34 @@ object AccessibilityOfferReader {
             missingFields = missing,
             source = OfferSource.ACCESSIBILITY_SERVICE
         )
+    }
+
+    /**
+     * Amounts explicitly introduced as included bonus, surge or impulse.
+     * The larger fare on the card stays; a bigger unlabeled amount is not treated as bonus.
+     */
+    internal fun includedBonusFares(lines: List<String>): Set<Double> {
+        val marker = Regex("(?i)\\b(inclui|bônus|bonus|impulso)\\b")
+        val moneyOnly = Regex("(?i)^(?:R\\$|BRL)\\s*[0-9]{1,4}[.,][0-9]{2}$")
+        val found = mutableListOf<Double>()
+        lines.forEachIndexed { index, raw ->
+            val line = raw.trim()
+            if (marker.containsMatchIn(line)) {
+                val matcher = FARE_PATTERN.matcher(line)
+                while (matcher.find()) found.add(parseCurrency(matcher.group(1)))
+            }
+            if (line.matches(Regex("(?i)inclui"))) {
+                for (next in lines.drop(index + 1).take(2)) {
+                    val text = next.trim()
+                    if (text.matches(Regex("(?i)(bônus|bonus|impulso)"))) continue
+                    if (!moneyOnly.matches(text)) break
+                    val matcher = FARE_PATTERN.matcher(text)
+                    if (matcher.find()) found.add(parseCurrency(matcher.group(1)))
+                    break
+                }
+            }
+        }
+        return found.toSet()
     }
 
     /** Join only adjacent explicit tokens; never invent absent units or values. */

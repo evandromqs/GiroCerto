@@ -25,6 +25,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.girocerto.app.GiroCertoApp
 import com.girocerto.domain.model.*
+import com.girocerto.app.theme.GreenPositive
+import com.girocerto.app.theme.RedAlert
+import com.girocerto.app.theme.YellowWarning
 import com.girocerto.ui.components.Formatters
 import com.girocerto.ui.components.NavigationGlyph
 import com.girocerto.navigation.Screen
@@ -48,13 +51,13 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
     val today = days.firstOrNull { it.date == currentDay }
     val loading by repo.loading.collectAsStateWithLifecycle()
     val loadError by repo.loadError.collectAsStateWithLifecycle()
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(com.girocerto.app.theme.AppSpacing.Section), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(com.girocerto.app.theme.AppSpacing.Section), horizontalAlignment = androidx.compose.ui.Alignment.Start) {
         Text("Giro Certo", style = MaterialTheme.typography.headlineMedium)
         Text(profile?.let { "Olá, ${it.name}. Vamos fechar seu dia?" } ?: "Seu trabalho, suas metas, tudo em um lugar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (loading) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Carregando seus ganhos…") }
         else if (profile == null) {
             Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.Start) {
                     Text("Comece pela sua moto", style = MaterialTheme.typography.titleLarge)
                     Text("Responda quatro passos rápidos. O Giro Certo calcula quanto buscar por dia, hora e km.")
                     Button(onClick = onGoals, modifier = Modifier.fillMaxWidth()) { Text("Criar meu perfil") }
@@ -62,18 +65,28 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
             }
         } else {
             Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.Start) {
                     Text("Hoje • ${currentDay.format(dayFormat)}")
+                    val goal = today?.grossGoal ?: profile!!.dailyGrossGoal
+                    val gap = today?.let { it.revenue - goal }
+                    val balanceColor = when {
+                        gap == null -> MaterialTheme.colorScheme.primary
+                        gap >= 0 -> GreenPositive
+                        goal > 0 && gap >= -goal * 0.15 -> YellowWarning
+                        else -> RedAlert
+                    }
                     Text(if (today == null) "Dia ainda não registrado" else Formatters.formatCurrency(today.net),
-                        style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+                        style = MaterialTheme.typography.headlineMedium, color = balanceColor)
                     if (today != null) {
                         Text("Saldo após os custos cadastrados", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         SummaryLine("Recebido nos apps", Formatters.formatCurrency(today.revenue))
                         SummaryLine("Custos do dia", Formatters.formatCurrency(today.cost))
                     }
-                    SummaryLine("Meta bruta do dia", Formatters.formatCurrency(today?.grossGoal ?: profile!!.dailyGrossGoal))
-                    if (today != null && today.grossGoal > 0) LinearProgressIndicator(
-                        progress = { (today.revenue / today.grossGoal).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+                    SummaryLine("Meta bruta do dia", Formatters.formatCurrency(goal))
+                    if (gap != null && goal > 0) {
+                        LinearProgressIndicator(progress = { (today!!.revenue / goal).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+                        Text(if (gap >= 0) "${Formatters.formatCurrency(gap)} acima da meta" else "Faltam ${Formatters.formatCurrency(-gap)}", color = balanceColor)
+                    }
                     Button(onClick = onRecord, modifier = Modifier.fillMaxWidth()) { Text(if (today == null) "Registrar meu dia" else "Editar meu dia") }
                 }
             }
@@ -84,7 +97,7 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
             NavigationGlyph(Screen.COPILOT, true); Spacer(Modifier.width(10.dp))
             Text(if (running) "Copiloto conectado • ver ajustes" else "Configurar leitura de ofertas")
         }
-        TextButton(onClick = onOffers) { Text("Ver ofertas analisadas") }
+        OutlinedButton(onClick = onOffers, modifier = Modifier.fillMaxWidth()) { Text("Ver ofertas analisadas") }
         if (days.isNotEmpty()) {
             Text("Últimos fechamentos", style = MaterialTheme.typography.titleMedium)
             days.take(5).forEach { day ->
@@ -119,15 +132,21 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
     }
     val date = remember(selectedDate) { LocalDate.parse(selectedDate) }
     val context = LocalContext.current
-    LazyColumn(Modifier.fillMaxSize().imePadding(), state = listState, contentPadding = PaddingValues(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(com.girocerto.app.theme.AppSpacing.Section), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+    LazyColumn(Modifier.fillMaxSize().imePadding(), state = listState, contentPadding = PaddingValues(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(com.girocerto.app.theme.AppSpacing.Section), horizontalAlignment = androidx.compose.ui.Alignment.Start) {
         item(key = "editor") { Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Meus ganhos", style = MaterialTheme.typography.headlineMedium)
         Text("Informe o que recebeu em cada app após as taxas da plataforma.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val todayDate = rememberCurrentDay()
+        Text(date.format(dayFormat), style = MaterialTheme.typography.titleMedium)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = date == todayDate, onClick = { selectedDate = todayDate.toString() }, label = { Text("Hoje") })
+            FilterChip(selected = date == todayDate.minusDays(1), onClick = { selectedDate = todayDate.minusDays(1).toString() }, label = { Text("Ontem") })
+            OutlinedButton(onClick = {
+                DatePickerDialog(context, { _, y, m, d -> selectedDate = LocalDate.of(y, m + 1, d).toString() },
+                    date.year, date.monthValue - 1, date.dayOfMonth).apply { datePicker.maxDate = System.currentTimeMillis() }.show()
+            }) { Text("Calendário") }
+        }
         WorkPlatformPicker()
-        OutlinedButton(onClick = {
-            DatePickerDialog(context, { _, y, m, d -> selectedDate = LocalDate.of(y, m + 1, d).toString() },
-                date.year, date.monthValue - 1, date.dayOfMonth).apply { datePicker.maxDate = System.currentTimeMillis() }.show()
-        }, modifier = Modifier.fillMaxWidth()) { Text("Dia: ${date.format(dayFormat)} • alterar") }
         loadError?.let { Text(it, color = MaterialTheme.colorScheme.error); TextButton(onClick = repo::retryLoad) { Text("Tentar recuperar") } }
         if (loading || !viewModel.draftsLoaded) { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         else if (profile == null) {
@@ -174,6 +193,10 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
     val draft = WorkDay(date, entries, inputNumber(km) ?: -1.0, inputNumber(hours) ?: -1.0,
         existing?.fixedCost ?: profile.dailyRent, existing?.variablePerKm ?: profile.variablePerKm,
         existing?.grossGoal ?: profile.dailyGrossGoal, if (existing != null) existing.weeklyRent else profile.weeklyRent)
+    Text("Totais reais do dia", style = MaterialTheme.typography.titleLarge)
+    MoneyField("Km rodados no dia", km, { km = it; message = null }, maximum = 2000.0)
+    MoneyField("Horas ativas no dia", hours, { hours = it; message = null }, maximum = 24.0)
+    Text("Inclua todos os deslocamentos e a espera. Se dois apps ficaram ligados por 3 horas juntos, o total é 3 horas, não 6.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
     WorkPlatform.entries.forEachIndexed { i, platform ->
         if (platform !in visiblePlatforms) return@forEachIndexed
         Card(Modifier.fillMaxWidth()) {
@@ -192,15 +215,11 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
                 if (expanded == platform.name) {
                     MoneyField("Km atribuídos ao app", kmFields[i], { kmFields = ArrayList(kmFields).apply { set(i, it) }; message = null })
                     MoneyField("Horas ativas no app", hourFields[i], { hourFields = ArrayList(hourFields).apply { set(i, it) }; message = null })
-                    Text("Opcional. Esses detalhes não são somados aos totais reais abaixo.", style = MaterialTheme.typography.bodySmall)
+                    Text("Opcional. Esses detalhes não entram nos km e nas horas do dia.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
                 }
             }
         }
     }
-    Text("Totais reais do dia", style = MaterialTheme.typography.titleLarge)
-    MoneyField("Km rodados no dia", km, { km = it; message = null }, maximum = 2000.0)
-    MoneyField("Horas ativas no dia", hours, { hours = it; message = null }, maximum = 24.0)
-    Text("Inclua todos os deslocamentos e a espera. Se dois apps ficaram ligados por 3 horas juntos, o total é 3 horas, não 6.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     if (draft.valid()) {
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(com.girocerto.app.theme.AppSpacing.Screen), verticalArrangement = Arrangement.spacedBy(10.dp)) {
