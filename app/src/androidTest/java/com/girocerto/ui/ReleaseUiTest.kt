@@ -90,12 +90,12 @@ class ReleaseUiTest {
         selectDate(LocalDate.now().minusDays(1))
         compose.onNodeWithText("Início", useUnmergedTree = true).performClick()
         compose.onNode(hasText("Registrar meu dia") or hasText("Editar meu dia")).performScrollTo().performClick()
-        val expected = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-        compose.onNodeWithText("Dia: $expected • alterar").performScrollTo().assertIsDisplayed()
+        assertSelectedDate(LocalDate.now())
+        compose.onNodeWithText("Hoje").assertIsSelected()
     }
 
     private fun selectDate(date: LocalDate) {
-        compose.onNodeWithText("Dia:", substring = true).performScrollTo().performClick()
+        compose.onNodeWithText("Calendário").performScrollTo().performClick()
         onView(instanceOf(DatePicker::class.java)).perform(object : ViewAction {
             override fun getConstraints(): Matcher<View> = instanceOf(DatePicker::class.java)
             override fun getDescription() = "Select a diary date"
@@ -103,6 +103,12 @@ class ReleaseUiTest {
         })
         onView(withId(android.R.id.button1)).perform(click())
         compose.waitForIdle()
+        assertSelectedDate(date)
+    }
+
+    private fun assertSelectedDate(date: LocalDate) {
+        compose.onNodeWithTag("diary-selected-date").performScrollTo().assertIsDisplayed()
+            .assertTextEquals(date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
     }
 
     private fun capture(name: String) {

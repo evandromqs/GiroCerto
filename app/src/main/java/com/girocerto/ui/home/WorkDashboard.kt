@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.girocerto.app.GiroCertoApp
 import com.girocerto.domain.model.*
@@ -137,7 +138,7 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
         Text("Meus ganhos", style = MaterialTheme.typography.headlineMedium)
         Text("Informe o que recebeu em cada app após as taxas da plataforma.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         val todayDate = rememberCurrentDay()
-        Text(date.format(dayFormat), style = MaterialTheme.typography.titleMedium)
+        Text(date.format(dayFormat), modifier = Modifier.testTag("diary-selected-date"), style = MaterialTheme.typography.titleMedium)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = date == todayDate, onClick = { selectedDate = todayDate.toString() }, label = { Text("Hoje") })
             FilterChip(selected = date == todayDate.minusDays(1), onClick = { selectedDate = todayDate.minusDays(1).toString() }, label = { Text("Ontem") })
