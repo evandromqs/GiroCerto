@@ -74,7 +74,10 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                     scanDelay = if (packages.isEmpty()) 5_000L else 2_500L
                     packages.forEach { (pkg, id) -> readOfferWindow(pkg, id) }
                 }
-            } catch (error: Exception) { reportReader("Falha ao observar janelas: ${error.javaClass.simpleName}") }
+            } catch (error: Exception) {
+                recordFailure("Observação de janelas", error)
+                reportReader("Janela temporariamente indisponível; tentando novamente")
+            }
             finally { readHandler.postDelayed(this, scanDelay) }
         }
     }
@@ -88,6 +91,10 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             OverlayController.updateReaderStatus(message)
             android.util.Log.i("GiroReader", message)
         }
+    }
+
+    private fun recordFailure(stage: String, error: Exception) {
+        android.util.Log.w("GiroReader", ReaderDiagnostics.record(stage, error))
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -120,6 +127,13 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     // Some floating windows expose their event source before appearing in getWindows().
     // Use only this event's own package; never retain nodes across asynchronous retries.
     private fun eventRoot(event: AccessibilityEvent, packageName: String): AccessibilityNodeInfo? {
+        return try { findEventRoot(event, packageName) } catch (error: Exception) {
+            recordFailure("Origem do evento", error)
+            null
+        }
+    }
+
+    private fun findEventRoot(event: AccessibilityEvent, packageName: String): AccessibilityNodeInfo? {
         var node = event.source ?: return null
         if (node.packageName?.toString() != packageName) {
             @Suppress("DEPRECATION") node.recycle()
@@ -201,7 +215,9 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             readImageFallback(packageName)
             return false
         } catch (error: Exception) {
-            reportReader("Falha de leitura: ${error.javaClass.simpleName}")
+            recordFailure("Leitura de texto", error)
+            reportReader("Texto temporariamente indisponível; tentando leitura por imagem")
+            readImageFallback(packageName)
             return false
         } finally {
             candidates.forEach { @Suppress("DEPRECATION") it.recycle() }
@@ -209,8 +225,13 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     }
 
     private fun readImageFallback(packageName: String) {
-        if (CopilotPreferences(this).read().ocrEnabled) ocrDelegate.value.read(packageName)
-        else reportReader("Oferta sem dados suficientes pelo texto. Ative Leitura local de imagem (OCR) no Copiloto para tentar ler o popup.")
+        try {
+            if (CopilotPreferences(this).read().ocrEnabled) ocrDelegate.value.read(packageName)
+            else reportReader("Oferta sem dados suficientes pelo texto. Ative Leitura local de imagem (OCR) no Copiloto para tentar ler o popup.")
+        } catch (error: Exception) {
+            recordFailure("Inicialização do OCR", error)
+            reportReader("OCR temporariamente indisponível; nova tentativa automática")
+        }
     }
 
     private fun acceptParsedOffer(parsed: OfferReaderResult, packageName: String) {
@@ -282,7 +303,10 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 }
 
                 reportReader("${result.appName}: ganhos calculados • $overlayStatus")
-            } catch (error: Exception) { reportReader("Falha ao exibir análise: ${error.javaClass.simpleName}") }
+            } catch (error: Exception) {
+                recordFailure("Exibição da análise", error)
+                reportReader("Não foi possível exibir esta análise; aguardando nova leitura")
+            }
         }
     }
 

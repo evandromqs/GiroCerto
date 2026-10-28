@@ -133,7 +133,7 @@ fun CopilotScreen() {
                         val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName
                         val details = "Giro Certo $version • Android ${android.os.Build.VERSION.RELEASE}\n" +
                             "Leitor conectado: $connected • Copiloto ativo: ${policy.enabled} • OCR: ${policy.ocrEnabled} • Janela: $floating\n" +
-                            "$observation\n$reader"
+                            "$observation\n$reader\n" + com.girocerto.monitoring.ReaderDiagnostics.lastFailure
                         val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                         clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Diagnóstico Giro Certo", details))
                         android.widget.Toast.makeText(context, "Diagnóstico copiado", android.widget.Toast.LENGTH_SHORT).show()

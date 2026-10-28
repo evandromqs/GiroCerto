@@ -74,9 +74,7 @@ object AccessibilityOfferReader {
         }
 
         val appName = resolveAppName(packageName, rawLines)
-        val cleanedLines = joinAdjacentMeasurementNodes(rawLines.map {
-            it.replace('\u00A0', ' ').replace('\u202F', ' ').trim()
-        }.filter { it.isNotBlank() })
+        val cleanedLines = joinAdjacentMeasurementNodes(OfferTextNormalization.lines(rawLines))
 
         // Flattened text cannot distinguish repeated legs from duplicate tree nodes.
         // The collector removes parent aggregates; otherwise fail closed and retry via OCR.

@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.0.11",
+    "changes": [
+      "Leitura por imagem também é tentada quando o acesso ao texto da oferta falha, se o OCR estiver habilitado.",
+      "Valores com espaços especiais, quebras de linha e caracteres invisíveis recebem o mesmo tratamento na leitura por texto e imagem.",
+      "Falhas temporárias do OCR são tratadas sem interromper o leitor. Copiar diagnóstico inclui a etapa e o local da última falha, sem mensagens que possam conter dados da oferta.",
+      "Teste de reconhecimento local de uma imagem de oferta acrescentado à validação em Android 11 e Android 15."
+    ]
+  },
+  {
     "version": "1.0.10",
     "changes": [
       "Títulos centralizados e parágrafos alinhados à esquerda, com semáforo verde, amarelo e vermelho também nas telas.",

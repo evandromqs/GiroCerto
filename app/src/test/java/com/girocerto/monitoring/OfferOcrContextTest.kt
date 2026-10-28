@@ -2,6 +2,16 @@ package com.girocerto.monitoring
 import org.junit.Assert.*
 import org.junit.Test
 class OfferOcrContextTest {
+    @Test fun currencyFormattingIsConsistentAcrossTextAndOcr() {
+        for (price in listOf("R$\u00a016,73", "R$\u202f16,73", "\u200eR$\u200e 16,73", "R$\n16,73")) {
+            val lines = listOf("Envios Moto", price, "29 min (10.7 km)", "Aceitar")
+            assertTrue(price, OfferOcrContext.permits(lines))
+            val parsed = AccessibilityOfferReader.parse(lines, "com.ubercab.driver")
+            assertTrue(price, parsed.isComplete)
+            assertEquals(16.73, parsed.fare!!, .001)
+        }
+        assertFalse(OfferOcrContext.permits(listOf("Aceitar", "R$\u00a016,73", "R$\u200e 250,00")))
+    }
     @Test fun routeAndBalanceAreNotOfferContext() {
         assertFalse(OfferOcrContext.permits(listOf("Seu saldo", "R$ 28,50", "10 km", "20 min")))
         assertFalse(OfferOcrContext.permits(listOf("Rota atual", "R$ 28,50", "10 km", "20 min")))

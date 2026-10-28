@@ -18,13 +18,14 @@ object OfferOcrContext {
     }
 
     fun permits(lines: List<String>): Boolean {
-        val text = lines.joinToString(" ").lowercase(java.util.Locale.ROOT)
+        val normalized = OfferTextNormalization.lines(lines)
+        val text = normalized.joinToString(" ").lowercase(java.util.Locale.ROOT)
         val currencyTokens = Regex("""(?i)(?:R\$|BRL)""").findAll(text).count()
         val matches = Regex("""(?i)(?:R\$|BRL)\s*([0-9]{1,4}[.,][0-9]{2})(?![0-9.,])""")
             .findAll(text).toList()
         val amounts = matches.map { it.groupValues[1].replace(',', '.').toDouble() }
         val maxFare = amounts.maxOrNull()
-        val included = AccessibilityOfferReader.includedBonusFares(lines)
+        val included = AccessibilityOfferReader.includedBonusFares(normalized)
         val prices = amounts.filterNot { fare ->
             maxFare != null && fare < maxFare && included.any { kotlin.math.abs(it - fare) < 0.001 }
         }.toSet()
@@ -41,7 +42,8 @@ class OfferOcrReader(
     private val offerReady: (OfferReaderResult, String) -> Unit
 ) {
     private data class Target(val id: Int, val bounds: android.graphics.Rect, val masks: List<android.graphics.Rect>)
-    private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    private val recognizerDelegate = lazy { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
+    private val recognizer get() = recognizerDelegate.value
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private var retry: Runnable? = null
     private var busy = false
@@ -63,6 +65,18 @@ class OfferOcrReader(
         return !closed && policy.ocrEnabled && policy.monitors(pkg) && pkg in GiroCertoAccessibilityService.TARGET_PACKAGES
     }
     private fun target(pkg: String, expected: Target? = null): Target? {
+        return try { findTarget(pkg, expected) } catch (error: Exception) {
+            reportFailure("Janela do OCR", error)
+            null
+        }
+    }
+
+    private fun reportFailure(stage: String, error: Exception) {
+        android.util.Log.w("GiroReader", ReaderDiagnostics.record(stage, error))
+        report("OCR: falha temporária em $stage; nova tentativa automática")
+    }
+
+    private fun findTarget(pkg: String, expected: Target? = null): Target? {
         if (!allowed(pkg)) return null
         val windows = service.windows.sortedByDescending { it.layer }
         for (window in windows) {
@@ -150,25 +164,27 @@ class OfferOcrReader(
                         val bitmap = checkNotNull(crop)
                         recognizer.process(InputImage.fromBitmap(bitmap, 0))
                             .addOnSuccessListener { recognized ->
-                                if (target(pkg, selected) != null && epochs.accepts(pkg, generation, now, SystemClock.elapsedRealtime())) {
-                                    val lines = recognized.textBlocks.flatMap { it.lines }
-                                        .filter { OfferOcrContext.acceptsLine(it.text, it.boundingBox?.top, bitmap.height) }
-                                        .map { it.text }
-                                    val parsed = AccessibilityOfferReader.parse(lines, pkg)
-                                    if (OfferOcrContext.permits(lines) && parsed.isComplete) {
-                                        if (confirmation == null) {
-                                            nextConfirmation = parsed
-                                            report("OCR: confirmando que a oferta continua na tela")
-                                        } else if (confirmation == parsed) {
-                                            report("OCR: oferta confirmada em duas leituras")
-                                            offerReady(parsed.copy(source = OfferSource.OCR_FALLBACK), pkg)
-                                        } else report("OCR: oferta mudou; aguardando nova leitura")
-                                    } else report(if (!parsed.isComplete)
-                                        "OCR: ${lines.size} textos; faltam ${parsed.missingFields.joinToString().ifEmpty { "dados da oferta" }}"
-                                        else "OCR: valores ambíguos ou botão Aceitar não reconhecido")
-                                } else report("OCR: resultado descartado; janela mudou")
+                                try {
+                                    if (target(pkg, selected) != null && epochs.accepts(pkg, generation, now, SystemClock.elapsedRealtime())) {
+                                        val lines = recognized.textBlocks.flatMap { it.lines }
+                                            .filter { OfferOcrContext.acceptsLine(it.text, it.boundingBox?.top, bitmap.height) }
+                                            .map { it.text }
+                                        val parsed = AccessibilityOfferReader.parse(lines, pkg)
+                                        if (OfferOcrContext.permits(lines) && parsed.isComplete) {
+                                            if (confirmation == null) {
+                                                nextConfirmation = parsed
+                                                report("OCR: confirmando que a oferta continua na tela")
+                                            } else if (confirmation == parsed) {
+                                                report("OCR: oferta confirmada em duas leituras")
+                                                offerReady(parsed.copy(source = OfferSource.OCR_FALLBACK), pkg)
+                                            } else report("OCR: oferta mudou; aguardando nova leitura")
+                                        } else report(if (!parsed.isComplete)
+                                            "OCR: ${lines.size} textos; faltam ${parsed.missingFields.joinToString().ifEmpty { "dados da oferta" }}"
+                                            else "OCR: valores ambíguos ou botão Aceitar não reconhecido")
+                                    } else report("OCR: resultado descartado; janela mudou")
+                                    } catch (error: Exception) { reportFailure("interpretação da imagem", error) }
                             }
-                            .addOnFailureListener { report("OCR: falha no reconhecimento local") }
+                            .addOnFailureListener { reportFailure("reconhecimento local", it) }
                             .addOnCompleteListener {
                                 bitmap.recycle(); finish()
                                 nextConfirmation?.let { candidate ->
@@ -180,7 +196,7 @@ class OfferOcrReader(
                                 }
                             }
                         submitted = true; crop = null
-                    } catch (_: Exception) { report("OCR: falha ao preparar imagem") }
+                    } catch (error: Exception) { reportFailure("preparação da imagem", error) }
                     finally {
                         crop?.recycle(); full?.recycle(); hardware?.recycle(); buffer.close()
                         if (!submitted) finish()
@@ -199,14 +215,14 @@ class OfferOcrReader(
             }
             if (Build.VERSION.SDK_INT >= 34) service.takeScreenshotOfWindow(selected.id, service.mainExecutor, callback)
             else service.takeScreenshot(Display.DEFAULT_DISPLAY, service.mainExecutor, callback)
-        } catch (_: Exception) { report("OCR: captura indisponível"); finish() }
+        } catch (error: Exception) { reportFailure("captura", error); finish() }
     }
     private fun android.graphics.Rect.region() = OcrRegion(left, top, right, bottom)
 
-    private fun finish() { busy = false; if (closed) recognizer.close() }
+    private fun finish() { busy = false; if (closed && recognizerDelegate.isInitialized()) recognizer.close() }
     fun close() {
         closed = true
         retry?.let { handler.removeCallbacks(it) }; retry = null
-        if (!busy) recognizer.close()
+        if (!busy && recognizerDelegate.isInitialized()) recognizer.close()
     }
 }
