@@ -173,17 +173,21 @@ class OfferOcrReader(
                     var mutableSource: Bitmap? = null
                     var crop: Bitmap? = null
                     var submitted = false
+                    var preparationStage = "leitura do buffer da captura"
                     try {
                         val colorSpace = result.colorSpace
                         hardware = Bitmap.wrapHardwareBuffer(buffer, colorSpace)
                         val hw = hardware ?: throw IllegalStateException("wrapHardwareBuffer returned null")
 
                         // A software Canvas cannot draw a hardware bitmap. Copy its pixels first.
+                        preparationStage = "conversão dos pixels da captura"
                         mutableSource = OcrBitmapPreparation.mutableCopy(hw)
+                        preparationStage = "criação da superfície de imagem"
                         val canvas = Canvas(mutableSource)
 
                         // Mask out floating windows above the app (e.g. Giro Certo floating bubble)
                         val paint = Paint().apply { color = Color.BLACK }
+                        preparationStage = "revalidação da janela capturada"
                         val current = findTarget(pkg)
                         if (current == null || current.id != activeTarget.id || current.bounds != activeTarget.bounds ||
                             !epochs.accepts(pkg, generation, now, SystemClock.elapsedRealtime())) return
@@ -192,6 +196,7 @@ class OfferOcrReader(
                         // Window captures exclude overlays; only display captures need masking.
                         val maskRegions = if (windowCapture) emptyList() else
                             (activeTarget.masks + current.masks).map { it.region() }
+                        preparationStage = "máscara das sobreposições"
                         OcrWindowRegion.masks(targetRegion, maskRegions, false, mutableSource.width, mutableSource.height).forEach {
                             canvas.drawRect(it.left.toFloat(), it.top.toFloat(), it.right.toFloat(), it.bottom.toFloat(), paint)
                         }
@@ -208,6 +213,7 @@ class OfferOcrReader(
                             return
                         }
 
+                        preparationStage = "recorte da oferta"
                         crop = if (width < mutableSource.width || height < mutableSource.height) {
                             Bitmap.createBitmap(mutableSource, left, top, width, height)
                         } else {
@@ -215,7 +221,12 @@ class OfferOcrReader(
                         }
 
                         val bitmap = checkNotNull(crop)
-                        recognizer.process(InputImage.fromBitmap(bitmap, 0))
+                        preparationStage = "inicialização do reconhecedor"
+                        val localRecognizer = recognizer
+                        preparationStage = "criação da entrada do OCR"
+                        val inputImage = InputImage.fromBitmap(bitmap, 0)
+                        preparationStage = "envio da imagem ao reconhecedor"
+                        localRecognizer.process(inputImage)
                             .addOnSuccessListener { recognized ->
                                 try {
                                     val latest = findTarget(pkg)
@@ -252,7 +263,7 @@ class OfferOcrReader(
                             }
                         submitted = true
                     } catch (error: Exception) {
-                        reportFailure("preparação da imagem", error)
+                        reportFailure(preparationStage, error)
                     } finally {
                         if (!submitted) {
                             if (crop !== mutableSource) crop?.recycle()
@@ -290,7 +301,7 @@ class OfferOcrReader(
 
     private fun reportFailure(stage: String, error: Exception) {
         Log.w("GiroReader", ReaderDiagnostics.record(stage, error))
-        report("OCR: falha temporária em $stage; nova tentativa automática")
+        report("OCR: falha em $stage (${error.javaClass.simpleName}); copie o diagnóstico no Copiloto")
     }
 
     private fun finish() {

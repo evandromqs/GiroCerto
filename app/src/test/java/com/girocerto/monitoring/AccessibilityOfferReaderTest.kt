@@ -7,6 +7,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AccessibilityOfferReaderTest {
+    @Test fun uberOfferReportedOnOctober31ParsesAndCalculates() {
+        // Manual transcription of the supplied screenshot, not an OCR accuracy test.
+        val lines = listOf("Envios Moto", "R$ 46,83", "4,93 (4347)",
+            "Confirmação do usuário", "1 h e 2 min (34.9 km)", "Aceitar")
+        assertTrue(OfferOcrContext.permits(lines))
+        val parsed = AccessibilityOfferReader.parse(lines, "com.ubercab.driver")
+        assertTrue(parsed.isComplete)
+        assertEquals(46.83, parsed.fare!!, .001)
+        assertEquals(34.9, parsed.distanceKm!!, .001)
+        assertEquals(62, parsed.durationMinutes)
+        val analysis = com.girocerto.domain.calculator.RideCalculator.calculate(
+            com.girocerto.domain.model.RideOffer(fare = parsed.fare, distanceKm = parsed.distanceKm,
+                durationMinutes = parsed.durationMinutes!!), com.girocerto.domain.model.VehicleSettings())
+        assertEquals(1.34, analysis.grossPerKm, .001)
+        assertEquals(45.32, analysis.grossPerHour, .001)
+    }
     @Test fun ignoresLabeledBalanceAndRejectsUnknownCompetingPrices() {
         val offer = AccessibilityOfferReader.parse(listOf("Saldo R$ 250,00", "R$ 16,73", "10.7 km", "29 min", "Aceitar"), "com.ubercab.driver")
         assertEquals(16.73, offer.fare!!, .001)

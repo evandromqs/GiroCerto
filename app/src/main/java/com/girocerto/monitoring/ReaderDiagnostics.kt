@@ -6,8 +6,10 @@ internal object ReaderDiagnostics {
         private set
 
     fun record(stage: String, error: Exception): String {
-        val trace = error.stackTrace.take(8).joinToString("\n") { frame ->
-            "${frame.className}.${frame.methodName}(${frame.fileName}:${frame.lineNumber})"
+        val trace = generateSequence<Throwable>(error) { it.cause }.take(4).joinToString("\nCausa: ") { cause ->
+            cause.javaClass.name + "\n" + cause.stackTrace.take(8).joinToString("\n") { frame ->
+                "${frame.className}.${frame.methodName}(${frame.fileName}:${frame.lineNumber})"
+            }
         }
         return "$stage: ${error.javaClass.simpleName}\n$trace".also { lastFailure = it }
     }

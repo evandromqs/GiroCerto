@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.0.16",
+    "changes": [
+      "Correção da inicialização do OCR na versão de produção: preservação dos construtores do ML Kit removidos pela otimização do APK.",
+      "Verificação do APK final antes da publicação para impedir novas versões sem os componentes necessários ao OCR.",
+      "Diagnóstico distingue conversão da captura, recorte e inicialização do reconhecedor, com identificação do aparelho e das causas encadeadas.",
+      "202 testes locais aprovados, incluindo os valores da oferta Uber relatada. A leitura de ofertas reais ainda precisa ser conferida no aparelho após a atualização."
+    ]
+  },
+  {
     "version": "1.0.15",
     "changes": [
       "Correção da conversão da captura de tela que podia impedir o processamento de todas as ofertas pelo OCR.",

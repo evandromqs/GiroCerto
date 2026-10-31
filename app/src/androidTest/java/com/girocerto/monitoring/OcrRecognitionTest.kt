@@ -13,6 +13,17 @@ import org.junit.Test
 import java.util.concurrent.TimeUnit
 
 class OcrRecognitionTest {
+    @Test fun appRegistrarsCanBeCreatedThroughManifestNames() {
+        val loader = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.classLoader
+        listOf(
+            "com.google.mlkit.vision.text.internal.TextRegistrar",
+            "com.google.mlkit.vision.common.internal.VisionCommonRegistrar",
+            "com.google.mlkit.common.internal.CommonComponentRegistrar"
+        ).forEach { name ->
+            assertNotNull(Class.forName(name, true, loader).getDeclaredConstructor().newInstance())
+        }
+    }
+
     @Test fun localRecognizerReadsUberFareFromBitmapTwice() {
         // Exercise the actual bundled recognizer, not only manually supplied strings.
         val bitmap = Bitmap.createBitmap(800, 900, Bitmap.Config.ARGB_8888)

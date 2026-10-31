@@ -482,6 +482,7 @@ fun CopilotScreen() {
                         onClick = {
                             val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName
                             val details = "Giro Certo $version • Android ${Build.VERSION.RELEASE}\n" +
+                                "Aparelho: ${Build.MANUFACTURER} ${Build.MODEL} • API ${Build.VERSION.SDK_INT}\n" +
                                 "Leitor conectado: $connected • Copiloto ativo: ${policy.enabled} • OCR: ${policy.ocrEnabled} • Janela: $floating\n" +
                                 "$observation\n$reader\n" + ReaderDiagnostics.lastFailure
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
