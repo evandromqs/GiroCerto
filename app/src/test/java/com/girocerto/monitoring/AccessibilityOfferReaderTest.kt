@@ -68,6 +68,47 @@ class AccessibilityOfferReaderTest {
         assertEquals(34.61, analysis.grossPerHour, 0.001)
     }
 
+    @Test fun ninetyNineFoodBonusDeliveryShownInScreenshotParsesAccurately() {
+        val lines = listOf(
+            "Entrega Food",
+            "R$ 11,08",
+            "Inclui R$2,00 Bônus",
+            "Distância total 6,2 km",
+            "Casa das Marmitas e Marmitex Feijoada & Parmegiana",
+            "Universidade Anhanguera - Polo Ferraz de Vasconcelos, Rua Jacomo Zanchetta, 271, Sítio Paredao",
+            "Aceitar pedido"
+        )
+        val result = AccessibilityOfferReader.parse(lines, "com.app99.driver")
+        assertTrue("A oferta da 99Food deve estar completa", result.isComplete)
+        assertTrue(OfferOcrContext.permits(lines))
+        assertEquals("99Food", result.appName)
+        assertEquals(11.08, result.fare!!, 0.001)
+        assertEquals(6.2, result.distanceKm!!, 0.001)
+        assertEquals(0.0, result.pickupDistanceKm!!, 0.001)
+    }
+
+    @Test fun uberEnviosMotoLongTripShownInScreenshotParsesAccurately() {
+        val lines = listOf(
+            "19% de bateria restante no celular.",
+            "Envios Moto",
+            "R$ 47,23",
+            "★ 4,96 (26)",
+            "Verificado",
+            "1 h e 11 min (44.9 km)",
+            "R. Das Hortencias, 62 - Jardim Barão, Vila Santa Margarida, Ferraz de Vasconcelos - SP, 08543-270, Brasil",
+            "Rua Manuel Manrique, 94, Cachoeirinha, São Paulo",
+            "Aceitar"
+        )
+        val result = AccessibilityOfferReader.parse(lines, "com.ubercab.driver")
+        assertTrue("A oferta da Uber deve estar completa", result.isComplete)
+        assertTrue(OfferOcrContext.permits(lines))
+        assertEquals("Uber", result.appName)
+        assertEquals(47.23, result.fare!!, 0.001)
+        assertEquals(44.9, result.distanceKm!!, 0.001)
+        assertEquals(71, result.durationMinutes)
+        assertEquals(4.96, result.passengerRating!!, 0.001)
+    }
+
     @Test fun deliveryWithoutTimeStillCalculatesPerKm() {
         val result = AccessibilityOfferReader.parse(listOf("Nova entrega", "R$ 18,00", "Distância total 6 km", "Aceitar"), "br.com.ifood.driver.app")
         assertTrue(result.isComplete)

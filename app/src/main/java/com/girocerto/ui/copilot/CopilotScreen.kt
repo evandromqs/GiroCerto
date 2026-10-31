@@ -212,26 +212,22 @@ fun CopilotScreen() {
                 )
 
                 PreferenceRow(
-                    label = "Uber e Uber Eats",
-                    checked = policy.uber,
-                    platform = WorkPlatform.UBER,
-                    onCheckedChange = { update(policy.copy(uber = it)) }
-                )
-                PreferenceRow(
                     label = "99 e 99Food",
                     checked = policy.ninetyNine,
                     platform = WorkPlatform.NINETY_NINE,
                     onCheckedChange = { update(policy.copy(ninetyNine = it)) }
                 )
                 PreferenceRow(
-                    label = "inDrive",
-                    checked = policy.inDrive,
-                    onCheckedChange = { update(policy.copy(inDrive = it)) }
+                    label = "Uber e Uber Eats",
+                    checked = policy.uber,
+                    platform = WorkPlatform.UBER,
+                    onCheckedChange = { update(policy.copy(uber = it)) }
                 )
                 PreferenceRow(
-                    label = "iFood e Keeta",
-                    checked = policy.otherApps,
-                    onCheckedChange = { update(policy.copy(otherApps = it)) }
+                    label = "iFood",
+                    checked = policy.ifood,
+                    platform = WorkPlatform.IFOOD,
+                    onCheckedChange = { update(policy.copy(ifood = it)) }
                 )
             }
         }

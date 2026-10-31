@@ -9,8 +9,9 @@ data class CopilotPolicy(
     val enabled: Boolean = true,
     val uber: Boolean = true,
     val ninetyNine: Boolean = true,
+    val ifood: Boolean = true,
     val inDrive: Boolean = true,
-    val otherApps: Boolean = true,
+    val otherApps: Boolean = false,
     val speakGreen: Boolean = true,
     val speakYellow: Boolean = true,
     val speakRed: Boolean = true,
@@ -28,6 +29,7 @@ data class CopilotPolicy(
     fun monitors(packageName: String): Boolean = enabled && when {
         packageName.contains("uber") -> uber
         packageName == "com.app99.driver" || packageName.contains("taxis99") || packageName.contains("didiglobal") -> ninetyNine
+        packageName.contains("ifood") -> ifood
         packageName.contains("indriver") -> inDrive
         else -> otherApps
     }
@@ -48,8 +50,9 @@ class CopilotPreferences(private val context: Context) {
             enabled = prefs.getBoolean("enabled", true),
             uber = prefs.getBoolean("uber", true),
             ninetyNine = prefs.getBoolean("99", true),
-            inDrive = prefs.getBoolean("indrive", true),
-            otherApps = prefs.getBoolean("others", true),
+            ifood = prefs.getBoolean("ifood", true),
+            inDrive = prefs.getBoolean("indrive", false),
+            otherApps = prefs.getBoolean("others", false),
             speakGreen = prefs.getBoolean("green", true),
             speakYellow = prefs.getBoolean("yellow", true),
             speakRed = prefs.getBoolean("red", true),
@@ -63,8 +66,9 @@ class CopilotPreferences(private val context: Context) {
     }
     fun write(policy: CopilotPolicy) {
         prefs.edit().putBoolean("enabled", policy.enabled).putBoolean("uber", policy.uber)
-            .putBoolean("99", policy.ninetyNine).putBoolean("indrive", policy.inDrive)
-            .putBoolean("others", policy.otherApps).putBoolean("green", policy.speakGreen)
+            .putBoolean("99", policy.ninetyNine).putBoolean("ifood", policy.ifood)
+            .putBoolean("indrive", policy.inDrive).putBoolean("others", policy.otherApps)
+            .putBoolean("green", policy.speakGreen)
             .putBoolean("yellow", policy.speakYellow).putBoolean("red", policy.speakRed)
             .putString("minimum_rating", policy.minimumPassengerRating.toString())
             .putBoolean("capture_screenshot", policy.captureOfferScreenshot)

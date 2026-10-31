@@ -138,12 +138,18 @@ class OfferOcrReader(
                     try {
                         val current = target(pkg, selected)
                         if (current == null) { report("OCR: captura descartada; janela mudou"); return }
-                        hardware = Bitmap.wrapHardwareBuffer(buffer, result.colorSpace)
-                        full = hardware?.copy(Bitmap.Config.ARGB_8888, true)
-                        val source = full ?: throw IllegalStateException("No bitmap")
+                        val colorSpace = result.colorSpace
+                        hardware = Bitmap.wrapHardwareBuffer(buffer, colorSpace)
+                        val hw = hardware ?: throw IllegalStateException("wrapHardwareBuffer returned null")
+                        // Hardware bitmaps cannot be copied with isMutable=true on Android.
+                        // Drawing onto a software Bitmap guarantees a mutable ARGB_8888 bitmap across all Android versions.
+                        val mutableSource = Bitmap.createBitmap(hw.width, hw.height, Bitmap.Config.ARGB_8888)
+                        val canvas = android.graphics.Canvas(mutableSource)
+                        canvas.drawBitmap(hw, 0f, 0f, null)
+                        full = mutableSource
+                        val source = full
                         // Exclude covers from both snapshots, including notifications and our bubble.
                         // API 34 window captures need coordinates relative to the target window.
-                        val canvas = android.graphics.Canvas(source)
                         val paint = android.graphics.Paint().apply { color = android.graphics.Color.BLACK }
                         OcrWindowRegion.masks(selected.bounds.region(),
                             (selected.masks + current.masks).map { it.region() },
@@ -154,10 +160,16 @@ class OfferOcrReader(
                             crop = source; full = null
                         } else {
                             val b = selected.bounds
-                            if (b.left < 0 || b.top < 0 || b.right > source.width || b.bottom > source.height) {
+                            val left = b.left.coerceIn(0, source.width)
+                            val top = b.top.coerceIn(0, source.height)
+                            val right = b.right.coerceIn(left, source.width)
+                            val bottom = b.bottom.coerceIn(top, source.height)
+                            val width = right - left
+                            val height = bottom - top
+                            if (width <= 0 || height <= 0) {
                                 report("OCR: limites da janela incompatíveis com captura"); return
                             }
-                            crop = Bitmap.createBitmap(source, b.left, b.top, b.width(), b.height())
+                            crop = Bitmap.createBitmap(source, left, top, width, height)
                             if (crop === source) full = null
                         }
                         var nextConfirmation: OfferReaderResult? = null

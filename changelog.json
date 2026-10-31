@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.0.13",
+    "changes": [
+      "Configuração do Copiloto focada nos 3 principais aplicativos: 99, Uber e iFood.",
+      "Correção no leitor OCR para conversão segura de HardwareBuffer em dispositivos Android, eliminando falhas temporárias na captura de ofertas.",
+      "Aprimoramento na detecção de bônus inclusos e viagens longas da 99Food e Uber Envios Moto.",
+      "Otimização do tempo de varredura e orçamento de acessibilidade para leitura contínua de popups e janelas de ofertas."
+    ]
+  },
+  {
     "version": "1.0.12",
     "changes": [
       "Sistema de design neobrutalista com paleta azul-marinho (#102746) e cinza-claro (#F0F3F8), com alto contraste em branco e preto.",

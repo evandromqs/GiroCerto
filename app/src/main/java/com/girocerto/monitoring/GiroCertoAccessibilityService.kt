@@ -313,7 +313,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     private class ReadBudget {
         var nodes = 0
         val started = android.os.SystemClock.uptimeMillis()
-        fun permits(depth: Int) = ++nodes <= 512 && depth <= 40 && android.os.SystemClock.uptimeMillis() - started < 50
+        fun permits(depth: Int) = ++nodes <= 1024 && depth <= 50 && android.os.SystemClock.uptimeMillis() - started < 300
     }
     private fun collectAllTexts(node: AccessibilityNodeInfo, texts: MutableList<String>, budget: ReadBudget, depth: Int = 0): Boolean {
         if (!budget.permits(depth)) return false

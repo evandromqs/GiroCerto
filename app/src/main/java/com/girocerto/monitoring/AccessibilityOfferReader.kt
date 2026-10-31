@@ -68,6 +68,7 @@ object AccessibilityOfferReader {
     fun parse(rawLines: List<String>, packageName: String): OfferReaderResult {
         if (rawLines.isEmpty()) {
             return OfferReaderResult(
+                appName = resolveAppName(packageName, rawLines),
                 error = "Nenhum texto identificado na tela",
                 source = OfferSource.ACCESSIBILITY_SERVICE
             )
@@ -89,7 +90,7 @@ object AccessibilityOfferReader {
             missingFields = listOf("Trajeto inequívoco"), source = OfferSource.ACCESSIBILITY_SERVICE)
 
         val eligibleLines = cleanedLines.filterNot {
-            Regex("(?i)\\b(saldo|carteira|ganhos de hoje|ganhos da semana|promoção|bônus)\\b").containsMatchIn(it)
+            Regex("(?i)\\b(saldo|carteira|ganhos de hoje|ganhos da semana)\\b").containsMatchIn(it)
         }
         val priced = eligibleLines.flatMap { line ->
             val matcher = FARE_PATTERN.matcher(line)
@@ -337,7 +338,10 @@ object AccessibilityOfferReader {
             packageName.contains("ubercab") -> "Uber"
             packageName.contains("didiglobal.food") || packageName.contains("99food") -> "99Food"
             packageName.contains("didiglobal") -> "DiDi"
-            packageName == "com.app99.driver" || packageName.contains("taxis99") -> "99"
+            packageName == "com.app99.driver" || packageName.contains("taxis99") -> {
+                val fullText = lines.joinToString(" ")
+                if (fullText.contains("Food", ignoreCase = true)) "99Food" else "99"
+            }
             packageName.contains("indriver") -> "inDrive"
             packageName.contains("ifood") -> "iFood"
             packageName.contains("keeta") || packageName.contains("meituan") || packageName == "com.sankuai.sailor.courier" -> "Keeta"
