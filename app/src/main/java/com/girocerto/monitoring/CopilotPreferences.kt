@@ -20,8 +20,14 @@ data class CopilotPolicy(
     val captureOfferScreenshot: Boolean = false,
     val ocrEnabled: Boolean = false,
     val autoSave: Boolean = false,
+    val addFiveMinutes: Boolean = false,
     val restingCorner: OverlayCorner = OverlayCorner.TOP_RIGHT
 ) {
+    fun adjustedDuration(minutes: Int, packageName: String): Int {
+        val supported = packageName.contains("uber") || packageName == "com.app99.driver" ||
+            packageName == "com.taxis99" || packageName.startsWith("com.didiglobal")
+        return if (addFiveMinutes && supported && minutes > 0) minutes + 5 else minutes
+    }
     fun isBelowPreferredRating(rating: Double?): Boolean =
         minimumPassengerRating > 0.0 && rating != null && rating.isFinite() &&
             rating in 0.0..5.0 && rating < minimumPassengerRating
@@ -61,6 +67,7 @@ class CopilotPreferences(private val context: Context) {
             captureOfferScreenshot = prefs.getBoolean("capture_screenshot", false),
             ocrEnabled = prefs.getBoolean("ocr_enabled", false),
             autoSave = prefs.getBoolean("autosave", false),
+            addFiveMinutes = prefs.getBoolean("add_five_minutes", false),
             restingCorner = corner
         )
     }
@@ -73,6 +80,7 @@ class CopilotPreferences(private val context: Context) {
             .putString("minimum_rating", policy.minimumPassengerRating.toString())
             .putBoolean("capture_screenshot", policy.captureOfferScreenshot)
             .putBoolean("ocr_enabled", policy.ocrEnabled)
+            .putBoolean("add_five_minutes", policy.addFiveMinutes)
             .putBoolean("notifications", policy.notifyOffers).putBoolean("autosave", policy.autoSave)
             .putString("resting_corner", policy.restingCorner.name).apply()
         com.girocerto.overlay.OverlayController.syncCopilot(context)

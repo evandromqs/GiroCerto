@@ -35,8 +35,8 @@ object OfferOcrContext {
         return acceptsLine(text, screenTop, displayHeight)
     }
 
-    fun permits(lines: List<String>): Boolean {
-        val normalized = AccessibilityOfferReader.joinAdjacentMeasurementNodes(OfferTextNormalization.lines(lines))
+    fun permits(lines: List<String>, packageName: String = ""): Boolean {
+        val normalized = AccessibilityOfferReader.joinAdjacentMeasurementNodes(OfferTextNormalization.lines(DeliveryOfferRules.prepare(lines, packageName)))
         val text = normalized.joinToString(" ").lowercase(java.util.Locale.ROOT)
         if (Regex("""(?i)\b(seu saldo|rota atual)\b""").containsMatchIn(text)) return false
         val matches = Regex("""(?i)(?:R\$|BRL)\s*((?:[0-9]{1,3}(?:\.[0-9]{3})+,[0-9]{2}|[0-9]{1,4}[.,][0-9]{2}))(?![0-9.,])""")
@@ -241,7 +241,7 @@ class OfferOcrReader(
                                             activeTarget.bounds.top, activeTarget.bounds.height(), resourcesDisplayHeight()) }
                                         .map { it.text }
                                     val parsed = AccessibilityOfferReader.parse(lines, pkg)
-                                    if (OfferOcrContext.permits(lines) && parsed.isComplete) {
+                                    if (OfferOcrContext.permits(lines, pkg) && parsed.isComplete) {
                                         report("OCR: oferta detectada com sucesso (${parsed.appName})")
                                         offerReady(parsed.copy(source = OfferSource.OCR_FALLBACK), pkg)
                                     } else {

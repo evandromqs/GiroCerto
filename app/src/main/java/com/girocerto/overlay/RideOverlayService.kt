@@ -62,6 +62,7 @@ class RideOverlayService : Service() {
     // Posição na tela (persistida durante a sessão)
     private var posX: Int = 30
     private var posY: Int = 300
+    private var dockRight = true
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val autoDismissHandler = Handler(Looper.getMainLooper())
@@ -88,6 +89,12 @@ class RideOverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val corner = CopilotPreferences(this).read().restingCorner
+        dockRight = corner == OverlayCorner.TOP_RIGHT || corner == OverlayCorner.BOTTOM_RIGHT
+        posX = if (corner == OverlayCorner.TOP_RIGHT || corner == OverlayCorner.BOTTOM_RIGHT)
+            resources.displayMetrics.widthPixels - bubbleSize() - dpToPx(12) else dpToPx(12)
+        posY = if (corner == OverlayCorner.BOTTOM_LEFT || corner == OverlayCorner.BOTTOM_RIGHT)
+            resources.displayMetrics.heightPixels - bubbleSize() - dpToPx(80) else dpToPx(100)
         Log.i("GiroOverlay", "Overlay service created")
     }
 
@@ -159,10 +166,11 @@ class RideOverlayService : Service() {
 
         val bubble = createBubbleView()
         currentView = bubble
+        posX = if (dockRight) (resources.displayMetrics.widthPixels - bubbleSize() - dpToPx(12)).coerceAtLeast(0) else dpToPx(12)
 
         val layoutParams = getWindowLayoutParams(
-            width = dpToPx(64),
-            height = dpToPx(64),
+            width = bubbleSize(),
+            height = bubbleSize(),
             x = posX,
             y = posY
         )
@@ -192,8 +200,13 @@ class RideOverlayService : Service() {
         bubble.addView(android.widget.ImageView(this).apply {
             setImageResource(com.girocerto.app.R.drawable.ic_launcher_monochrome)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, FrameLayout.LayoutParams(dpToPx(96), dpToPx(96), Gravity.CENTER))
-        bubble.setOnClickListener { showQuickMenuMode() }
+        }, FrameLayout.LayoutParams((dpToPx(96) * .8f).toInt(), (dpToPx(96) * .8f).toInt(), Gravity.CENTER))
+        bubble.setOnClickListener {
+            currentAnalysis?.let { analysis ->
+                showOfferCardMode(analysis.grossPerKm, analysis.grossPerHour, analysis.estimatedProfit,
+                    analysis.trafficLight, analysis.decisionReason, analysis.offer.appName, analysis.offer.destinationAddress)
+            } ?: showQuickMenuMode()
+        }
         bubble.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
@@ -233,7 +246,8 @@ class RideOverlayService : Service() {
                             Toast.makeText(this@RideOverlayService, "Janela ocultada. Para voltar, abra Copiloto.", Toast.LENGTH_SHORT).show()
                         } else if (dragging) {
                             val edge = dpToPx(12)
-                            layout.x = if (layout.x + view.width / 2 < resources.displayMetrics.widthPixels / 2) edge
+                            dockRight = layout.x + view.width / 2 >= resources.displayMetrics.widthPixels / 2
+                            layout.x = if (!dockRight) edge
                                 else (resources.displayMetrics.widthPixels - view.width - edge).coerceAtLeast(0)
                             posX = layout.x; posY = layout.y
                             runCatching { windowManager?.updateViewLayout(view, layout) }
@@ -347,15 +361,14 @@ class RideOverlayService : Service() {
 
         val displayMetrics = resources.displayMetrics
         val screenWidth = displayMetrics.widthPixels
-        val cardWidth = dpToPx(280)
-        val targetX = (posX - cardWidth / 2).coerceIn(dpToPx(16), screenWidth - cardWidth - dpToPx(16))
+        val cardWidth = dpToPx(360).coerceAtMost(screenWidth - dpToPx(32))
 
         val layoutParams = getWindowLayoutParams(
             width = cardWidth,
             height = WindowManager.LayoutParams.WRAP_CONTENT,
-            x = targetX,
-            y = posY.coerceAtLeast(dpToPx(80))
-        )
+            x = 0,
+            y = 0
+        ).apply { gravity = Gravity.CENTER; x = 0; y = 0 }
         params = layoutParams
 
         try {
@@ -483,7 +496,7 @@ class RideOverlayService : Service() {
         root.addView(actions)
 
         // Drag listener para mover o menu rápido
-        attachDragListener(root)
+        // Expanded panels stay centered; only the bubble changes its docked position.
 
         return root
     }
@@ -525,14 +538,13 @@ class RideOverlayService : Service() {
         val displayMetrics = resources.displayMetrics
         val screenWidth = displayMetrics.widthPixels
         val cardWidth = dpToPx(360).coerceAtMost(screenWidth - dpToPx(32))
-        val targetX = (screenWidth - cardWidth) / 2
 
         val layoutParams = getWindowLayoutParams(
             width = cardWidth,
             height = WindowManager.LayoutParams.WRAP_CONTENT,
-            x = targetX,
-            y = dpToPx(28)
-        )
+            x = 0,
+            y = 0
+        ).apply { gravity = Gravity.CENTER; x = 0; y = 0 }
         params = layoutParams
 
         try {
@@ -561,6 +573,7 @@ class RideOverlayService : Service() {
         }
         fun action(value: String, name: String, click: () -> Unit) = Button(this).apply {
             text = value; tag = name; textSize = 12f; isAllCaps = false
+            if (name == "detailsBtn") contentDescription = "Alternar detalhes da oferta"
             typeface = resources.getFont(com.girocerto.app.R.font.poppins_medium)
             minHeight = dpToPx(48); minimumHeight = dpToPx(48)
             setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
@@ -571,6 +584,7 @@ class RideOverlayService : Service() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(16))
+            contentDescription = "Análise da oferta"
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(palette("#243535"), palette("#101818"))).apply {
                 cornerRadius = dpToPx(24).toFloat(); setStroke(dpToPx(1), palette("#4B5563"))
@@ -578,16 +592,22 @@ class RideOverlayService : Service() {
             elevation = dpToPx(12).toFloat()
         }
         val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; orientation = LinearLayout.HORIZONTAL }
+        header.addView(android.widget.ImageView(this).apply {
+            tag = "platformIcon"
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+        }, LinearLayout.LayoutParams(dpToPx(32), dpToPx(32)).apply { rightMargin = dpToPx(8) })
         val brand = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        brand.addView(label("Giro Certo • Copiloto", size = 12f))
+        brand.addView(label("Giro Certo", size = 11f))
         brand.addView(label(name = "appBadge", size = 16f))
         header.addView(brand, LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(label(name = "statusBadge", size = 12f).apply {
+            gravity = Gravity.CENTER; setPadding(dpToPx(8), dpToPx(5), dpToPx(8), dpToPx(5))
+        })
         header.addView(action("—", "minimizeBtn") { switchToBubble() }.apply {
             contentDescription = "Minimizar análise e manter copiloto ativo"
             textSize = 22f
         }, LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)).apply { leftMargin = dpToPx(12) })
         root.addView(header)
-        attachDragListener(brand)
         val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val scroll = object : android.widget.ScrollView(this) {
             override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -596,19 +616,15 @@ class RideOverlayService : Service() {
         }.apply { isFillViewport = false; addView(content) }
         root.addView(scroll)
         fun add(view: View, top: Int = 12) { content.addView(view, LinearLayout.LayoutParams(-1,-2).apply { topMargin = dpToPx(top) }) }
-        add(label(name = "statusBadge", size = 16f).apply {
-            gravity = Gravity.CENTER; setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
-        })
         add(label(name = "offerSummary", size = 13f).apply { gravity = Gravity.START })
         val glance = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        listOf("valKm" to "R$/km", "valProfit" to "Lucro").forEachIndexed { index, (tag, title) ->
+        listOf("valKm" to "R$/km", "valHour" to "R$/hora", "valProfit" to "Lucro").forEachIndexed { index, (tag, title) ->
             glance.addView(metricBox(tag, title), LinearLayout.LayoutParams(0, -2, 1f).apply { if (index > 0) leftMargin = dpToPx(8) })
         }
         add(glance)
         val details = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; tag = "details"; visibility = View.GONE
         }
-        details.addView(metricBox("valHour", "R$/hora"), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(8) })
         details.addView(label(name = "decisionReason", size = 13f).apply {
             gravity = Gravity.START
             justificationMode = android.graphics.text.LineBreaker.JUSTIFICATION_MODE_NONE
@@ -676,6 +692,15 @@ class RideOverlayService : Service() {
         val mapsBtn = root.findViewWithTag<Button>("mapsBtn")
 
         appBadge?.text = appName
+        root.findViewWithTag<android.widget.ImageView>("platformIcon")?.apply {
+            val icon = when {
+                appName.contains("uber", true) -> com.girocerto.app.R.drawable.platform_uber
+                appName.contains("99") || appName.contains("didi", true) -> com.girocerto.app.R.drawable.platform_ninety_nine
+                appName.contains("ifood", true) -> com.girocerto.app.R.drawable.platform_ifood
+                else -> com.girocerto.app.R.drawable.ic_launcher_monochrome
+            }
+            setImageResource(icon); contentDescription = "Aplicativo detectado: $appName"
+        }
         currentAnalysis?.let { analysis ->
             root.findViewWithTag<TextView>("offerSummary")?.text = String.format(Locale.GERMANY,
                 "R$ %.2f • %.1f km • %s", analysis.offer.fare, analysis.totalDistanceKm,
@@ -692,6 +717,8 @@ class RideOverlayService : Service() {
         valHour?.text = if ((currentAnalysis?.offer?.durationMinutes ?: 0) > 0) String.format(Locale.GERMANY, "%.2f", hourRate) else "—"
         valHour?.contentDescription = if ((currentAnalysis?.offer?.durationMinutes ?: 0) > 0) "Rendimento por hora" else "Tempo não informado"
         valProfit?.text = String.format(Locale.GERMANY, "%.2f", profit)
+        valKm?.contentDescription = "Ganho por quilômetro"
+        valProfit?.contentDescription = "Lucro estimado"
 
         val text = when (status) {
             TrafficLightStatus.GREEN -> "Compensa"
@@ -772,7 +799,7 @@ class RideOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            this.x = x.coerceIn(0, (resources.displayMetrics.widthPixels - width.coerceAtLeast(dpToPx(58))).coerceAtLeast(0))
+            this.x = x.coerceIn(0, (resources.displayMetrics.widthPixels - width.coerceAtLeast(bubbleSize())).coerceAtLeast(0))
             this.y = y.coerceIn(0, (resources.displayMetrics.heightPixels - dpToPx(180)).coerceAtLeast(0))
         }
     }
@@ -821,6 +848,8 @@ class RideOverlayService : Service() {
         val density = resources.displayMetrics.density
         return (dp * density).toInt()
     }
+
+    private fun bubbleSize() = (dpToPx(64) * .8f).toInt()
 
     companion object {
         const val ACTION_START_BUBBLE = "com.girocerto.overlay.ACTION_START_BUBBLE"

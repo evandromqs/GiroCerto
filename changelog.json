@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.17",
+    "changes": [
+      "Regras específicas da 99 separam a tarifa do dinheiro a cobrar do cliente e de recompensas adicionais; regras de leitura da Uber preservadas.",
+      "Leitura do iFood prioriza o cartão de Rota para Moto e evita misturar valores de outras sobreposições.",
+      "Modal centralizado com ícone do aplicativo e R$/km, R$/hora e lucro lado a lado, sem precisar expandir detalhes.",
+      "Toque na bolha reabre a última análise centralizada; ao minimizar, a bolha volta à lateral anterior. Botão flutuante 20% menor.",
+      "Nova opção no Copiloto para adicionar 5 minutos à duração informada de Uber e 99, desligada por padrão. Ofertas sem duração continuam sem estimativa por hora."
+    ]
+  },
+  {
     "version": "1.0.16",
     "changes": [
       "Correção da inicialização do OCR na versão de produção: preservação dos construtores do ML Kit removidos pela otimização do APK.",

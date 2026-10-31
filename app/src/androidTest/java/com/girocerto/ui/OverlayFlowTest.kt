@@ -75,6 +75,7 @@ class OverlayFlowTest {
                 assertTrue(OverlayController.showOverlay(compose.activity, analysis))
             }
             val minimize = awaitBounds("Minimizar análise e manter copiloto ativo")
+            assertCenteredMetrics()
             SystemClock.sleep(300)
             val dir = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
             if(dir != null) java.io.File(dir,"offer-${theme.name}.png").outputStream().use { automation.takeScreenshot()?.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) }
@@ -84,13 +85,50 @@ class OverlayFlowTest {
                 event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
                 assertTrue(automation.injectInputEvent(event,true)); event.recycle()
             }
-            awaitBounds("Giro Certo. Toque para abrir; arraste até a lixeira para ocultar.")
+            val docked = awaitBounds("Giro Certo. Toque para abrir; arraste até a lixeira para ocultar.")
+            val density = compose.activity.resources.displayMetrics.density
+            assertEquals((64 * density * .8f).toInt().toDouble(), docked.width().toDouble(), 2.0)
+            tap(docked)
+            awaitBounds("Minimizar análise e manter copiloto ativo")
+            assertCenteredMetrics()
+            tap(awaitBounds("Alternar detalhes da oferta"))
+            SystemClock.sleep(200)
+            assertCenteredMetrics()
+            tap(awaitBounds("Minimizar análise e manter copiloto ativo"))
+            val returned = awaitBounds("Giro Certo. Toque para abrir; arraste até a lixeira para ocultar.")
+            assertEquals(docked, returned)
             assertTrue(CopilotPreferences(compose.activity).read().enabled)
         }
         compose.runOnIdle {
             OverlayController.stopFloatingBubble(compose.activity)
             com.girocerto.app.theme.AppearancePreferences.set(compose.activity, com.girocerto.app.theme.ThemeMode.SYSTEM)
         }
+    }
+
+    private fun tap(bounds: Rect) {
+        val down = SystemClock.uptimeMillis()
+        for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+            val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, bounds.exactCenterX(), bounds.exactCenterY(), 0)
+            event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            assertTrue(automation.injectInputEvent(event, true)); event.recycle()
+        }
+    }
+
+    private fun assertCenteredMetrics() {
+        val panel = awaitBounds("Análise da oferta")
+        val screen = checkNotNull(automation.takeScreenshot())
+        try {
+            val density = compose.activity.resources.displayMetrics.density
+            assertEquals(screen.width / 2.0, panel.exactCenterX().toDouble(), 16.0 * density)
+            assertEquals(screen.height / 2.0, panel.exactCenterY().toDouble(), 48.0 * density)
+        } finally { screen.recycle() }
+        val km = awaitBounds("Ganho por quilômetro")
+        val hour = awaitBounds("Rendimento por hora")
+        val profit = awaitBounds("Lucro estimado")
+        assertEquals(km.centerY(), hour.centerY())
+        assertEquals(hour.centerY(), profit.centerY())
+        assertTrue(km.right <= hour.left && hour.right <= profit.left)
+        awaitBounds("Aplicativo detectado: Uber")
     }
 
     private fun awaitBounds(description: String): Rect {

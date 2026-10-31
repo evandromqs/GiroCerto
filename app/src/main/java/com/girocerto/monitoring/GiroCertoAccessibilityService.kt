@@ -244,7 +244,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     private fun processOffer(result: OfferReaderResult, packageName: String) {
         val fare = result.fare ?: return
         val distanceKm = result.distanceKm ?: return
-        val durationMinutes = result.durationMinutes ?: 0
+        val durationMinutes = CopilotPreferences(this).read().adjustedDuration(result.durationMinutes ?: 0, packageName)
         val pickupDistance = result.pickupDistanceKm ?: 0.0
 
         val offer = RideOffer(
@@ -266,7 +266,9 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 if (!policy.monitors(packageName)) return@launch
 
                 // 1. Calcula a rentabilidade e semáforo através das fórmulas financeiras puras
-                val calculated = RideCalculator.calculate(offer, settings)
+                val baseAnalysis = RideCalculator.calculate(offer, settings)
+                val calculated = if (durationMinutes > (result.durationMinutes ?: 0))
+                    baseAnalysis.copy(decisionReason = baseAnalysis.decisionReason + " • Tempo inclui margem de 5 min.") else baseAnalysis
                 val finalAnalysis = if (policy.isBelowPreferredRating(offer.passengerRating)) {
                     calculated.copy(decisionReason = calculated.decisionReason + " • Nota do passageiro abaixo da sua preferência. Você decide.")
                 } else calculated
