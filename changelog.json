@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.12",
+    "changes": [
+      "Sistema de design neobrutalista com paleta azul-marinho (#102746) e cinza-claro (#F0F3F8), com alto contraste em branco e preto.",
+      "Família tipográfica Roboto padronizada em todos os componentes e telas do aplicativo.",
+      "Reconstrução e padronização visual completa das telas de início, diário, metas, histórico, copiloto e configurações.",
+      "Modal flutuante compacto e tátil, com suporte à ancoragem por gravidade nos cantos da tela e botões otimizados para uso em trânsito.",
+      "Suíte expandida de testes unitários, testes de estresse adversariais e testes ponta a ponta (E2E)."
+    ]
+  },
+  {
     "version": "1.0.11",
     "changes": [
       "Leitura por imagem também é tentada quando o acesso ao texto da oferta falha, se o OCR estiver habilitado.",

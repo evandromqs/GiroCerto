@@ -3,7 +3,6 @@ package com.girocerto.ui.settings
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import com.girocerto.ui.components.TactileButton as Button
-
 import com.girocerto.ui.components.AppText as Text
 
 import android.content.Intent
@@ -17,16 +16,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
-import com.girocerto.ui.components.TactileCard as Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -54,22 +53,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.girocerto.app.GiroCertoApp
-import com.girocerto.app.theme.BackgroundDark
-import com.girocerto.app.theme.BorderDark
-import com.girocerto.app.theme.GreenPositive
-import com.girocerto.app.theme.PrimaryBlue
-import com.girocerto.app.theme.RedAlert
-import com.girocerto.app.theme.SurfaceVariantDark
-import com.girocerto.app.theme.SurfaceDark
-import com.girocerto.app.theme.TextPrimary
-import com.girocerto.app.theme.TextSecondary
-import com.girocerto.app.theme.YellowWarning
+import com.girocerto.app.theme.AppSpacing
 import com.girocerto.domain.calculator.RideCalculator
 import com.girocerto.domain.model.FuelType
 import com.girocerto.domain.model.RideOffer
 import com.girocerto.domain.model.VehicleSettings
 import com.girocerto.monitoring.VoiceAnnouncer
 import com.girocerto.overlay.OverlayController
+import com.girocerto.ui.components.NeobrutalButton
+import com.girocerto.ui.components.NeobrutalCard
+import com.girocerto.ui.components.TactileButton
 import kotlinx.coroutines.launch
 
 /**
@@ -166,24 +159,37 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(BackgroundDark)
-            .padding(16.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(AppSpacing.Screen)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         SnackbarHost(hostState = snackbarHostState)
-        OutlinedButton(onClick = onNavigateToCopilot, modifier = Modifier.fillMaxWidth()) { Text("Configurar copiloto") }
+        TactileButton(
+            onClick = onNavigateToCopilot,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = AppSpacing.MinTouchTarget),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            shape = RoundedCornerShape(AppSpacing.CornerButton),
+            border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
+        ) {
+            Text("Configurar copiloto", fontWeight = FontWeight.Bold)
+        }
 
         Text(
             text = "Configurações Operacionais",
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold
         )
 
         Text(
             text = "Ajuste os custos reais do seu veículo e as metas financeiras para calibrar o semáforo de decisão.",
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp
         )
 
@@ -191,14 +197,18 @@ fun SettingsScreen(
         // SEÇÃO 1 — Tipo de Combustível
         // 
         SectionCard(title = "Tipo de Combustível") {
-            Text(text = "Selecione o combustível do seu veículo:", color = TextSecondary, fontSize = 12.sp)
+            Text(
+                text = "Selecione o combustível do seu veículo:",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp
+            )
             Spacer(modifier = Modifier.height(6.dp))
 
             val fuelOptions = listOf(
-                FuelType.GASOLINA to " Gasolina",
-                FuelType.ETANOL to " Etanol",
-                FuelType.GNV to " GNV",
-                FuelType.ELETRICO to " Elétrico"
+                FuelType.GASOLINA to "Gasolina",
+                FuelType.ETANOL to "Etanol",
+                FuelType.GNV to "GNV",
+                FuelType.ELETRICO to "Elétrico"
             )
 
             Row(
@@ -210,12 +220,19 @@ fun SettingsScreen(
                         selected = selectedFuelType == type,
                         onClick = { selectedFuelType = type },
                         label = { Text(label, fontSize = 11.sp, fontWeight = FontWeight.Medium) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = AppSpacing.MinTouchTarget),
+                        shape = RoundedCornerShape(AppSpacing.CornerSmall),
+                        border = BorderStroke(
+                            AppSpacing.BorderThin,
+                            if (selectedFuelType == type) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                        ),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PrimaryBlue,
-                            selectedLabelColor = BackgroundDark,
-                            containerColor = SurfaceDark,
-                            labelColor = TextSecondary
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                 }
@@ -290,7 +307,7 @@ fun SettingsScreen(
         SectionCard(title = "Metas Mínimas de Decisão (Semáforo)") {
             Text(
                 text = "Acima da meta = Verde    Até 15% abaixo = Amarelo    Abaixo = Vermelho",
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 11.sp,
                 lineHeight = 15.sp
             )
@@ -322,10 +339,15 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Aviso por Voz (TTS)", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     Text(
-                        "Fala R$/km e semáforo ao receber oferta",
-                        color = TextSecondary,
+                        text = "Aviso por Voz (TTS)",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Fala R$/km e semáforo ao receber oferta",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
                 }
@@ -333,10 +355,10 @@ fun SettingsScreen(
                     checked = isVoiceEnabled,
                     onCheckedChange = { isVoiceEnabled = it },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = GreenPositive,
-                        uncheckedThumbColor = TextSecondary,
-                        uncheckedTrackColor = BorderDark
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 )
             }
@@ -348,7 +370,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Velocidade da Voz", color = TextPrimary, fontSize = 13.sp)
+                    Text("Velocidade da Voz", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
                     val rateLabel = when {
                         speechRate < 0.9f -> "Lento"
                         speechRate < 1.05f -> "Normal"
@@ -357,7 +379,7 @@ fun SettingsScreen(
                     }
                     Text(
                         text = "$rateLabel (${String.format("%.1fx", speechRate)})",
-                        color = PrimaryBlue,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -368,9 +390,9 @@ fun SettingsScreen(
                     valueRange = 0.7f..1.6f,
                     steps = 8,
                     colors = SliderDefaults.colors(
-                        thumbColor = PrimaryBlue,
-                        activeTrackColor = PrimaryBlue,
-                        inactiveTrackColor = BorderDark
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                     )
                 )
             }
@@ -381,10 +403,10 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Duração do Card Flutuante", color = TextPrimary, fontSize = 13.sp)
+                Text("Duração do Card Flutuante", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
                 Text(
                     text = "${cardDuration}s",
-                    color = PrimaryBlue,
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -395,14 +417,14 @@ fun SettingsScreen(
                 valueRange = 5f..30f,
                 steps = 4,
                 colors = SliderDefaults.colors(
-                    thumbColor = PrimaryBlue,
-                    activeTrackColor = PrimaryBlue,
-                    inactiveTrackColor = BorderDark
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                 )
             )
             Text(
                 text = "O card fecha automaticamente após ${cardDuration}s sem interação.",
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 11.sp
             )
 
@@ -414,10 +436,15 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Botão Flutuante Permanente", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     Text(
-                        "Mantém a bolha do Giro Certo sempre na tela",
-                        color = TextSecondary,
+                        text = "Botão Flutuante Permanente",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Mantém a bolha do Giro Certo sempre na tela",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
                 }
@@ -425,10 +452,10 @@ fun SettingsScreen(
                     checked = isFloatingBubbleEnabled,
                     onCheckedChange = { isFloatingBubbleEnabled = it },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = GreenPositive,
-                        uncheckedThumbColor = TextSecondary,
-                        uncheckedTrackColor = BorderDark
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 )
             }
@@ -438,7 +465,7 @@ fun SettingsScreen(
         if (errorMessage != null) {
             Text(
                 text = errorMessage ?: "",
-                color = RedAlert,
+                color = MaterialTheme.colorScheme.error,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -447,16 +474,18 @@ fun SettingsScreen(
         // 
         // BOTÕES DE AÇÃO
         // 
-        Button(
+        NeobrutalButton(
+            text = "SALVAR CONFIGURAÇÕES",
             onClick = { save() },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue, contentColor = BackgroundDark)
-        ) {
-            Text("SALVAR CONFIGURAÇÕES", fontWeight = FontWeight.Bold)
-        }
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = AppSpacing.MinTouchTarget),
+            backgroundColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            shape = RoundedCornerShape(AppSpacing.CornerButton)
+        )
 
-        OutlinedButton(
+        TactileButton(
             onClick = {
                 val defaults = VehicleSettings()
                 fuelPrice = defaults.fuelPricePerLiter.toString().replace(".", ",")
@@ -473,12 +502,17 @@ fun SettingsScreen(
                 isFloatingBubbleEnabled = defaults.isFloatingBubbleEnabled
                 errorMessage = null
             },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-            border = BorderStroke(1.dp, BorderDark)
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = AppSpacing.MinTouchTarget),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            shape = RoundedCornerShape(AppSpacing.CornerButton),
+            border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
         ) {
-            Text("Restaurar Valores Padrão")
+            Text("Restaurar Valores Padrão", fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -489,12 +523,12 @@ fun SettingsScreen(
         SectionCard(title = "Copiloto & Teste Prático") {
             Text(
                 text = "Simule uma oferta real para verificar como o card flutuante e a voz funcionam com suas configurações atuais.",
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp
             )
 
             // Botão Uber
-            Button(
+            TactileButton(
                 onClick = {
                     val testOffer = RideOffer(
                         fare = 29.50,
@@ -514,15 +548,21 @@ fun SettingsScreen(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue, contentColor = BackgroundDark)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = AppSpacing.MinTouchTarget),
+                shape = RoundedCornerShape(AppSpacing.CornerButton),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
             ) {
                 Text("Simular Oferta Uber", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
             // Botão iFood
-            Button(
+            TactileButton(
                 onClick = {
                     val testOffer = RideOffer(
                         fare = 14.80,
@@ -542,15 +582,21 @@ fun SettingsScreen(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SurfaceVariantDark, contentColor = TextPrimary)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = AppSpacing.MinTouchTarget),
+                shape = RoundedCornerShape(AppSpacing.CornerButton),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
             ) {
                 Text("Simular Entrega iFood", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
             // Botão 99
-            Button(
+            TactileButton(
                 onClick = {
                     val testOffer = RideOffer(
                         fare = 22.00,
@@ -570,11 +616,17 @@ fun SettingsScreen(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SurfaceVariantDark, contentColor = TextPrimary)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = AppSpacing.MinTouchTarget),
+                shape = RoundedCornerShape(AppSpacing.CornerButton),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
             ) {
-                Text("Simular Oferta 99", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Simular Oferta 99", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
             // Permissões
@@ -582,29 +634,43 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(
+                TactileButton(
                     onClick = {
                         val intent = OverlayController.createOverlayPermissionIntent(context)
                         context.startActivity(intent)
                     },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                    border = BorderStroke(1.dp, BorderDark)
-                ) { Text("Janela Flutuante", fontSize = 10.sp) }
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = AppSpacing.MinTouchTarget),
+                    shape = RoundedCornerShape(AppSpacing.CornerButton),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
+                ) {
+                    Text("Janela Flutuante", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
 
-                OutlinedButton(
+                TactileButton(
                     onClick = {
                         val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         }
                         context.startActivity(intent)
                     },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                    border = BorderStroke(1.dp, BorderDark)
-                ) { Text("Acessibilidade", fontSize = 10.sp) }
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = AppSpacing.MinTouchTarget),
+                    shape = RoundedCornerShape(AppSpacing.CornerButton),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
+                ) {
+                    Text("Acessibilidade", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
 
@@ -618,17 +684,24 @@ fun SettingsScreen(
 
 @Composable
 private fun SectionCard(title: String, content: @Composable () -> Unit) {
-    Card(
+    NeobrutalCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-        border = BorderStroke(1.dp, BorderDark)
+        backgroundColor = MaterialTheme.colorScheme.surface,
+        borderColor = MaterialTheme.colorScheme.outline,
+        borderWidth = AppSpacing.BorderThick,
+        shadowOffset = AppSpacing.ShadowOffset,
+        shape = RoundedCornerShape(AppSpacing.CornerCard)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(AppSpacing.Content),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(text = title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = title,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
             content()
         }
     }
@@ -648,13 +721,14 @@ private fun SettingsTextField(
         placeholder = { Text(placeholder, fontSize = 12.sp) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(AppSpacing.CornerSmall),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = TextPrimary,
-            unfocusedTextColor = TextPrimary,
-            focusedBorderColor = PrimaryBlue,
-            unfocusedBorderColor = BorderDark,
-            focusedLabelColor = PrimaryBlue,
-            unfocusedLabelColor = TextSecondary
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
         singleLine = true
     )

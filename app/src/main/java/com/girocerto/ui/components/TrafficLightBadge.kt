@@ -1,8 +1,8 @@
 package com.girocerto.ui.components
 
-import com.girocerto.ui.components.AppText as Text
-
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,61 +14,44 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.girocerto.app.theme.GreenPositive
-import com.girocerto.app.theme.RedAlert
-import com.girocerto.app.theme.TextSecondary
-import com.girocerto.app.theme.YellowWarning
+import com.girocerto.app.theme.AppSpacing
+import com.girocerto.app.theme.NeobrutalBlack
+import com.girocerto.app.theme.StatusGreenSolid
+import com.girocerto.app.theme.StatusInvalidSolid
+import com.girocerto.app.theme.StatusRedSolid
+import com.girocerto.app.theme.StatusYellowSolid
 import com.girocerto.domain.model.TrafficLightStatus
 
+/**
+ * Neobrutalist TrafficLightBadge:
+ * High-contrast decision indicator with solid color fill, solid black border,
+ * standardized rounded corners, framed status dot, and bold uppercase label.
+ */
 @Composable
 fun TrafficLightBadge(
     status: TrafficLightStatus,
     modifier: Modifier = Modifier,
     large: Boolean = false
 ) {
-    val (bgColor, textColor, label) = when (status) {
-        TrafficLightStatus.GREEN -> Triple(
-            GreenPositive.copy(alpha = 0.2f),
-            GreenPositive,
-            "Compensa"
-        )
-        TrafficLightStatus.YELLOW -> Triple(
-            YellowWarning.copy(alpha = 0.2f),
-            YellowWarning,
-            "Atenção"
-        )
-        TrafficLightStatus.RED -> Triple(
-            RedAlert.copy(alpha = 0.2f),
-            RedAlert,
-            "Não compensa"
-        )
-        TrafficLightStatus.INVALID -> Triple(
-            TextSecondary.copy(alpha = 0.2f),
-            TextSecondary,
-            "Incompleto"
-        )
+    val (bgColor, label) = when (status) {
+        TrafficLightStatus.GREEN -> StatusGreenSolid to "COMPENSA"
+        TrafficLightStatus.YELLOW -> StatusYellowSolid to "ATENÇÃO"
+        TrafficLightStatus.RED -> StatusRedSolid to "NÃO COMPENSA"
+        TrafficLightStatus.INVALID -> StatusInvalidSolid to "INCOMPLETO"
     }
 
-    val dotColor = when (status) {
-        TrafficLightStatus.GREEN -> GreenPositive
-        TrafficLightStatus.YELLOW -> YellowWarning
-        TrafficLightStatus.RED -> RedAlert
-        TrafficLightStatus.INVALID -> TextSecondary
-    }
+    val shape = RoundedCornerShape(if (large) AppSpacing.CornerCard else AppSpacing.CornerSmall)
 
     Box(
         modifier = modifier
-            .background(
-                color = bgColor,
-                shape = RoundedCornerShape(if (large) 12.dp else 8.dp)
-            )
+            .background(color = bgColor, shape = shape)
+            .border(BorderStroke(AppSpacing.BorderThin, NeobrutalBlack), shape = shape)
             .padding(
                 horizontal = if (large) 14.dp else 10.dp,
-                vertical = if (large) 8.dp else 4.dp
+                vertical = if (large) 8.dp else 5.dp
             )
     ) {
         Row(
@@ -77,14 +60,15 @@ fun TrafficLightBadge(
             Box(
                 modifier = Modifier
                     .size(if (large) 10.dp else 8.dp)
-                    .background(dotColor, CircleShape)
+                    .background(NeobrutalBlack, CircleShape)
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(
+            AppText(
                 text = label,
-                color = textColor,
-                fontSize = if (large) 13.sp else 11.sp,
-                fontWeight = FontWeight.Bold
+                color = NeobrutalBlack,
+                fontSize = if (large) 12.sp else 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
             )
         }
     }

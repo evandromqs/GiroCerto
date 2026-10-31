@@ -1,73 +1,70 @@
 package com.girocerto.ui.history
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
-import com.girocerto.ui.components.AppText as Text
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import com.girocerto.ui.components.TactileCard as Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TextButton
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.FilterChip
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.platform.LocalContext
-import com.girocerto.ui.profile.PassengerMessagePreferences
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import android.content.Intent
-import android.net.Uri
-import java.util.Calendar
-import androidx.compose.runtime.produceState
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import android.net.Uri
 import com.girocerto.app.GiroCertoApp
-import com.girocerto.app.theme.BackgroundDark
-import com.girocerto.app.theme.BorderDark
-import com.girocerto.app.theme.GreenPositive
-import com.girocerto.app.theme.PrimaryBlue
-import com.girocerto.app.theme.RedAlert
-import com.girocerto.app.theme.SurfaceDark
-import com.girocerto.app.theme.SurfaceVariantDark
-import com.girocerto.app.theme.TextPrimary
-import com.girocerto.app.theme.TextSecondary
+import com.girocerto.app.theme.AppSpacing
+import com.girocerto.app.theme.StatusGreenSolid
+import com.girocerto.app.theme.StatusRedSolid
 import com.girocerto.domain.model.RideAnalysis
+import com.girocerto.ui.components.AppText
 import com.girocerto.ui.components.ConfirmationDialog
 import com.girocerto.ui.components.Formatters
+import com.girocerto.ui.components.NeobrutalButton
+import com.girocerto.ui.components.NeobrutalCard
 import com.girocerto.ui.components.TrafficLightBadge
+import com.girocerto.ui.profile.PassengerMessagePreferences
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 @Composable
 fun HistoryScreen(
@@ -103,14 +100,21 @@ fun HistoryScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(BackgroundDark)
-            .padding(com.girocerto.app.theme.AppSpacing.Screen)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(AppSpacing.Screen)
     ) {
         SnackbarHost(hostState = snackbarHostState)
-        if (loading) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (loading) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(AppSpacing.CornerSmall))
+            )
+        }
         loadError?.let { message ->
-            Text(message, modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = { rideRepo.retryLoad() }) { Text("Tentar recuperar histórico") }
+            AppText(message, modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = { rideRepo.retryLoad() }) { AppText("Tentar recuperar histórico") }
         }
 
         // Barra Superior do Histórico
@@ -120,16 +124,16 @@ fun HistoryScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(
+                AppText(
                     text = "Histórico de Análises",
-                    color = TextPrimary,
-                    fontSize = 22.sp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
+                AppText(
                     text = "${rides.size} corridas salvas localmente",
-                    color = TextSecondary,
-                    fontSize = 12.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
 
@@ -137,7 +141,7 @@ fun HistoryScreen(
                 TextButton(
                     onClick = { showClearAllDialog = true }
                 ) {
-                    Text("Limpar tudo", color = RedAlert, fontSize = 12.sp)
+                    AppText("Limpar tudo", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -146,16 +150,28 @@ fun HistoryScreen(
 
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             platforms.forEach { platform ->
-                FilterChip(selected = platformFilter == platform, onClick = { platformFilter = platform }, label = { Text(platform) })
+                FilterChip(
+                    selected = platformFilter == platform,
+                    onClick = { platformFilter = platform },
+                    label = { AppText(platform, fontWeight = if (platformFilter == platform) FontWeight.Bold else FontWeight.Normal) },
+                    shape = RoundedCornerShape(AppSpacing.CornerSmall),
+                    border = BorderStroke(AppSpacing.BorderThin, MaterialTheme.colorScheme.outline)
+                )
             }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Todo período", "Hoje", "7 dias").forEach { period ->
-                FilterChip(selected = periodFilter == period, onClick = { periodFilter = period }, label = { Text(period) })
+                FilterChip(
+                    selected = periodFilter == period,
+                    onClick = { periodFilter = period },
+                    label = { AppText(period, fontWeight = if (periodFilter == period) FontWeight.Bold else FontWeight.Normal) },
+                    shape = RoundedCornerShape(AppSpacing.CornerSmall),
+                    border = BorderStroke(AppSpacing.BorderThin, MaterialTheme.colorScheme.outline)
+                )
             }
         }
         if (rides.isNotEmpty() && filteredRides.isEmpty()) {
-            Text("Nenhuma análise corresponde aos filtros.", color = TextSecondary, modifier = Modifier.padding(vertical = 16.dp))
+            AppText("Nenhuma análise corresponde aos filtros.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))
         }
         if (rides.isEmpty()) {
             EmptyHistoryView(onNavigateToCopilot = onNavigateToCopilot)
@@ -216,6 +232,7 @@ fun HistoryScreen(
     }
 }
 
+
 @Composable
 private fun HistoryItemCard(
     ride: RideAnalysis,
@@ -226,40 +243,72 @@ private fun HistoryItemCard(
     var showMessageDraft by rememberSaveable { mutableStateOf(false) }
     var passengerDraft by rememberSaveable { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
+
     if (showMessageDraft) {
         AlertDialog(
             onDismissRequest = { showMessageDraft = false },
-            title = { Text("Revise a mensagem") },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                AppText("Revise a mensagem", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                    Text("Você escolherá o aplicativo e o destinatário e confirmará o envio. O Giro Certo não identifica o passageiro nem envia mensagens automaticamente.")
-                    OutlinedTextField(value = passengerDraft, onValueChange = { passengerDraft = it },
-                        modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 6,
-                        label = { Text("Mensagem") })
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    AppText("Você escolherá o aplicativo e o destinatário e confirmará o envio. O Giro Certo não identifica o passageiro nem envia mensagens automaticamente.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedTextField(
+                        value = passengerDraft,
+                        onValueChange = { passengerDraft = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        maxLines = 6,
+                        shape = RoundedCornerShape(AppSpacing.CornerSmall),
+                        label = { AppText("Mensagem") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
+                    )
                 }
             },
             confirmButton = {
-                TextButton(enabled = passengerDraft.isNotBlank(), onClick = {
-                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"; putExtra(Intent.EXTRA_TEXT, passengerDraft.trim())
-                    }, "Escolher aplicativo"))
-                    showMessageDraft = false
-                }) { Text("Escolher aplicativo") }
+                TextButton(
+                    enabled = passengerDraft.isNotBlank(),
+                    onClick = {
+                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"; putExtra(Intent.EXTRA_TEXT, passengerDraft.trim())
+                        }, "Escolher aplicativo"))
+                        showMessageDraft = false
+                    },
+                    shape = RoundedCornerShape(AppSpacing.CornerButton)
+                ) {
+                    AppText("Escolher aplicativo", fontWeight = FontWeight.Bold)
+                }
             },
-            dismissButton = { TextButton(onClick = { showMessageDraft = false }) { Text("Cancelar") } }
+            dismissButton = {
+                TextButton(
+                    onClick = { showMessageDraft = false },
+                    shape = RoundedCornerShape(AppSpacing.CornerButton)
+                ) {
+                    AppText("Cancelar", color = MaterialTheme.colorScheme.onSurface)
+                }
+            }
         )
     }
 
-    Card(
+    NeobrutalCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { expanded = !expanded },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-        border = BorderStroke(1.dp, BorderDark)
+        backgroundColor = MaterialTheme.colorScheme.surface,
+        borderColor = MaterialTheme.colorScheme.outline,
+        borderWidth = AppSpacing.BorderThick,
+        shadowOffset = AppSpacing.ShadowOffset,
+        shape = RoundedCornerShape(AppSpacing.CornerCard)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp)
+            modifier = Modifier.padding(AppSpacing.Content)
         ) {
             // Linha 1: Valor e Semáforo
             Row(
@@ -267,10 +316,10 @@ private fun HistoryItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                AppText(
                     text = Formatters.formatCurrency(ride.offer.fare),
-                    color = TextPrimary,
-                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 TrafficLightBadge(status = ride.trafficLight)
@@ -283,15 +332,15 @@ private fun HistoryItemCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
+                AppText(
                     text = "${Formatters.formatKm(ride.totalDistanceKm)} • ${Formatters.formatDuration(ride.offer.durationMinutes)}",
-                    color = TextSecondary,
-                    fontSize = 12.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
                 )
-                Text(
+                AppText(
                     text = "Lucro: ${Formatters.formatCurrency(ride.estimatedProfit)}",
-                    color = if (ride.estimatedProfit >= 0) GreenPositive else RedAlert,
-                    fontSize = 13.sp,
+                    color = if (ride.estimatedProfit >= 0) StatusGreenSolid else StatusRedSolid,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -303,41 +352,63 @@ private fun HistoryItemCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
+                AppText(
                     text = "${Formatters.formatPerKm(ride.grossPerKm)} • ${Formatters.formatOfferPerHour(ride.grossPerHour, ride.offer.durationMinutes)}",
-                    color = TextSecondary,
-                    fontSize = 11.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
                 )
-                Text(
+                AppText(
                     text = Formatters.formatDateTime(ride.timestamp),
-                    color = TextSecondary,
-                    fontSize = 11.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
 
             if (expanded) {
-                TextButton(onClick = {
-                    passengerDraft = PassengerMessagePreferences(context).read()
-                    showMessageDraft = true
-                }) { Text("Compartilhar mensagem ao passageiro") }
-                TextButton(onClick = {
-                    val message = "Giro Certo · ${ride.offer.appName}\nOferta: ${Formatters.formatCurrency(ride.offer.fare)}\nDistância: ${Formatters.formatKm(ride.totalDistanceKm)}\nLucro estimado: ${Formatters.formatCurrency(ride.estimatedProfit)}\n${ride.decisionReason}"
-                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"; putExtra(Intent.EXTRA_TEXT, message)
-                    }, "Compartilhar análise"))
-                }) { Text("Compartilhar resumo") }
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(
+                    onClick = {
+                        passengerDraft = PassengerMessagePreferences(context).read()
+                        showMessageDraft = true
+                    },
+                    modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
+                ) {
+                    AppText("Compartilhar mensagem ao passageiro", fontWeight = FontWeight.SemiBold)
+                }
+                TextButton(
+                    onClick = {
+                        val message = "Giro Certo · ${ride.offer.appName}\nOferta: ${Formatters.formatCurrency(ride.offer.fare)}\nDistância: ${Formatters.formatKm(ride.totalDistanceKm)}\nLucro estimado: ${Formatters.formatCurrency(ride.estimatedProfit)}\n${ride.decisionReason}"
+                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"; putExtra(Intent.EXTRA_TEXT, message)
+                        }, "Compartilhar análise"))
+                    },
+                    modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
+                ) {
+                    AppText("Compartilhar resumo", fontWeight = FontWeight.SemiBold)
+                }
                 ride.offer.pickupAddress.takeIf { it.isNotBlank() }?.let { address ->
-                    TextButton(onClick = {
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(address)}"))) }
-                    }) { Text("Ver embarque no mapa") }
+                    TextButton(
+                        onClick = {
+                            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(address)}"))) }
+                        },
+                        modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
+                    ) {
+                        AppText("Ver embarque no mapa", fontWeight = FontWeight.SemiBold)
+                    }
                 }
                 ride.offer.destinationAddress.takeIf { it.isNotBlank() }?.let { address ->
-                    TextButton(onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(address)}"))
-                        runCatching { context.startActivity(intent) }
-                    }) { Text("Ver destino no mapa") }
+                    TextButton(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(address)}"))
+                            runCatching { context.startActivity(intent) }
+                        },
+                        modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
+                    ) {
+                        AppText("Ver destino no mapa", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
+
             // Área Expansível com Detalhes Completos
             AnimatedVisibility(visible = expanded) {
                 Column(
@@ -345,40 +416,39 @@ private fun HistoryItemCard(
                         .fillMaxWidth()
                         .padding(top = 12.dp)
                 ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceVariantDark)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(AppSpacing.CornerSmall))
+                            .border(BorderStroke(AppSpacing.BorderThin, MaterialTheme.colorScheme.outline), RoundedCornerShape(AppSpacing.CornerSmall))
+                            .padding(12.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            AppText(
                                 text = "Motivo da Avaliação:",
-                                color = TextPrimary,
-                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
+                            AppText(
                                 text = ride.decisionReason,
-                                color = TextSecondary,
-                                fontSize = 11.sp
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(
+                            AppText(
                                 text = "Composição Financeira:",
-                                color = TextPrimary,
-                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(text = "• Combustível: ${Formatters.formatCurrency(ride.fuelCost)}", color = TextSecondary, fontSize = 11.sp)
-                            Text(text = "• Custos Operacionais extras: ${Formatters.formatCurrency(ride.additionalOperationalCost)}", color = TextSecondary, fontSize = 11.sp)
+                            AppText(text = "• Combustível: ${Formatters.formatCurrency(ride.fuelCost)}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            AppText(text = "• Custos Operacionais extras: ${Formatters.formatCurrency(ride.additionalOperationalCost)}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                             if (ride.fixedCost > 0) {
-                                Text(text = "• Custo fixo da corrida: ${Formatters.formatCurrency(ride.fixedCost)}", color = TextSecondary, fontSize = 11.sp)
+                                AppText(text = "• Custo fixo da corrida: ${Formatters.formatCurrency(ride.fixedCost)}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                             }
-                            Text(text = "• Custo Total Estimado: ${Formatters.formatCurrency(ride.totalCost)}", color = TextSecondary, fontSize = 11.sp)
-                            Text(text = "• Margem de Lucro: ${Formatters.formatPercent(ride.estimatedMarginPercent)}", color = GreenPositive, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            AppText(text = "• Custo Total Estimado: ${Formatters.formatCurrency(ride.totalCost)}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            AppText(text = "• Margem de Lucro: ${Formatters.formatPercent(ride.estimatedMarginPercent)}", color = StatusGreenSolid, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -389,19 +459,21 @@ private fun HistoryItemCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
+                        NeobrutalButton(
                             onClick = onShowOverlay,
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryBlue),
-                            border = BorderStroke(1.dp, BorderDark)
-                        ) {
-                            Text("Abrir Janela Flutuante", fontSize = 11.sp)
-                        }
+                            backgroundColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            borderColor = MaterialTheme.colorScheme.outline,
+                            borderWidth = AppSpacing.BorderAction,
+                            shape = RoundedCornerShape(AppSpacing.CornerButton),
+                            text = "Abrir Janela Flutuante"
+                        )
 
                         TextButton(
-                            onClick = onDelete
+                            onClick = onDelete,
+                            modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
                         ) {
-                            Text("Excluir", color = RedAlert, fontSize = 11.sp)
+                            AppText("Excluir", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -412,11 +484,13 @@ private fun HistoryItemCard(
 
 @Composable
 private fun EmptyHistoryView(onNavigateToCopilot: () -> Unit) {
-    Card(
+    NeobrutalCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-        border = BorderStroke(1.dp, BorderDark)
+        backgroundColor = MaterialTheme.colorScheme.surface,
+        borderColor = MaterialTheme.colorScheme.outline,
+        borderWidth = AppSpacing.BorderThick,
+        shadowOffset = AppSpacing.ShadowOffset,
+        shape = RoundedCornerShape(AppSpacing.CornerCard)
     ) {
         Column(
             modifier = Modifier
@@ -424,28 +498,28 @@ private fun EmptyHistoryView(onNavigateToCopilot: () -> Unit) {
                 .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
+            AppText(
                 text = "Nenhuma corrida salva ainda",
-                color = TextPrimary,
-                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(6.dp))
-            Text(
+            AppText(
                 text = "Salve ofertas pela janela flutuante ou ative o salvamento automático nos ajustes do copiloto.",
-                color = TextSecondary,
-                fontSize = 12.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedButton(
+            NeobrutalButton(
                 onClick = onNavigateToCopilot,
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryBlue),
-                border = BorderStroke(1.dp, PrimaryBlue)
-            ) {
-                Text("Configurar copiloto")
-            }
+                backgroundColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(AppSpacing.CornerButton),
+                text = "Configurar copiloto"
+            )
         }
     }
 }
+

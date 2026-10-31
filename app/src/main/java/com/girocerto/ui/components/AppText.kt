@@ -21,10 +21,25 @@ fun AppText(text: String, modifier: Modifier = Modifier, color: Color = Color.Un
     minLines: Int = 1, onTextLayout: ((TextLayoutResult) -> Unit)? = null, style: TextStyle = LocalTextStyle.current
 ) {
     val align = textAlign ?: style.textAlign.takeUnless { it == TextAlign.Unspecified } ?: TextAlign.Start
-    MaterialText(text = text, modifier = if (align == TextAlign.Center) modifier.fillMaxWidth() else modifier,
-        color = color, fontSize = fontSize, fontStyle = fontStyle, fontWeight = FontWeight.Medium,
-        fontFamily = fontFamily, letterSpacing = letterSpacing, textDecoration = textDecoration,
+    val weight = fontWeight ?: style.fontWeight ?: FontWeight.Normal
+    val family = fontFamily ?: style.fontFamily ?: com.girocerto.app.theme.RobotoFamily
+    MaterialText(
+        text = text,
+        modifier = if (align == TextAlign.Center) modifier.fillMaxWidth() else modifier,
+        color = color,
+        fontSize = fontSize,
+        fontStyle = fontStyle,
+        fontWeight = weight,
+        fontFamily = family,
+        letterSpacing = letterSpacing,
+        textDecoration = textDecoration,
         textAlign = align,
-        lineHeight = lineHeight, overflow = overflow, softWrap = softWrap, maxLines = maxLines,
-        minLines = minLines, onTextLayout = onTextLayout, style = style)
+        lineHeight = lineHeight,
+        overflow = overflow,
+        softWrap = softWrap,
+        maxLines = maxLines,
+        minLines = minLines,
+        onTextLayout = onTextLayout,
+        style = style
+    )
 }

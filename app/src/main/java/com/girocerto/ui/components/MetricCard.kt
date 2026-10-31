@@ -1,65 +1,74 @@
 package com.girocerto.ui.components
 
-import com.girocerto.ui.components.AppText as Text
-
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.girocerto.ui.components.TactileCard as Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.girocerto.app.theme.BorderDark
-import com.girocerto.app.theme.SurfaceDark
-import com.girocerto.app.theme.TextPrimary
-import com.girocerto.app.theme.TextSecondary
+import com.girocerto.app.theme.AppSpacing
 
+/**
+ * Neobrutalist MetricCard:
+ * Compact, physical instrument display with solid border, hard shadow,
+ * standardized rounded corners (12dp), uppercase bold title, and prominent value.
+ */
 @Composable
 fun MetricCard(
     title: String,
     value: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    accentColor: Color = TextPrimary
+    accentColor: Color = MaterialTheme.colorScheme.onSurface,
+    borderWidth: Dp = 2.dp,
+    shadowOffset: Dp = 3.dp
 ) {
-    Card(
+    NeobrutalCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = SurfaceDark
-        ),
-        border = BorderStroke(1.dp, BorderDark)
+        backgroundColor = MaterialTheme.colorScheme.surface,
+        borderColor = MaterialTheme.colorScheme.outline,
+        borderWidth = borderWidth,
+        shadowOffset = shadowOffset,
+        shape = RoundedCornerShape(AppSpacing.CornerCard)
     ) {
         Column(
             modifier = Modifier.padding(14.dp)
         ) {
-            Text(
-                text = title,
-                color = TextSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+            AppText(
+                text = title.uppercase(),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
+            AppText(
                 text = value,
                 color = accentColor,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             if (subtitle != null) {
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(
+                AppText(
                     text = subtitle,
-                    color = TextSecondary,
-                    fontSize = 11.sp
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

@@ -15,4 +15,16 @@ internal class OfferDeliveryGate(private val intervalMs: Long = 15_000L) {
         // Continuous polling must not reopen a card the user has already collapsed.
         return previous?.result != identity
     }
+
+    private val recentKeys = mutableMapOf<String, Long>()
+
+    fun permits(offerKey: String, now: Long = System.currentTimeMillis()): Boolean {
+        recentKeys.entries.removeAll { now - it.value >= intervalMs }
+        val lastSeen = recentKeys[offerKey]
+        if (lastSeen != null && now - lastSeen < intervalMs) {
+            return false
+        }
+        recentKeys[offerKey] = now
+        return true
+    }
 }
