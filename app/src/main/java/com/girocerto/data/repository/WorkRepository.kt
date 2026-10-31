@@ -21,7 +21,7 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
     val loading = _loading.asStateFlow()
     private val _loadError = MutableStateFlow<String?>(null)
     val loadError = _loadError.asStateFlow()
-    private val _selectedPlatforms = MutableStateFlow(WorkPlatform.entries.toSet())
+    private val _selectedPlatforms = MutableStateFlow(setOf(WorkPlatform.UBER, WorkPlatform.NINETY_NINE, WorkPlatform.IFOOD))
     val selectedPlatforms = _selectedPlatforms.asStateFlow()
     private val _restoreRevision = MutableStateFlow(0L)
     val restoreRevision = _restoreRevision.asStateFlow()
@@ -39,7 +39,7 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
             damaged.clear()
             _selectedPlatforms.value = prefs.getStringSet("selected_platforms", null)?.mapNotNull { name ->
                 WorkPlatform.entries.find { it.name == name }
-            }?.toSet()?.takeIf { it.isNotEmpty() } ?: WorkPlatform.entries.toSet()
+            }?.toSet()?.takeIf { it.isNotEmpty() } ?: setOf(WorkPlatform.UBER, WorkPlatform.NINETY_NINE, WorkPlatform.IFOOD)
             _profile.value = readSafely("profile") { decodeProfile(it) }
             _days.value = prefs.all.keys.filter { it.startsWith("day:") }.mapNotNull { key ->
                 readSafely(key) { decodeDay(LocalDate.parse(key.removePrefix("day:")), it) }

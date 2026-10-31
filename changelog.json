@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.14",
+    "changes": [
+      "Alinhamento da arquitetura de OCR com engenharia reversa do Gigu (captura em Display.DEFAULT_DISPLAY em API 30+).",
+      "Eliminação da latência de dupla confirmação no OCR, exibindo o cálculo financeiro em tempo real no card flutuante imediatamente na primeira detecção.",
+      "Ajuste na tolerância do leitor para aceitar ofertas com bônus ou formatos proeminentes sem bloqueios por contagem de moeda.",
+      "Configuração e seletor de plataformas no diário padronizados exclusivamente para os 3 aplicativos principais: 99, Uber e iFood.",
+      "Intervalo de captura do OCR otimizado para 500ms com fallback seguro para limites de tela quando raízes de acessibilidade forem nulas."
+    ]
+  },
+  {
     "version": "1.0.13",
     "changes": [
       "Configuração do Copiloto focada nos 3 principais aplicativos: 99, Uber e iFood.",

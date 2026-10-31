@@ -62,10 +62,52 @@ class AccessibilityOfferReaderTest {
         assertEquals(0.0, result.pickupDistanceKm!!, 0.001)
         assertEquals(29, result.durationMinutes)
         val analysis = com.girocerto.domain.calculator.RideCalculator.calculate(
-            com.girocerto.domain.model.RideOffer(fare = result.fare!!, distanceKm = result.distanceKm!!,
-                durationMinutes = result.durationMinutes!!), com.girocerto.domain.model.VehicleSettings())
+            com.girocerto.domain.model.RideOffer(fare = result.fare, distanceKm = result.distanceKm,
+                durationMinutes = result.durationMinutes ?: 0), com.girocerto.domain.model.VehicleSettings())
         assertEquals(1.56, analysis.grossPerKm, 0.001)
         assertEquals(34.61, analysis.grossPerHour, 0.001)
+    }
+
+    @Test fun ninetyNineEntregaFoodUserScreenshotCalculatesRates() {
+        val lines = listOf(
+            "Entrega Food",
+            "R$11,08",
+            "Inclui R$2,00 Bônus",
+            "Distância total 6,2 km",
+            "Casa das Marmitas e Marmitex Feijoada & Parmegiana",
+            "Universidade Anhanguera - Polo Ferraz de Vasconcelos, Rua Jacomo Zanchetta, 271, Sítio Paredao",
+            "Aceitar pedido"
+        )
+        val result = AccessibilityOfferReader.parse(lines, "com.app99.driver")
+        assertTrue(result.isComplete)
+        assertTrue(OfferOcrContext.permits(lines))
+        assertEquals(11.08, result.fare!!, 0.001)
+        assertEquals(6.2, result.distanceKm!!, 0.001)
+        assertEquals("99Food", result.appName)
+        assertNotNull(result.destination)
+    }
+
+    @Test fun uberEnviosMoto44KmUserScreenshotCalculatesRates() {
+        val lines = listOf(
+            "19% de bateria restante no celular.",
+            "Envios Moto",
+            "R$ 47,23",
+            "4,96 (26)",
+            "Verificado",
+            "1 h e 11 min (44.9 km)",
+            "R. Das Hortencias, 62 - Jardim Barão, Vila Santa Margarida, Ferraz de Vasconcelos - SP, 08543-270, Brasil",
+            "Rua Manuel Manrique, 94, Cachoeirinha, São Paulo",
+            "Aceitar"
+        )
+        val result = AccessibilityOfferReader.parse(lines, "com.ubercab.driver")
+        assertTrue(result.isComplete)
+        assertTrue(OfferOcrContext.permits(lines))
+        assertEquals(47.23, result.fare!!, 0.001)
+        assertEquals(44.9, result.distanceKm!!, 0.001)
+        assertEquals(71, result.durationMinutes)
+        assertEquals(4.96, result.passengerRating!!, 0.001)
+        assertEquals("Uber", result.appName)
+        assertNotNull(result.destination)
     }
 
     @Test fun ninetyNineFoodBonusDeliveryShownInScreenshotParsesAccurately() {

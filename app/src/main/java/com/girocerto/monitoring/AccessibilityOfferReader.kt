@@ -98,14 +98,13 @@ object AccessibilityOfferReader {
         }
         val maxFare = priced.maxOrNull()
         val included = includedBonusFares(cleanedLines)
-        val prices = priced.filterNot { fare -> maxFare != null && fare < maxFare && fare in included }.distinct()
+        val prices = priced.filterNot { fare -> maxFare != null && fare < maxFare && included.any { kotlin.math.abs(it - fare) < 0.001 } }.distinct()
         if (prices.size > 1) return OfferReaderResult(appName = appName,
             error = "Mais de um valor monetário na janela; aguardando oferta inequívoca",
             missingFields = listOf("Valor da oferta"), source = OfferSource.ACCESSIBILITY_SERVICE)
         val currencyCount = eligibleLines.sumOf { Regex("(?i)(R\\$|BRL)").findAll(it).count() }
-        val matchedCount = eligibleLines.sumOf { line -> val m = FARE_PATTERN.matcher(line); var n = 0; while(m.find()) n++; n }
-        if (currencyCount != matchedCount) return OfferReaderResult(appName = appName, error = "Formato monetário ambíguo", missingFields = listOf("Valor da oferta"))
-        var fare: Double? = prices.singleOrNull()
+        if (priced.isEmpty() && currencyCount > 0) return OfferReaderResult(appName = appName, error = "Formato monetário ambíguo", missingFields = listOf("Valor da oferta"))
+        var fare: Double? = prices.singleOrNull() ?: maxFare
         var tripDistanceKm: Double? = null
         var pickupDistanceKm: Double? = null
         var durationMinutes: Int? = null

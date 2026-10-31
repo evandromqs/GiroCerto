@@ -591,7 +591,8 @@ private fun WorkPlatformPicker() {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     AppText("Escolha pelo menos um. Os ganhos já registrados serão preservados. Esta seleção filtra o diário; a leitura de ofertas é configurada no Copiloto.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(8.dp))
-                    WorkPlatform.entries.forEach { platform ->
+                    val selectablePlatforms = listOf(WorkPlatform.UBER, WorkPlatform.NINETY_NINE, WorkPlatform.IFOOD)
+                    selectablePlatforms.forEach { platform ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
