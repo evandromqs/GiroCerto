@@ -304,7 +304,7 @@ object AccessibilityOfferReader {
     }
 
     /** Join only adjacent explicit tokens; never invent absent units or values. */
-    private fun joinAdjacentMeasurementNodes(lines: List<String>): List<String> {
+    internal fun joinAdjacentMeasurementNodes(lines: List<String>): List<String> {
         val number = Regex("""[0-9]+(?:[.,][0-9]+)?""")
         val money = Regex("""[0-9]{1,4}[.,][0-9]{2}""")
         val unit = Regex("""(?i)(km|quil[oô]metros?|m|metros?|min|mins|minutos?|h|hr|horas?)""")

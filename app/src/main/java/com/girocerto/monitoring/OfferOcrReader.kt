@@ -26,27 +26,38 @@ object OfferOcrContext {
         return !monetary || top > (height * 0.075).toInt()
     }
 
+    // The header is relative to the display, not the first 7.5% of a small offer popup.
+    fun acceptsCapturedLine(text: String, top: Int?, imageHeight: Int,
+                            windowTop: Int, windowHeight: Int, displayHeight: Int): Boolean {
+        val screenTop = top?.let {
+            windowTop + (it.toDouble() * windowHeight / imageHeight.coerceAtLeast(1)).toInt()
+        }
+        return acceptsLine(text, screenTop, displayHeight)
+    }
+
     fun permits(lines: List<String>): Boolean {
-        val normalized = OfferTextNormalization.lines(lines)
+        val normalized = AccessibilityOfferReader.joinAdjacentMeasurementNodes(OfferTextNormalization.lines(lines))
         val text = normalized.joinToString(" ").lowercase(java.util.Locale.ROOT)
         if (Regex("""(?i)\b(seu saldo|rota atual)\b""").containsMatchIn(text)) return false
-        val matches = Regex("""(?i)(?:R\$|BRL)\s*([0-9]{1,4}[.,][0-9]{2})(?![0-9.,])""")
+        val matches = Regex("""(?i)(?:R\$|BRL)\s*((?:[0-9]{1,3}(?:\.[0-9]{3})+,[0-9]{2}|[0-9]{1,4}[.,][0-9]{2}))(?![0-9.,])""")
             .findAll(text).toList()
-        val amounts = matches.map { it.groupValues[1].replace(',', '.').toDouble() }
+        if (matches.size != Regex("(?i)(R\\$|BRL)").findAll(text).count()) return false
+        val amounts = matches.map {
+            val value = it.groupValues[1]
+            (if (',' in value) value.replace(".", "").replace(',', '.') else value).toDouble()
+        }
         val maxFare = amounts.maxOrNull() ?: return false
         val included = AccessibilityOfferReader.includedBonusFares(normalized)
         val prices = amounts.filterNot { fare ->
             fare < maxFare && included.any { kotlin.math.abs(it - fare) < 0.001 }
         }.toSet()
         if (prices.size > 1) return false
-        return Regex("""(?i)\b(aceitar|selecionar|nova entrega|nova corrida|nova viagem|solicitação de viagem|solicitação de entrega|envios moto|entrega food|pedido|pedidos)\b""").containsMatchIn(text)
+        return OfferScreenContext.hasOfferAction(normalized)
     }
 }
 
 /**
- * Local OCR of the screen display using ML Kit, aligned with Gigu's real-time capture architecture.
- * Takes a screenshot of Display.DEFAULT_DISPLAY, crops to active application bounds,
- * filters status bar balance, extracts offer metrics, and immediately delivers calculation.
+ * Local OCR of an identified application window. Frames are held only in memory.
  */
 class OfferOcrReader(
     private val service: AccessibilityService,
@@ -61,12 +72,13 @@ class OfferOcrReader(
     private var retry: Runnable? = null
     private var busy = false
     private var closed = false
+    private val epochs = OfferReadEpoch(maximumAgeMs = 5_000L)
     private var lastAttempt = -2_000L
     private var lastStatus = ""
     private var lastStatusTime = -5_000L
 
     fun invalidate(pkg: String) {
-        // No-op for epoch wiping, avoiding discarding valid in-flight OCR results
+        epochs.invalidate(pkg)
     }
 
     private fun report(message: String) {
@@ -101,7 +113,9 @@ class OfferOcrReader(
             if (!matches) continue
             val bounds = Rect().also { window.getBoundsInScreen(it) }
             if (bounds.isEmpty) continue
-            val masks = windows.filter { it.layer > window.layer }.mapNotNull { above ->
+            val masks = windows.filter { it.layer > window.layer &&
+                !(Build.VERSION.SDK_INT >= 34 && it.type == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY)
+            }.mapNotNull { above ->
                 val area = Rect().also { above.getBoundsInScreen(it) }
                 if (Rect.intersects(bounds, area)) area else null
             }
@@ -112,7 +126,7 @@ class OfferOcrReader(
         return null
     }
 
-    fun isObservable(pkg: String): Boolean = Build.VERSION.SDK_INT >= 30 && allowed(pkg)
+    fun isObservable(pkg: String): Boolean = Build.VERSION.SDK_INT >= 30 && findTarget(pkg) != null
 
     fun read(pkg: String) { attempt(pkg, 1) }
 
@@ -140,11 +154,16 @@ class OfferOcrReader(
         }
         retry?.let { handler.removeCallbacks(it) }
         retry = null
+        val activeTarget = findTarget(pkg)
+        if (activeTarget == null) {
+            report("OCR: aguardando janela identificada do aplicativo")
+            return
+        }
+        val generation = epochs.current(pkg)
+        val windowCapture = Build.VERSION.SDK_INT >= 34
         busy = true
         lastAttempt = now
         report("OCR: analisando tela da oferta...")
-
-        val activeTarget = findTarget(pkg)
 
         try {
             val callback = object : AccessibilityService.TakeScreenshotCallback {
@@ -159,29 +178,37 @@ class OfferOcrReader(
                         hardware = Bitmap.wrapHardwareBuffer(buffer, colorSpace)
                         val hw = hardware ?: throw IllegalStateException("wrapHardwareBuffer returned null")
 
-                        // Hardware bitmaps cannot be modified; draw onto a mutable ARGB_8888 bitmap.
-                        mutableSource = Bitmap.createBitmap(hw.width, hw.height, Bitmap.Config.ARGB_8888)
+                        // A software Canvas cannot draw a hardware bitmap. Copy its pixels first.
+                        mutableSource = OcrBitmapPreparation.mutableCopy(hw)
                         val canvas = Canvas(mutableSource)
-                        canvas.drawBitmap(hw, 0f, 0f, null)
 
                         // Mask out floating windows above the app (e.g. Giro Certo floating bubble)
                         val paint = Paint().apply { color = Color.BLACK }
-                        val targetBounds = activeTarget?.bounds ?: Rect(0, 0, mutableSource.width, mutableSource.height)
+                        val current = findTarget(pkg)
+                        if (current == null || current.id != activeTarget.id || current.bounds != activeTarget.bounds ||
+                            !epochs.accepts(pkg, generation, now, SystemClock.elapsedRealtime())) return
+                        val targetBounds = if (windowCapture) Rect(0, 0, mutableSource.width, mutableSource.height) else activeTarget.bounds
                         val targetRegion = targetBounds.region()
-                        val maskRegions = activeTarget?.masks?.map { it.region() } ?: emptyList()
+                        // Window captures exclude overlays; only display captures need masking.
+                        val maskRegions = if (windowCapture) emptyList() else
+                            (activeTarget.masks + current.masks).map { it.region() }
                         OcrWindowRegion.masks(targetRegion, maskRegions, false, mutableSource.width, mutableSource.height).forEach {
                             canvas.drawRect(it.left.toFloat(), it.top.toFloat(), it.right.toFloat(), it.bottom.toFloat(), paint)
                         }
 
-                        // Determine target bounds (fallback to full display if window root wasn't accessible)
+                        // Never submit the whole display when the target bounds are invalid.
                         val left = targetBounds.left.coerceIn(0, mutableSource.width)
                         val top = targetBounds.top.coerceIn(0, mutableSource.height)
                         val right = targetBounds.right.coerceIn(left, mutableSource.width)
                         val bottom = targetBounds.bottom.coerceIn(top, mutableSource.height)
                         val width = right - left
                         val height = bottom - top
+                        if (width <= 0 || height <= 0) {
+                            report("OCR: limites da janela incompatíveis com captura")
+                            return
+                        }
 
-                        crop = if (width > 0 && height > 0 && (width < mutableSource.width || height < mutableSource.height)) {
+                        crop = if (width < mutableSource.width || height < mutableSource.height) {
                             Bitmap.createBitmap(mutableSource, left, top, width, height)
                         } else {
                             mutableSource
@@ -191,13 +218,20 @@ class OfferOcrReader(
                         recognizer.process(InputImage.fromBitmap(bitmap, 0))
                             .addOnSuccessListener { recognized ->
                                 try {
+                                    val latest = findTarget(pkg)
+                                    if (latest == null || latest.id != activeTarget.id || latest.bounds != activeTarget.bounds ||
+                                        !epochs.accepts(pkg, generation, now, SystemClock.elapsedRealtime())) {
+                                        report("OCR: resultado descartado; janela mudou")
+                                        return@addOnSuccessListener
+                                    }
                                     val lines = recognized.textBlocks.flatMap { it.lines }
-                                        .filter { OfferOcrContext.acceptsLine(it.text, it.boundingBox?.top, bitmap.height) }
+                                        .sortedWith(compareBy({ it.boundingBox?.top ?: Int.MAX_VALUE }, { it.boundingBox?.left ?: Int.MAX_VALUE }))
+                                        .filter { OfferOcrContext.acceptsCapturedLine(it.text, it.boundingBox?.top, bitmap.height,
+                                            activeTarget.bounds.top, activeTarget.bounds.height(), resourcesDisplayHeight()) }
                                         .map { it.text }
                                     val parsed = AccessibilityOfferReader.parse(lines, pkg)
                                     if (OfferOcrContext.permits(lines) && parsed.isComplete) {
                                         report("OCR: oferta detectada com sucesso (${parsed.appName})")
-                                        // Gigu immediate delivery: deliver directly without artificial double-read delay
                                         offerReady(parsed.copy(source = OfferSource.OCR_FALLBACK), pkg)
                                     } else {
                                         report(if (!parsed.isComplete)
@@ -242,8 +276,8 @@ class OfferOcrReader(
                 }
             }
 
-            // Always take screenshot of Display.DEFAULT_DISPLAY like Gigu does
-            service.takeScreenshot(Display.DEFAULT_DISPLAY, service.mainExecutor, callback)
+            if (Build.VERSION.SDK_INT >= 34) service.takeScreenshotOfWindow(activeTarget.id, service.mainExecutor, callback)
+            else service.takeScreenshot(Display.DEFAULT_DISPLAY, service.mainExecutor, callback)
         } catch (error: Exception) {
             reportFailure("captura", error)
             finish()
@@ -251,6 +285,8 @@ class OfferOcrReader(
     }
 
     private fun Rect.region() = OcrRegion(left, top, right, bottom)
+
+    private fun resourcesDisplayHeight() = service.resources.displayMetrics.heightPixels
 
     private fun reportFailure(stage: String, error: Exception) {
         Log.w("GiroReader", ReaderDiagnostics.record(stage, error))

@@ -2,6 +2,27 @@ package com.girocerto.monitoring
 import org.junit.Assert.*
 import org.junit.Test
 class OfferOcrContextTest {
+    @Test fun priceAtTopOfPopupIsNotAStatusBarBalance() {
+        assertTrue(OfferOcrContext.acceptsCapturedLine("R$ 28,50", 10, 400, 600, 400, 1000))
+        assertFalse(OfferOcrContext.acceptsCapturedLine("R$ 250,00", 10, 1000, 0, 1000, 1000))
+    }
+    @Test fun splitBonusAndSpacedCurrencyUseTheSameRulesAsTheParser() {
+        val lines = listOf("R $ 22,58", "Inclui", "R$", "4,00", "Bônus", "Distância total 7,6 km", "Aceitar")
+        assertTrue(OfferOcrContext.permits(lines))
+        val result = AccessibilityOfferReader.parse(lines, "com.app99.driver")
+        assertTrue(result.isComplete)
+        assertEquals(22.58, result.fare!!, .001)
+    }
+
+    @Test fun malformedSecondCurrencyCannotBeIgnored() {
+        assertFalse(OfferOcrContext.permits(listOf("Aceitar", "R$ 20,00", "R$ 1.23.45", "10 km")))
+    }
+
+    @Test fun thousandsSeparatorsAreConsistentWithParser() {
+        val lines = listOf("Selecionar", "R$ 1.234,56", "200 km", "3 h")
+        assertTrue(OfferOcrContext.permits(lines))
+        assertEquals(1234.56, AccessibilityOfferReader.parse(lines, "com.ubercab.driver").fare!!, .001)
+    }
     @Test fun currencyFormattingIsConsistentAcrossTextAndOcr() {
         for (price in listOf("R$\u00a016,73", "R$\u202f16,73", "\u200eR$\u200e 16,73", "R$\n16,73")) {
             val lines = listOf("Envios Moto", price, "29 min (10.7 km)", "Aceitar")

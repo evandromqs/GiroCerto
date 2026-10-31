@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.15",
+    "changes": [
+      "Correção da conversão da captura de tela que podia impedir o processamento de todas as ofertas pelo OCR.",
+      "Captura por janela no Android 14 ou superior e descarte de resultados quando a janela ou as preferências de monitoramento mudam.",
+      "Melhor leitura de preços com R $ e bônus separados em blocos de texto, mantendo a rejeição de valores ambíguos.",
+      "Correção do filtro de saldo para preservar o preço no topo de popups de ofertas.",
+      "200 testes locais aprovados e novo teste Android para conversão da captura. A detecção em ofertas reais de Uber e 99 ainda requer validação no aparelho."
+    ]
+  },
+  {
     "version": "1.0.14",
     "changes": [
       "Alinhamento da arquitetura de OCR com engenharia reversa do Gigu (captura em Display.DEFAULT_DISPLAY em API 30+).",

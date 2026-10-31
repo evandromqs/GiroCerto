@@ -4,6 +4,8 @@ package com.girocerto.monitoring
 internal object OfferTextNormalization {
     fun lines(raw: List<String>): List<String> = raw.flatMap { it.lines() }.map { line ->
         line.replace(Regex("\\p{Cf}"), "")
-            .replace('\u00A0', ' ').replace('\u202F', ' ').trim()
+            .replace('\u00A0', ' ').replace('\u202F', ' ')
+            .replace(Regex("(?i)R\\s+\\$")) { "R\$" }
+            .trim()
     }.filter { it.isNotBlank() }
 }
