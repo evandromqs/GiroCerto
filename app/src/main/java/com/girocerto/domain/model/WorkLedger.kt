@@ -4,7 +4,22 @@ import java.time.LocalDate
 
 enum class WorkPlatform(val label: String) {
     UBER("Uber"), UBER_EATS("Uber Eats"), IFOOD("iFood"),
-    NINETY_NINE("99"), FOOD_99("99Food"), KEETA("Keeta")
+    NINETY_NINE("99"), FOOD_99("99Food"), KEETA("Keeta");
+
+    companion object {
+        fun fromAppName(appName: String): WorkPlatform {
+            val lower = appName.lowercase()
+            return when {
+                lower.contains("eats") -> UBER_EATS
+                lower.contains("uber") -> UBER
+                lower.contains("99food") -> FOOD_99
+                lower.contains("99") || lower.contains("didi") -> NINETY_NINE
+                lower.contains("ifood") -> IFOOD
+                lower.contains("keeta") -> KEETA
+                else -> UBER
+            }
+        }
+    }
 }
 
 data class ElectricProfile(

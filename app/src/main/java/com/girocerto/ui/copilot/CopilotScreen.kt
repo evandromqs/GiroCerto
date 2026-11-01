@@ -437,6 +437,9 @@ fun CopilotScreen() {
                     }
 
                     PreferenceRow("Salvar análises automaticamente", policy.autoSave) { update(policy.copy(autoSave = it)) }
+                    PreferenceRow("Rejeitar ofertas no prejuízo automaticamente", policy.autoRejectLoss) { update(policy.copy(autoRejectLoss = it)) }
+                    Text("Recusa automaticamente chamadas avaliadas como Prejuízo nos aplicativos de motorista.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     PreferenceRow("Adicionar 5 min — Uber e 99", policy.addFiveMinutes) { update(policy.copy(addFiveMinutes = it)) }
                     Text("Acrescenta 5 minutos à duração informada para calcular R$/hora e custos com margem. Não estima tempo quando ele não aparece na oferta.",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

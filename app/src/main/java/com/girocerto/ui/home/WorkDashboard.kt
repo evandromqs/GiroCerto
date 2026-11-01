@@ -45,7 +45,7 @@ import java.time.format.DateTimeFormatter
 private val dayFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
 @Composable
-fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Unit, onOffers: () -> Unit) {
+fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Unit, onOffers: () -> Unit, onShift: () -> Unit = {}) {
     val repo = GiroCertoApp.instance.workRepository
     val profile by repo.profile.collectAsStateWithLifecycle()
     val days by repo.days.collectAsStateWithLifecycle()
@@ -78,19 +78,31 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
 
         val context = LocalContext.current
         val policy = com.girocerto.monitoring.CopilotPreferences(context).read()
-        NeobrutalButton(
-            text = if (running && policy.enabled) "Mostrar copiloto" else "Ativar copiloto",
+        val currentShift by GiroCertoApp.instance.shiftRepository.currentShift.collectAsStateWithLifecycle()
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_copilot), null, tint = MaterialTheme.colorScheme.onPrimary) },
-            onClick = {
-                if (GiroCertoAccessibilityService.isAccessibilityEnabled(context) && com.girocerto.overlay.OverlayController.canDrawOverlays(context)) {
-                    val preferences = com.girocerto.monitoring.CopilotPreferences(context)
-                    preferences.write(preferences.read().copy(enabled = true))
-                    com.girocerto.overlay.OverlayController.restore(context)
-                    com.girocerto.overlay.OverlayController.startFloatingBubble(context)
-                } else onCopilot()
-            }
-        )
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            NeobrutalButton(
+                text = if (running && policy.enabled) "Copiloto" else "Ativar",
+                modifier = Modifier.weight(1f),
+                leadingIcon = { Icon(androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_copilot), null, tint = MaterialTheme.colorScheme.onPrimary) },
+                onClick = {
+                    if (GiroCertoAccessibilityService.isAccessibilityEnabled(context) && com.girocerto.overlay.OverlayController.canDrawOverlays(context)) {
+                        val preferences = com.girocerto.monitoring.CopilotPreferences(context)
+                        preferences.write(preferences.read().copy(enabled = true))
+                        com.girocerto.overlay.OverlayController.restore(context)
+                        com.girocerto.overlay.OverlayController.startFloatingBubble(context)
+                    } else onCopilot()
+                }
+            )
+            NeobrutalButton(
+                text = if (currentShift?.isActive == true) "Ponto (${currentShift?.startTime})" else "Registrar Ponto",
+                modifier = Modifier.weight(1.2f),
+                leadingIcon = { Icon(androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_trip_clock), null, tint = MaterialTheme.colorScheme.onPrimary) },
+                onClick = onShift
+            )
+        }
 
         if (loading) {
             LinearProgressIndicator(

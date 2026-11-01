@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.20",
+    "changes": [
+      "Novo modal flutuante inspirado no design GigU com ícone centralizado sobreposto, resumo de Meta, Total Feito e Kms rodados no dia.",
+      "3 botões de ação rápida centralizados: Registrar Ponto, Histórico de Corridas e Ativar/Desativar Cálculo.",
+      "Módulo de Registro de Ponto: detecção de horário automático, registro de km da moto ou carro e fechamento de turno.",
+      "Botão Aceitar Corrida no card de ofertas: aciona o app oficial, clica em Aceitar e registra a corrida no fechamento diário automaticamente.",
+      "Opção de Rejeitar ofertas no prejuízo automaticamente nas configurações do Copiloto."
+    ]
+  },
+  {
     "version": "1.0.19",
     "changes": [
       "Nova paleta azul: primária #0000FF e secundária #1591EA, e novos ícones do app atualizados.",

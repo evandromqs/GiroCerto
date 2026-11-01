@@ -19,6 +19,15 @@ class WorkPlatformSelectionTest {
     @Test fun invalidDraftIsNotSilentlyHiddenWhenDeselecting() {
         assertTrue(WorkPlatform.UBER in platformsForDay(setOf(WorkPlatform.KEETA), listOf(PlatformWork(WorkPlatform.UBER, -1.0, 0.0, 0.0))))
     }
+    @Test fun fromAppNameMapsCorrectly() {
+        assertEquals(WorkPlatform.UBER, WorkPlatform.fromAppName("Uber"))
+        assertEquals(WorkPlatform.UBER, WorkPlatform.fromAppName("uber driver"))
+        assertEquals(WorkPlatform.NINETY_NINE, WorkPlatform.fromAppName("99"))
+        assertEquals(WorkPlatform.NINETY_NINE, WorkPlatform.fromAppName("99 Motorista"))
+        assertEquals(WorkPlatform.IFOOD, WorkPlatform.fromAppName("iFood"))
+        assertEquals(WorkPlatform.KEETA, WorkPlatform.fromAppName("Keeta Entregas"))
+        assertEquals(WorkPlatform.UBER, WorkPlatform.fromAppName("Desconhecido"))
+    }
     @Test fun clearingDeselectedAmountsRemovesPlatformWithoutChangingSelectedOnes() {
         assertEquals(setOf(WorkPlatform.KEETA), platformsForDay(setOf(WorkPlatform.KEETA), listOf(PlatformWork(WorkPlatform.UBER, 0.0, 0.0, 0.0))))
     }

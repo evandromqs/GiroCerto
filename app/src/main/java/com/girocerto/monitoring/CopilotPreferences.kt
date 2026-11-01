@@ -21,6 +21,7 @@ data class CopilotPolicy(
     val ocrEnabled: Boolean = false,
     val autoSave: Boolean = false,
     val addFiveMinutes: Boolean = false,
+    val autoRejectLoss: Boolean = false,
     val restingCorner: OverlayCorner = OverlayCorner.TOP_RIGHT
 ) {
     fun adjustedDuration(minutes: Int, packageName: String): Int {
@@ -68,6 +69,7 @@ class CopilotPreferences(private val context: Context) {
             ocrEnabled = prefs.getBoolean("ocr_enabled", false),
             autoSave = prefs.getBoolean("autosave", false),
             addFiveMinutes = prefs.getBoolean("add_five_minutes", false),
+            autoRejectLoss = prefs.getBoolean("auto_reject_loss", false),
             restingCorner = corner
         )
     }
@@ -81,6 +83,7 @@ class CopilotPreferences(private val context: Context) {
             .putBoolean("capture_screenshot", policy.captureOfferScreenshot)
             .putBoolean("ocr_enabled", policy.ocrEnabled)
             .putBoolean("add_five_minutes", policy.addFiveMinutes)
+            .putBoolean("auto_reject_loss", policy.autoRejectLoss)
             .putBoolean("notifications", policy.notifyOffers).putBoolean("autosave", policy.autoSave)
             .putString("resting_corner", policy.restingCorner.name).apply()
         com.girocerto.overlay.OverlayController.syncCopilot(context)

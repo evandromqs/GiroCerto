@@ -2,6 +2,9 @@ package com.girocerto.navigation
 
 import com.girocerto.ui.components.AppText as Text
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import android.content.Context
@@ -74,6 +77,29 @@ fun AppNavigation() {
         } else {
             pendingOverlayAnalysis = analysis
             showPermissionRationale = true
+        }
+    }
+
+    var showShiftDialog by remember { mutableStateOf(false) }
+    val requestedTarget by com.girocerto.app.MainActivity.targetScreen.collectAsStateWithLifecycle()
+    LaunchedEffect(requestedTarget) {
+        when (requestedTarget) {
+            "SHIFT", "PONTO" -> {
+                showShiftDialog = true
+                com.girocerto.app.MainActivity.targetScreen.value = null
+            }
+            "HISTORY" -> {
+                navigate(Screen.HISTORY)
+                com.girocerto.app.MainActivity.targetScreen.value = null
+            }
+            "DIARY" -> {
+                navigate(Screen.DIARY)
+                com.girocerto.app.MainActivity.targetScreen.value = null
+            }
+            "COPILOT" -> {
+                navigate(Screen.COPILOT)
+                com.girocerto.app.MainActivity.targetScreen.value = null
+            }
         }
     }
 
@@ -156,7 +182,8 @@ fun AppNavigation() {
                     onRecord = { todayRequest++; navigate(Screen.DIARY) },
                     onGoals = { navigate(Screen.GOALS) },
                     onCopilot = { navigate(Screen.COPILOT) },
-                    onOffers = { navigate(Screen.HISTORY) }
+                    onOffers = { navigate(Screen.HISTORY) },
+                    onShift = { showShiftDialog = true }
                 )
                 Screen.DIARY -> com.girocerto.ui.home.WorkDiaryScreen(openTodayRequest = todayRequest, onProfile = { navigate(Screen.GOALS) })
                 Screen.HISTORY -> HistoryScreen(
@@ -178,6 +205,10 @@ fun AppNavigation() {
     }
 
     // Modal educativo e transparente para solicitar permissão de sobreposição
+    if (showShiftDialog) {
+        com.girocerto.ui.home.ShiftDialog(onDismiss = { showShiftDialog = false })
+    }
+
     if (showPermissionRationale) {
         AlertDialog(
             onDismissRequest = { showPermissionRationale = false; pendingOverlayAnalysis = null },

@@ -22,6 +22,9 @@ class GiroCertoApp : Application() {
     lateinit var rideRepository: RideRepository
         private set
 
+    lateinit var shiftRepository: com.girocerto.data.repository.ShiftRepository
+        private set
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -29,6 +32,7 @@ class GiroCertoApp : Application() {
         appUpdates = com.girocerto.update.AppUpdateManager(this)
         settingsRepository = SettingsRepository(this)
         rideRepository = RideRepository(this, deferLoading = true)
+        shiftRepository = com.girocerto.data.repository.ShiftRepository(this)
         workRepository = com.girocerto.data.repository.WorkRepository(this, deferLoading = true)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             workRepository.profile.collectLatest { profile ->

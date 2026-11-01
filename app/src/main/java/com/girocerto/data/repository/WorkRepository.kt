@@ -62,6 +62,40 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
     private fun writable(key: String) { check("*" !in damaged && key !in damaged) { "Registro protegido para recuperação. Exporte o backup original." } }
     fun retryLoad() { scope.launch { ready.await(); mutex.withLock { _loading.value = true; load() } } }
 
+    suspend fun recordAcceptedRide(platform: WorkPlatform, fare: Double, distanceKm: Double) = withContext(Dispatchers.IO) {
+        ready.await(); mutex.withLock {
+            val today = LocalDate.now()
+            val existing = _days.value.firstOrNull { it.date == today }
+            val profile = _profile.value
+            val entries = existing?.entries?.toMutableList() ?: mutableListOf()
+            val idx = entries.indexOfFirst { it.platform == platform }
+            if (idx >= 0) {
+                val current = entries[idx]
+                entries[idx] = current.copy(revenue = current.revenue + fare, km = current.km + distanceKm)
+            } else {
+                entries.add(PlatformWork(platform, revenue = fare, km = distanceKm, hours = 0.0))
+            }
+            val totalKm = (existing?.totalKm ?: 0.0) + distanceKm
+            val goal = existing?.grossGoal ?: profile?.dailyGrossGoal ?: 0.0
+            val fixed = existing?.fixedCost ?: profile?.dailyRent ?: 0.0
+            val variable = existing?.variablePerKm ?: profile?.variablePerKm ?: 0.0
+            val activeHours = existing?.activeHours ?: 0.0
+            val updatedDay = WorkDay(
+                date = today,
+                entries = entries,
+                totalKm = totalKm,
+                activeHours = activeHours,
+                fixedCost = fixed,
+                variablePerKm = variable,
+                grossGoal = goal,
+                weeklyRent = existing?.weeklyRent ?: profile?.weeklyRent
+            )
+            val key = "day:${updatedDay.date}"; writable(key)
+            check(prefs.edit().putString(key, encodeDay(updatedDay).toString()).commit())
+            _days.value = (_days.value.filterNot { it.date == updatedDay.date } + updatedDay).sortedByDescending { it.date }
+        }
+    }
+
     suspend fun saveSelectedPlatforms(platforms: Set<WorkPlatform>) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
         require(platforms.isNotEmpty()); writable("selected_platforms")
         check(prefs.edit().putStringSet("selected_platforms", platforms.map { it.name }.toSet()).commit())

@@ -379,80 +379,167 @@ class RideOverlayService : Service() {
     }
 
     private fun createQuickMenuView(): View {
-        val root = LinearLayout(this).apply {
+        val root = FrameLayout(this).apply {
+            contentDescription = "Menu rápido do Giro Certo"
+        }
+
+        val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12))
-            background = GradientDrawable().apply {
-                orientation = GradientDrawable.Orientation.TOP_BOTTOM
-                colors = intArrayOf(palette("#243535"), palette("#101818"))
-                cornerRadius = dpToPx(16).toFloat()
-                setStroke(dpToPx(2), palette("#4B5563"))
-            }
-            elevation = dpToPx(16).toFloat()
+            background = panelSurface()
+            elevation = dpToPx(10).toFloat()
+            setPadding(dpToPx(16), dpToPx(32), dpToPx(16), dpToPx(16))
         }
 
-        // Header com título e botão recolher
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+        // Close button at top right
+        val closeRow = LinearLayout(this).apply {
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
         }
-
-        val title = TextView(this).apply {
-            typeface = resources.getFont(com.girocerto.app.R.font.poppins_medium)
-            gravity = Gravity.CENTER
-            text = "Giro Certo Copiloto"
-            setTextColor(palette("#F9FAFB"))
-            textSize = 14f
-            paint.isFakeBoldText = true
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f)
+        val closeBtn = iconAction(com.girocerto.app.R.drawable.ic_close_panel, "Recolher painel") { switchToBubble() }.apply {
+            setPadding(dpToPx(5), dpToPx(5), dpToPx(5), dpToPx(5))
         }
+        closeRow.addView(closeBtn, LinearLayout.LayoutParams(dpToPx(24), dpToPx(24)))
+        card.addView(closeRow)
 
-        val collapseBtn = iconAction(com.girocerto.app.R.drawable.ic_close_panel, "Recolher painel") { switchToBubble() }
-
-        header.addView(title)
-        header.addView(collapseBtn, LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)))
-        root.addView(header)
-
-        // Status de monitoramento
-        val statusText = TextView(this).apply {
-            typeface = resources.getFont(com.girocerto.app.R.font.poppins_medium)
-            gravity = Gravity.CENTER
-            tag = "readerStatus"
-            text = "Nenhuma oferta recente"
-            setTextColor(palette("#B5C9C7"))
-            textSize = 12f
-            setPadding(0, dpToPx(4), 0, dpToPx(10))
-        }
-        root.addView(statusText)
-
+        // Summary Data (Meta do dia, Total feito, Kms rodados)
         val today = GiroCertoApp.instance.workRepository.days.value.firstOrNull { it.date == java.time.LocalDate.now() }
-        val profitText = TextView(this).apply {
-            typeface = resources.getFont(com.girocerto.app.R.font.poppins_medium)
-            text = today?.let { String.format(Locale.GERMANY, "Saldo registrado hoje: R$ %.2f", it.net) }
-                ?: "Hoje: ganhos ainda não registrados"
-            setTextColor(palette("#F9FAFB"))
-            gravity = Gravity.CENTER
-            textSize = 12f
-            paint.isFakeBoldText = true
-            setPadding(0, 0, 0, dpToPx(10))
-        }
-        root.addView(profitText)
+        val profile = GiroCertoApp.instance.workRepository.profile.value
+        val goal = today?.grossGoal ?: profile?.dailyGrossGoal ?: 0.0
+        val revenue = today?.revenue ?: 0.0
+        val km = today?.totalKm ?: 0.0
 
-        // Botões de ação rápida
-        val actions = LinearLayout(this).apply {
+        val summaryContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dpToPx(4), 0, dpToPx(12))
+        }
+
+        val metricsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
 
-        val openAppBtn = Button(this).apply {
-            text = "Abrir App"
-            textSize = 12f
-            setTextColor(Color.WHITE)
-            setPadding(dpToPx(12), dpToPx(4), dpToPx(12), dpToPx(4))
-            background = GradientDrawable().apply {
-                setColor(palette("#19BFB0"))
-                cornerRadius = dpToPx(8).toFloat()
+        fun summaryCol(title: String, value: String): LinearLayout {
+            return LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                addView(label(value, 16f).apply {
+                    paint.isFakeBoldText = true
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                })
+                addView(label(title, 11f).apply {
+                    setTextColor(palette("#B5C9C7"))
+                    gravity = Gravity.CENTER
+                })
             }
+        }
+
+        val goalStr = if (goal > 0) String.format(Locale.GERMANY, "R$ %.0f", goal) else "—"
+        val revStr = String.format(Locale.GERMANY, "R$ %.2f", revenue)
+        val kmStr = String.format(Locale.GERMANY, "%.1f km", km)
+
+        metricsRow.addView(summaryCol("Meta do dia", goalStr), LinearLayout.LayoutParams(0, -2, 1f))
+        metricsRow.addView(summaryCol("Total feito", revStr), LinearLayout.LayoutParams(0, -2, 1f))
+        metricsRow.addView(summaryCol("Kms rodados", kmStr), LinearLayout.LayoutParams(0, -2, 1f))
+        summaryContainer.addView(metricsRow)
+
+        if (goal > 0) {
+            val progress = (revenue / goal).toFloat().coerceIn(0f, 1f)
+            summaryContainer.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                max = 1000
+                setProgress((progress * 1000).toInt())
+                progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1591EA"))
+                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(palette("#4B5563"))
+            }, LinearLayout.LayoutParams(-1, dpToPx(4)).apply { topMargin = dpToPx(10) })
+        }
+        card.addView(summaryContainer)
+
+        // Divider
+        card.addView(View(this).apply {
+            setBackgroundColor(palette("#4B5563"))
+        }, LinearLayout.LayoutParams(-1, dpToPx(1)).apply { topMargin = dpToPx(4); bottomMargin = dpToPx(14) })
+
+        // 3 Buttons aligned horizontally centered
+        val buttonsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+
+        fun menuButton(iconRes: Int, text: String, activeBg: Int? = null, onClick: () -> Unit): LinearLayout {
+            val col = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { onClick() }
+            }
+            val iconBtn = android.widget.ImageView(this).apply {
+                setImageResource(iconRes)
+                imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12))
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(activeBg ?: Color.parseColor("#1591EA"))
+                    setStroke(dpToPx(1), Color.parseColor("#72BFFF"))
+                }
+                elevation = dpToPx(3).toFloat()
+            }
+            col.addView(iconBtn, LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)))
+            col.addView(label(text, 11f).apply {
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+            }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dpToPx(6) })
+            return col
+        }
+
+        // Button 1: Registrar Ponto
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_trip_clock, "Registrar Ponto") {
+            val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra("target_screen", "SHIFT")
+            }
+            startActivity(intent)
+            switchToBubble()
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+
+        // Button 2: Histórico de Corridas
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_history, "Histórico") {
+            val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra("target_screen", "HISTORY")
+            }
+            startActivity(intent)
+            switchToBubble()
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+
+        // Button 3: Ativar / Desativar Cálculo
+        val prefs = CopilotPreferences(this)
+        val isCalcEnabled = prefs.read().enabled
+        val calcBg = if (isCalcEnabled) Color.parseColor("#087443") else Color.parseColor("#4B5563")
+        val calcLabel = if (isCalcEnabled) "Cálculo Ativo" else "Cálculo Pausado"
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_copilot, calcLabel, calcBg) {
+            val current = prefs.read()
+            val toggled = !current.enabled
+            prefs.write(current.copy(enabled = toggled))
+            Toast.makeText(this@RideOverlayService, if (toggled) "Cálculo de ofertas ativado!" else "Cálculo pausado", Toast.LENGTH_SHORT).show()
+            showQuickMenuMode()
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+
+        card.addView(buttonsRow)
+
+        // Add card with topMargin of 28dp to leave space for overlapping top icon
+        root.addView(card, FrameLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(28) })
+
+        // Central Top Icon (Avatar like GigU) overlapping the top of the card
+        val topIconContainer = FrameLayout(this).apply {
+            elevation = dpToPx(14).toFloat()
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#0000FF"))
+                setStroke(dpToPx(2), Color.parseColor("#1591EA"))
+            }
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Abrir Giro Certo em primeiro plano"
             setOnClickListener {
                 val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -461,32 +548,13 @@ class RideOverlayService : Service() {
                 switchToBubble()
             }
         }
+        topIconContainer.addView(android.widget.ImageView(this).apply {
+            setImageResource(com.girocerto.app.R.drawable.ic_launcher_monochrome)
+            imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, FrameLayout.LayoutParams(dpToPx(32), dpToPx(32), Gravity.CENTER))
 
-        val closeBtn = Button(this).apply {
-            text = "Pausar copiloto"
-            textSize = 12f
-            setTextColor(Color.WHITE)
-            setPadding(dpToPx(10), dpToPx(4), dpToPx(10), dpToPx(4))
-            background = GradientDrawable().apply {
-                setColor(palette("#304242"))
-                cornerRadius = dpToPx(8).toFloat()
-            }
-            setOnClickListener {
-                val preferences = CopilotPreferences(this@RideOverlayService)
-                preferences.write(preferences.read().copy(enabled = false))
-                dismiss()
-            }
-        }
-
-        val btnParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f).apply {
-            setMargins(dpToPx(3), 0, dpToPx(3), 0)
-        }
-        actions.addView(openAppBtn, btnParams)
-        actions.addView(closeBtn, btnParams)
-        root.addView(actions)
-
-        // Drag listener para mover o menu rápido
-        // Expanded panels stay at the top; only the bubble can be dragged.
+        root.addView(topIconContainer, FrameLayout.LayoutParams(dpToPx(56), dpToPx(56), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
 
         return root
     }
@@ -694,6 +762,24 @@ class RideOverlayService : Service() {
         body.addView(iconAction(com.girocerto.app.R.drawable.ic_open_app, "Abrir ${offer.appName}") { openPlatform(offer) },
             LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)).apply { leftMargin = dpToPx(8) })
         card.addView(body, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(12) })
+
+        // Botão Aceitar Corrida com clique automatizado e registro contábil imediato
+        val acceptBtn = Button(this).apply {
+            text = "Aceitar Corrida • R$ " + String.format(Locale.GERMANY, "%.2f", offer.fare)
+            textSize = 13f
+            paint.isFakeBoldText = true
+            setTextColor(Color.WHITE)
+            setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6))
+            background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(Color.parseColor("#087443"), Color.parseColor("#10B981"))).apply {
+                cornerRadius = dpToPx(20).toFloat()
+            }
+            elevation = dpToPx(2).toFloat()
+            setOnClickListener {
+                acceptAndRecordOffer(analysis)
+            }
+        }
+        card.addView(acceptBtn, LinearLayout.LayoutParams(-1, dpToPx(40)).apply { topMargin = dpToPx(8) })
         card.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             tag = "offerLifetime"; max = 1000; progress = 1000
             progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1591EA"))
@@ -701,6 +787,24 @@ class RideOverlayService : Service() {
             contentDescription = "Tempo restante da oferta"
         }, LinearLayout.LayoutParams(-1, dpToPx(4)).apply { topMargin = dpToPx(12) })
         return card
+    }
+
+    private fun acceptAndRecordOffer(analysis: RideAnalysis) {
+        val offer = analysis.offer
+        // 1. Traz o aplicativo de motorista para o primeiro plano
+        openPlatform(offer)
+        // 2. Dispara o clique automático de aceitar via acessibilidade
+        autoDismissHandler.postDelayed({
+            com.girocerto.monitoring.GiroCertoAccessibilityService.requestAcceptOffer(offer.sourcePackage)
+        }, 400)
+        // 3. Salva a corrida no histórico e registra no fechamento diário
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            com.girocerto.app.GiroCertoApp.instance.rideRepository.saveRide(analysis)
+            val platform = com.girocerto.domain.model.WorkPlatform.fromAppName(offer.appName)
+            com.girocerto.app.GiroCertoApp.instance.workRepository.recordAcceptedRide(platform, offer.fare, analysis.totalDistanceKm)
+        }
+        Toast.makeText(this, "Corrida aceita e registrada!", Toast.LENGTH_SHORT).show()
+        switchToBubble()
     }
 
     private fun openPlatform(offer: RideOffer) {

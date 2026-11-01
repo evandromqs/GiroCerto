@@ -46,6 +46,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         _isServiceRunning.value = true
+        serviceInstance = this
         voiceAnnouncer = VoiceAnnouncer(this)
         reportReader("Leitor conectado • aguardando oferta dos apps habilitados")
 
@@ -303,6 +304,15 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 // 3. Anúncio por voz Text-To-Speech (se habilitado)
                 if (policy.speaks(finalAnalysis.trafficLight)) voiceAnnouncer?.speakAnalysis(finalAnalysis)
                 if (policy.notifyOffers) OfferNotifications.publish(this@GiroCertoAccessibilityService, finalAnalysis)
+                if (policy.autoRejectLoss && finalAnalysis.trafficLight == com.girocerto.domain.model.TrafficLightStatus.RED) {
+                    serviceScope.launch {
+                        kotlinx.coroutines.delay(800)
+                        val rejected = clickRejectCurrentOffer(packageName)
+                        if (rejected) {
+                            reportReader("${result.appName}: oferta com prejuízo recusada automaticamente")
+                        }
+                    }
+                }
                 if (policy.autoSave) {
                     val now = android.os.SystemClock.elapsedRealtime()
                     savedOffers.entries.removeAll { now - it.value >= 120_000L }
@@ -351,6 +361,103 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         return true
     }
 
+    fun clickAcceptCurrentOffer(targetPackage: String): Boolean {
+        val targetWindows = windows.sortedByDescending { it.layer }.filter {
+            val root = it.root
+            val pkg = windowOwners.owner(it.id, root?.packageName?.toString(), android.os.SystemClock.elapsedRealtime())
+            @Suppress("DEPRECATION") root?.recycle()
+            pkg == targetPackage
+        }
+        for (w in targetWindows) {
+            val root = w.root ?: continue
+            try {
+                if (findAndClickAcceptNode(root)) return true
+            } finally {
+                @Suppress("DEPRECATION") root.recycle()
+            }
+        }
+        rootInActiveWindow?.let { root ->
+            try {
+                if (root.packageName?.toString() == targetPackage && findAndClickAcceptNode(root)) return true
+            } finally {
+                @Suppress("DEPRECATION") root.recycle()
+            }
+        }
+        return false
+    }
+
+    private fun findAndClickAcceptNode(node: AccessibilityNodeInfo): Boolean {
+        val text = listOfNotNull(node.text?.toString(), node.contentDescription?.toString()).joinToString(" ")
+        if (text.isNotBlank() && Regex("(?i)\\b(aceitar)\\b").containsMatchIn(text)) {
+            var target: AccessibilityNodeInfo? = node
+            while (target != null && !target.isClickable) {
+                target = target.parent
+            }
+            if (target != null && target.isClickable) {
+                return target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            }
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try {
+                if (findAndClickAcceptNode(child)) return true
+            } finally {
+                @Suppress("DEPRECATION") child.recycle()
+            }
+        }
+        return false
+    }
+
+    fun clickRejectCurrentOffer(targetPackage: String): Boolean {
+        val targetWindows = windows.sortedByDescending { it.layer }.filter {
+            val root = it.root
+            val pkg = windowOwners.owner(it.id, root?.packageName?.toString(), android.os.SystemClock.elapsedRealtime())
+            @Suppress("DEPRECATION") root?.recycle()
+            pkg == targetPackage
+        }
+        for (w in targetWindows) {
+            val root = w.root ?: continue
+            try {
+                if (findAndClickRejectNode(root)) return true
+            } finally {
+                @Suppress("DEPRECATION") root.recycle()
+            }
+        }
+        rootInActiveWindow?.let { root ->
+            try {
+                if (root.packageName?.toString() == targetPackage && findAndClickRejectNode(root)) return true
+            } finally {
+                @Suppress("DEPRECATION") root.recycle()
+            }
+        }
+        return false
+    }
+
+    private fun findAndClickRejectNode(node: AccessibilityNodeInfo): Boolean {
+        val text = listOfNotNull(node.text?.toString(), node.contentDescription?.toString()).joinToString(" ")
+        val viewId = node.viewIdResourceName?.lowercase() ?: ""
+        val isRejectText = text.isNotBlank() && Regex("(?i)\\b(recusar|rejeitar|descartar|ignorar|fechar)\\b").containsMatchIn(text)
+        val isRejectId = viewId.contains("close") || viewId.contains("reject") || viewId.contains("decline") || viewId.contains("dismiss")
+        if (isRejectText || isRejectId) {
+            var target: AccessibilityNodeInfo? = node
+            while (target != null && !target.isClickable) {
+                target = target.parent
+            }
+            if (target != null && target.isClickable) {
+                return target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            }
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try {
+                if (findAndClickRejectNode(child)) return true
+            } finally {
+                @Suppress("DEPRECATION") child.recycle()
+            }
+        }
+        return false
+    }
+
     override fun onInterrupt() {
         // Interrupção solicitada pelo sistema operacional
     }
@@ -362,6 +469,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         retryRead?.let { readHandler.removeCallbacks(it) }
         serviceScope.cancel()
         _isServiceRunning.value = false
+        serviceInstance = null
         screenshot.close()
         if (ocrDelegate.isInitialized()) ocrDelegate.value.close()
         voiceAnnouncer?.shutdown()
@@ -369,6 +477,15 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     }
 
     companion object {
+        @Volatile
+        var serviceInstance: GiroCertoAccessibilityService? = null
+
+        fun requestAcceptOffer(targetPackage: String): Boolean =
+            serviceInstance?.clickAcceptCurrentOffer(targetPackage) ?: false
+
+        fun requestRejectOffer(targetPackage: String): Boolean =
+            serviceInstance?.clickRejectCurrentOffer(targetPackage) ?: false
+
         // Aplicativos suportados para leitura de ofertas
         val TARGET_PACKAGES = setOf(
             // Uber (motorista, moto e entregador)
