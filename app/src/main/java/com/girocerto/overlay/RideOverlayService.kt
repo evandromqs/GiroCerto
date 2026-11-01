@@ -600,8 +600,9 @@ class RideOverlayService : Service() {
         val now = android.os.SystemClock.elapsedRealtime()
         val entries = recentOffers.active(now)
         if (entries != renderedEntries || list.childCount == 0) {
+            currentView?.setPadding(dpToPx(10), if (entries.size > 1) 0 else dpToPx(6), dpToPx(10), if (entries.size > 1) 0 else dpToPx(8))
             list.removeAllViews()
-            entries.forEach { entry -> list.addView(offerRow(entry), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(6) }) }
+            entries.forEach { entry -> list.addView(offerRow(entry, entries.size > 1), LinearLayout.LayoutParams(-1, -2).apply { topMargin = if (entries.size > 1) 0 else dpToPx(6) }) }
             renderedEntries = entries
         }
         entries.forEachIndexed { index, entry ->
@@ -612,17 +613,24 @@ class RideOverlayService : Service() {
                 else -> "Dados incompletos"
             }
             list.getChildAt(index)?.findViewWithTag<TextView>("age")?.text = "$decision · vista há ${(now - entry.firstSeen) / 1000} s"
+            list.getChildAt(index)?.findViewWithTag<TextView>("compactAge")?.let { label ->
+                val offer = entry.analysis.offer
+                val time = if (offer.durationMinutes <= 0) "tempo —" else if (offer.addedMinutes > 0)
+                    "${offer.durationMinutes - offer.addedMinutes}+${offer.addedMinutes} min" else "${offer.durationMinutes} min"
+                label.text = String.format(Locale.GERMANY, "%.1f km · %s · há %ds", entry.analysis.totalDistanceKm, time, (now - entry.firstSeen) / 1000)
+                label.contentDescription = "$decision. ${label.text}"
+            }
 
         }
     }
 
-    private fun offerRow(entry: RecentOffers.Entry): View {
+    private fun offerRow(entry: RecentOffers.Entry, compact: Boolean): View {
         val analysis = entry.analysis
         val offer = analysis.offer
         val row = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             background = panelSurface()
-            setPadding(dpToPx(8), dpToPx(6), dpToPx(4), dpToPx(6))
+            setPadding(dpToPx(8), if (compact) 0 else dpToPx(6), dpToPx(4), if (compact) 0 else dpToPx(6))
         }
         val info = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val heading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
@@ -634,12 +642,21 @@ class RideOverlayService : Service() {
         }
         heading.addView(android.widget.ImageView(this).apply {
             setImageResource(icon); contentDescription = "Aplicativo detectado: ${offer.appName}"
-        }, LinearLayout.LayoutParams(dpToPx(22), dpToPx(22)).apply { rightMargin = dpToPx(6) })
+        }, LinearLayout.LayoutParams(dpToPx(if (compact) 16 else 22), dpToPx(if (compact) 16 else 22)).apply { rightMargin = dpToPx(6) })
         val time = if (offer.durationMinutes <= 0) "tempo —" else if (offer.addedMinutes > 0)
             "${offer.durationMinutes - offer.addedMinutes} + ${offer.addedMinutes} min" else "${offer.durationMinutes} min"
-        heading.addView(label(String.format(Locale.GERMANY, "%s · R$ %.2f", offer.appName, offer.fare), 13f), LinearLayout.LayoutParams(0, -2, 1f))
+        val decision = when (analysis.trafficLight) {
+            TrafficLightStatus.GREEN -> "Compensa"
+            TrafficLightStatus.YELLOW -> "Atenção"
+            TrafficLightStatus.RED -> "Não compensa"
+            else -> "Incompleta"
+        }
+        val headingText = String.format(Locale.GERMANY, "%s · R$ %.2f", offer.appName, offer.fare) + if (compact) " · $decision" else ""
+        heading.addView(label(headingText, if (compact) 12f else 13f), LinearLayout.LayoutParams(0, -2, 1f))
         info.addView(heading)
-        info.addView(label(String.format(Locale.GERMANY, "%.1f km · %s", analysis.totalDistanceKm, time), 12f))
+        val summary = label(String.format(Locale.GERMANY, "%.1f km · %s", analysis.totalDistanceKm, time), if (compact) 10f else 12f)
+        if (compact) summary.tag = "compactAge"
+        info.addView(summary)
         val metrics = LinearLayout(this)
         val dark = com.girocerto.app.theme.AppearancePreferences.isDark(this)
         val color = Color.parseColor(when (analysis.trafficLight) {
@@ -652,16 +669,24 @@ class RideOverlayService : Service() {
             String.format(Locale.GERMANY, "%.2f", analysis.estimatedProfit))
         listOf("R$/km", "R$/hora", "Lucro est.").forEachIndexed { index, title ->
             val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            column.addView(label(amounts[index], 16f).apply {
-                setTextColor(color); maxLines = 1
+            val metricText: CharSequence = if (compact) android.text.SpannableString(amounts[index] + " " + listOf("R$/km", "R$/h", "lucro")[index]).apply {
+                setSpan(android.text.style.RelativeSizeSpan(.75f), amounts[index].length, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            } else amounts[index]
+            column.addView(label("", if (compact) 14f else 16f).apply {
+                text = metricText
+                setTextColor(if (index != 2) color else Color.parseColor(
+                    if (analysis.estimatedProfit > 0) { if (dark) "#6EE7B7" else "#087443" }
+                    else if (analysis.estimatedProfit < 0) { if (dark) "#FDA4AF" else "#B42336" }
+                    else { if (dark) "#FDE68A" else "#885600" }))
+                maxLines = 1
                 contentDescription = listOf("Ganho por quilômetro", "Rendimento por hora", "Lucro estimado")[index]
-                setAutoSizeTextTypeUniformWithConfiguration(12, 16, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+                setAutoSizeTextTypeUniformWithConfiguration(12, if (compact) 14 else 16, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
             }, LinearLayout.LayoutParams(-1, -2))
-            column.addView(label(title, 11f))
+            if (!compact) column.addView(label(title, 11f))
             metrics.addView(column, LinearLayout.LayoutParams(0, -2, 1f))
         }
-        info.addView(metrics, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(4) })
-        info.addView(label("", 10f).apply { tag = "age" })
+        info.addView(metrics, LinearLayout.LayoutParams(-1, -2).apply { topMargin = if (compact) 0 else dpToPx(4) })
+        if (!compact) info.addView(label("", 10f).apply { tag = "age" })
         row.addView(info, LinearLayout.LayoutParams(0, -2, 1f))
         row.addView(iconAction(com.girocerto.app.R.drawable.ic_open_app, "Abrir ${offer.appName}") { openPlatform(offer) },
             LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)).apply { leftMargin = dpToPx(4) })

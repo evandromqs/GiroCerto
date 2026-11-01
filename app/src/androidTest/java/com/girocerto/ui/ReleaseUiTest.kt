@@ -95,7 +95,12 @@ class ReleaseUiTest {
     }
 
     private fun selectDate(date: LocalDate) {
-        compose.onNodeWithText("Calendário").performScrollTo().performClick()
+        // Finish IME resizing before scrolling: the focused earnings field otherwise
+        // requests visibility again and moves the Calendar button during the tap.
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
+        compose.onNodeWithText("Calendário").performScrollTo()
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) { it() }
         onView(instanceOf(DatePicker::class.java)).perform(object : ViewAction {
             override fun getConstraints(): Matcher<View> = instanceOf(DatePicker::class.java)
             override fun getDescription() = "Select a diary date"
