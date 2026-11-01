@@ -13,17 +13,17 @@ import org.junit.Test
 
 /**
  * Tier 1: Feature Coverage for Requirement R1.
- * Neobrutalist visual design, dark blue (#371BE4) and light gray (#F3F1FA) palette,
+ * Neobrutalist visual design, dark blue (#0000FF) and light gray (#F1F6FC) palette,
  * global light/dark theme switching, and Roboto typography standard.
  */
 class ThemeAndColorPaletteE2ETest {
 
     @Test
     fun testNavyPrimaryColorTokenMatchesSpecification() {
-        // Requirement R1: Primary Dark Blue must be #371BE4
-        val expectedColor = Color(0xFF371BE4)
+        // Requirement R1: Primary Dark Blue must be #0000FF
+        val expectedColor = Color(0xFF0000FF)
         assertEquals(
-            "Primary navy color must match 0xFF371BE4 specified in R1",
+            "Primary navy color must match 0xFF0000FF specified in R1",
             expectedColor,
             Navy
         )
@@ -31,10 +31,10 @@ class ThemeAndColorPaletteE2ETest {
 
     @Test
     fun testLightGrayBackgroundTokenMatchesSpecification() {
-        // Requirement R1: Light theme background must be #F3F1FA
-        val expectedLightBackground = Color(0xFFF3F1FA)
+        // Requirement R1: Light theme background must be #F1F6FC
+        val expectedLightBackground = Color(0xFFF1F6FC)
         assertEquals(
-            "Light gray background token must match 0xFFF3F1FA",
+            "Light gray background token must match 0xFFF1F6FC",
             expectedLightBackground,
             com.girocerto.app.theme.NeobrutalLightGray
         )

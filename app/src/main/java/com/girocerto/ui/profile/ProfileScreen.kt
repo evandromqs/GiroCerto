@@ -351,7 +351,7 @@ fun ProfileScreen(
                     (settings.fuelPricePerLiter / settings.fuelConsumptionKmL) + settings.additionalCostPerKm
                 ))
                 ConfigRow(label = "Voz habilitada", value = if (settings.isVoiceEnabled) " Sim" else " Não")
-                ConfigRow(label = "Ofertas recentes", value = "30 segundos")
+                ConfigRow(label = "Ofertas recentes", value = "${settings.cardDurationSeconds} segundos")
             }
         }
 

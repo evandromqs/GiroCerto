@@ -397,7 +397,12 @@ fun SettingsScreen(
                 )
             }
 
-            Text("Ofertas recentes: 30 segundos por oferta, até três aplicativos.", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
+            Text("Tempo de cada oferta na tela", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(15, 30).forEach { seconds ->
+                    FilterChip(selected = cardDuration == seconds, onClick = { cardDuration = seconds }, label = { Text("${seconds}s") })
+                }
+            }
 
             Text(
                 text = "Cada oferta expira individualmente. O X recolhe o painel e mantém o copiloto ativo.",

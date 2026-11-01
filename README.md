@@ -1,3 +1,5 @@
+> Versão 1.0.19: painel azul com mais espaço, tempo configurável de 15/30s e leitura de janelas de oferta priorizada. [Detalhes](design/README.md).
+
 > Versão 1.0.18: [novo visual roxo e painel de ofertas recentes](design/README.md). Painel fixo no topo, até três aplicativos, expiração individual em 30 segundos e atalho para abrir a plataforma.
 
 > Atualização 24/10/2026: [perfil de moto elétrica e diário de ganhos](analysis/MOTO_ELETRICA_DIARIO.md). Quatro abas, quiz de custos/metas e fechamento por aplicativo, separado das ofertas analisadas. Veja também a [investigação REA](analysis/REA_GIGU.md). A documentação abaixo descreve a base inicial.

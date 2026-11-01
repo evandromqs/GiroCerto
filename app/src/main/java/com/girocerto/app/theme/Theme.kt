@@ -14,41 +14,41 @@ import androidx.compose.ui.unit.dp
 // Dark violet scheme with lighter accent text for contrast
 // ============================================================================
 private val DarkScheme = darkColorScheme(
-    primary = Color(0xFFC1B3FF),
+    primary = Color(0xFF8BCBFF),
     onPrimary = NeobrutalBlack,
     primaryContainer = NeobrutalDarkBlue,
     onPrimaryContainer = NeobrutalWhite,
-    secondary = Color(0xFFD0C8E6),
+    secondary = Color(0xFF1591EA),
     onSecondary = NeobrutalBlack,
-    secondaryContainer = Color(0xFF332B4E),
+    secondaryContainer = Color(0xFF193754),
     onSecondaryContainer = NeobrutalWhite,
-    tertiary = Color(0xFFC1B3FF),
+    tertiary = Color(0xFF8BCBFF),
     onTertiary = NeobrutalDarkBlue,
     background = NeobrutalDarkBackground,       // Deep violet
     onBackground = NeobrutalWhite,             // Pure white text
     surface = NeobrutalDarkSurface,            // Raised dark surface
     onSurface = NeobrutalWhite,                // Pure white text
-    surfaceVariant = Color(0xFF2A2340),
+    surfaceVariant = Color(0xFF19334F),
     onSurfaceVariant = NeobrutalWhite,         // High-contrast secondary text
-    outline = Color(0xFF665A80),                  // Soft outline for dark cards
+    outline = Color(0xFF4B7298),                  // Soft outline for dark cards
     outlineVariant = Color(0xFF594D73),
     error = Color(0xFFFDA4AF),
     onError = NeobrutalBlack,
     errorContainer = Color(0xFF5C1220),
     onErrorContainer = Color(0xFFFFE4E8),
     surfaceContainer = NeobrutalDarkSurface,
-    surfaceContainerHigh = Color(0xFF332B4E)
+    surfaceContainerHigh = Color(0xFF193754)
 )
 
 // ============================================================================
-// Light scheme with #371BE4 brand accents
+// Light scheme with #0000FF brand accents
 // ============================================================================
 private val LightScheme = lightColorScheme(
     primary = NeobrutalDarkBlue,               // Brand violet
     onPrimary = NeobrutalWhite,                // Pure white
     primaryContainer = NeobrutalLightBlueTint, // Pale violet
     onPrimaryContainer = NeobrutalDarkBlue,
-    secondary = NeobrutalDarkBlue,
+    secondary = Color(0xFF1591EA),
     onSecondary = NeobrutalWhite,
     secondaryContainer = Color(0xFFE2E8F0),
     onSecondaryContainer = NeobrutalBlack,
@@ -60,8 +60,8 @@ private val LightScheme = lightColorScheme(
     onSurface = NeobrutalBlack,                // Pure black text (#000000)
     surfaceVariant = NeobrutalLightGray,
     onSurfaceVariant = NeobrutalBlack,         // Pure black text (#000000)
-    outline = Color(0xFFC8BEDF),                  // Subtle surface outlines
-    outlineVariant = Color(0xFFE0D9EF),           // Card outline
+    outline = Color(0xFFBCD2E8),                  // Subtle surface outlines
+    outlineVariant = Color(0xFFD8E8F6),           // Card outline
     error = Color(0xFFB42336),
     onError = NeobrutalWhite,
     errorContainer = Color(0xFFFDE8EB),

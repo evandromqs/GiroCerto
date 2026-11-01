@@ -8,13 +8,13 @@ import androidx.compose.ui.graphics.luminance
 // ============================================================================
 // Skeuomorphic brand palette; legacy token names preserve call-site compatibility
 // ============================================================================
-val NeobrutalDarkBlue = Color(0xFF371BE4)       // Primary brand violet
-val NeobrutalLightGray = Color(0xFFF3F1FA)      // Light mode background/neutral
+val NeobrutalDarkBlue = Color(0xFF0000FF)       // Primary brand violet
+val NeobrutalLightGray = Color(0xFFF1F6FC)      // Light mode background/neutral
 val NeobrutalBlack = Color(0xFF000000)          // Pure black (text, borders, shadows)
 val NeobrutalWhite = Color(0xFFFFFFFF)          // Pure white (card surfaces, dark mode text)
-val NeobrutalDarkBackground = Color(0xFF100D20) // Deep dark mode background
-val NeobrutalDarkSurface = Color(0xFF201A35)    // Dark mode card surface fill
-val NeobrutalLightBlueTint = Color(0xFFEAE4FF)  // Primary container / subtle blue highlight
+val NeobrutalDarkBackground = Color(0xFF091427) // Deep dark mode background
+val NeobrutalDarkSurface = Color(0xFF12243C)    // Dark mode card surface fill
+val NeobrutalLightBlueTint = Color(0xFFE5F2FF)  // Primary container / subtle blue highlight
 
 // Brand alias
 val Navy = NeobrutalDarkBlue

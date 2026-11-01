@@ -15,14 +15,14 @@ class ThemeTokensUnitTest {
 
     @Test
     fun verifyNeobrutalistCorePalette() {
-        // R1: Dark blue #371BE4 and light gray #F3F1FA, pure black #000000 and pure white #FFFFFF
-        assertEquals("Dark Blue primary must be #371BE4", Color(0xFF371BE4), NeobrutalDarkBlue)
-        assertEquals("Light Gray background must be #F3F1FA", Color(0xFFF3F1FA), NeobrutalLightGray)
+        // R1: Dark blue #0000FF and light gray #F1F6FC, pure black #000000 and pure white #FFFFFF
+        assertEquals("Dark Blue primary must be #0000FF", Color(0xFF0000FF), NeobrutalDarkBlue)
+        assertEquals("Light Gray background must be #F1F6FC", Color(0xFFF1F6FC), NeobrutalLightGray)
         assertEquals("Neobrutal Black must be pure #000000", Color(0xFF000000), NeobrutalBlack)
         assertEquals("Neobrutal White must be pure #FFFFFF", Color(0xFFFFFFFF), NeobrutalWhite)
-        assertEquals("Dark theme background must be #100D20", Color(0xFF100D20), NeobrutalDarkBackground)
-        assertEquals("Dark theme surface must be #201A35", Color(0xFF201A35), NeobrutalDarkSurface)
-        assertEquals("Primary container blue tint must be #EAE4FF", Color(0xFFEAE4FF), NeobrutalLightBlueTint)
+        assertEquals("Dark theme background must be #091427", Color(0xFF091427), NeobrutalDarkBackground)
+        assertEquals("Dark theme surface must be #12243C", Color(0xFF12243C), NeobrutalDarkSurface)
+        assertEquals("Primary container blue tint must be #E5F2FF", Color(0xFFE5F2FF), NeobrutalLightBlueTint)
         assertEquals("Brand alias Navy must match NeobrutalDarkBlue", NeobrutalDarkBlue, Navy)
     }
 

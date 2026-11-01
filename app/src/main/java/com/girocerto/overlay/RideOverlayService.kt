@@ -75,7 +75,7 @@ class RideOverlayService : Service() {
             if (currentMode == Mode.OFFER_CARD) {
                 if (entries.isEmpty()) switchToBubble() else renderRecentOffers()
             }
-            if (entries.isNotEmpty()) autoDismissHandler.postDelayed(this, 1000)
+            if (entries.isNotEmpty()) autoDismissHandler.postDelayed(this, if (currentMode == Mode.OFFER_CARD) 100 else 1000)
         }
     }
 
@@ -136,10 +136,10 @@ class RideOverlayService : Service() {
                 val settings = GiroCertoApp.instance.settingsRepository.settings.value
                 currentAnalysis = RideCalculator.calculate(offer, settings).copy(decisionReason = reason)
 
-                if (recentOffers.add(checkNotNull(currentAnalysis), android.os.SystemClock.elapsedRealtime())) {
+                if (recentOffers.add(checkNotNull(currentAnalysis), android.os.SystemClock.elapsedRealtime(), if (settings.cardDurationSeconds == 30) 30_000L else 15_000L)) {
                     showOfferCardMode()
                     autoDismissHandler.removeCallbacks(expiryTick)
-                    autoDismissHandler.postDelayed(expiryTick, 1000)
+                    autoDismissHandler.postDelayed(expiryTick, 100)
                 }
             }
         }
@@ -189,7 +189,7 @@ class RideOverlayService : Service() {
         val bubble = FrameLayout(this).apply {
             contentDescription = "Giro Certo. Toque para abrir; arraste até a lixeira para ocultar."
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.parseColor("#8066FF"), Color.parseColor("#371BE4"), Color.parseColor("#241078"))).apply {
+                intArrayOf(Color.parseColor("#1591EA"), Color.parseColor("#0000FF"), Color.parseColor("#000080"))).apply {
                 shape = GradientDrawable.OVAL
                 setStroke(dpToPx(2), palette("#C9D5E6"))
             }
@@ -544,7 +544,7 @@ class RideOverlayService : Service() {
         return inset + dpToPx(8)
     }
 
-    private fun panelHeight() = ((resources.displayMetrics.heightPixels - panelTop()) * .30f).toInt()
+    private fun panelHeight() = ((resources.displayMetrics.heightPixels - panelTop()) * .50f).toInt()
 
     private fun panelSurface() = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
         intArrayOf(palette("#243535"), palette("#101818"))).apply {
@@ -563,8 +563,8 @@ class RideOverlayService : Service() {
         imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
         setPadding(dpToPx(13), dpToPx(13), dpToPx(13), dpToPx(13))
         background = android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x40FFFFFF),
-            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.parseColor("#6246F0"), Color.parseColor("#371BE4"))).apply {
-                cornerRadius = dpToPx(14).toFloat(); setStroke(dpToPx(1), Color.parseColor("#8D7BF4"))
+            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.parseColor("#1591EA"), Color.parseColor("#0000FF"))).apply {
+                cornerRadius = dpToPx(14).toFloat(); setStroke(dpToPx(1), Color.parseColor("#72BFFF"))
             }, null)
         elevation = dpToPx(2).toFloat()
         setOnClickListener { click() }
@@ -582,12 +582,23 @@ class RideOverlayService : Service() {
             background = panelSurface(); elevation = dpToPx(8).toFloat()
         }
         val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        val title = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        title.addView(label("Ofertas recentes · 30 s", 13f))
-        title.addView(label("Disponibilidade não garantida", 10f))
-        header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
-        header.addView(iconAction(com.girocerto.app.R.drawable.ic_close_panel, "Recolher painel") { switchToBubble() },
-            LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)))
+        header.addView(android.widget.ImageView(this).apply {
+            setImageResource(com.girocerto.app.R.drawable.ic_launcher_monochrome)
+            imageTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(
+                if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#1591EA" else "#0000FF"))
+            contentDescription = "Giro Certo"
+        }, LinearLayout.LayoutParams(dpToPx(24), dpToPx(24)).apply { rightMargin = dpToPx(8) })
+        header.addView(label("Giro Certo", 16f), LinearLayout.LayoutParams(0, -2, 1f))
+        // 24dp visible close control (half size), with a 48dp touch target.
+        val close = FrameLayout(this).apply {
+            contentDescription = "Recolher painel"
+            setOnClickListener { switchToBubble() }
+            addView(iconAction(com.girocerto.app.R.drawable.ic_close_panel, "") { switchToBubble() }.apply {
+                setPadding(dpToPx(5), dpToPx(5), dpToPx(5), dpToPx(5))
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, FrameLayout.LayoutParams(dpToPx(24), dpToPx(24), Gravity.CENTER))
+        }
+        header.addView(close, LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)))
         root.addView(header)
         val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; tag = "recentOffers" }
         root.addView(android.widget.ScrollView(this).apply { addView(list); isFillViewport = false }, LinearLayout.LayoutParams(-1, -2))
@@ -600,39 +611,33 @@ class RideOverlayService : Service() {
         val now = android.os.SystemClock.elapsedRealtime()
         val entries = recentOffers.active(now)
         if (entries != renderedEntries || list.childCount == 0) {
-            currentView?.setPadding(dpToPx(10), if (entries.size > 1) 0 else dpToPx(6), dpToPx(10), if (entries.size > 1) 0 else dpToPx(8))
             list.removeAllViews()
-            entries.forEach { entry -> list.addView(offerRow(entry, entries.size > 1), LinearLayout.LayoutParams(-1, -2).apply { topMargin = if (entries.size > 1) 0 else dpToPx(6) }) }
+            entries.forEach { entry -> list.addView(offerRow(entry), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(10) }) }
             renderedEntries = entries
         }
         entries.forEachIndexed { index, entry ->
-            val decision = when (entry.analysis.trafficLight) {
-                TrafficLightStatus.GREEN -> "Compensa"
-                TrafficLightStatus.YELLOW -> "Atenção"
-                TrafficLightStatus.RED -> "Não compensa"
-                else -> "Dados incompletos"
-            }
-            list.getChildAt(index)?.findViewWithTag<TextView>("age")?.text = "$decision · vista há ${(now - entry.firstSeen) / 1000} s"
-            list.getChildAt(index)?.findViewWithTag<TextView>("compactAge")?.let { label ->
-                val offer = entry.analysis.offer
-                val time = if (offer.durationMinutes <= 0) "tempo —" else if (offer.addedMinutes > 0)
-                    "${offer.durationMinutes - offer.addedMinutes}+${offer.addedMinutes} min" else "${offer.durationMinutes} min"
-                label.text = String.format(Locale.GERMANY, "%.1f km · %s · há %ds", entry.analysis.totalDistanceKm, time, (now - entry.firstSeen) / 1000)
-                label.contentDescription = "$decision. ${label.text}"
-            }
-
+            list.getChildAt(index)?.findViewWithTag<android.widget.ProgressBar>("offerLifetime")?.progress = (entry.remainingFraction(now) * 1000).toInt()
         }
     }
 
-    private fun offerRow(entry: RecentOffers.Entry, compact: Boolean): View {
+    private fun offerRow(entry: RecentOffers.Entry): View {
         val analysis = entry.analysis
         val offer = analysis.offer
-        val row = LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            background = panelSurface()
-            setPadding(dpToPx(8), if (compact) 0 else dpToPx(6), dpToPx(4), if (compact) 0 else dpToPx(6))
+        val dark = com.girocerto.app.theme.AppearancePreferences.isDark(this)
+        val gain = Color.parseColor(if (dark) "#6EE7B7" else "#087443")
+        val loss = Color.parseColor(if (dark) "#FDA4AF" else "#B42336")
+        val warning = Color.parseColor(if (dark) "#FDE68A" else "#885600")
+        val decisionColor = when (analysis.trafficLight) { TrafficLightStatus.GREEN -> gain; TrafficLightStatus.RED -> loss; else -> warning }
+        val decision = when (analysis.trafficLight) {
+            TrafficLightStatus.GREEN -> "Compensa"
+            TrafficLightStatus.RED -> "Prejuízo"
+            else -> "Atenção"
         }
-        val info = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = panelSurface()
+            setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
+        }
         val heading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         val icon = when {
             offer.appName.contains("uber", true) -> com.girocerto.app.R.drawable.platform_uber
@@ -642,68 +647,104 @@ class RideOverlayService : Service() {
         }
         heading.addView(android.widget.ImageView(this).apply {
             setImageResource(icon); contentDescription = "Aplicativo detectado: ${offer.appName}"
-        }, LinearLayout.LayoutParams(dpToPx(if (compact) 16 else 22), dpToPx(if (compact) 16 else 22)).apply { rightMargin = dpToPx(6) })
-        val time = if (offer.durationMinutes <= 0) "tempo —" else if (offer.addedMinutes > 0)
-            "${offer.durationMinutes - offer.addedMinutes} + ${offer.addedMinutes} min" else "${offer.durationMinutes} min"
-        val decision = when (analysis.trafficLight) {
-            TrafficLightStatus.GREEN -> "Compensa"
-            TrafficLightStatus.YELLOW -> "Atenção"
-            TrafficLightStatus.RED -> "Não compensa"
-            else -> "Incompleta"
-        }
-        val headingText = String.format(Locale.GERMANY, "%s · R$ %.2f", offer.appName, offer.fare) + if (compact) " · $decision" else ""
-        heading.addView(label(headingText, if (compact) 12f else 13f), LinearLayout.LayoutParams(0, -2, 1f))
-        info.addView(heading)
-        val summary = label(String.format(Locale.GERMANY, "%.1f km · %s", analysis.totalDistanceKm, time), if (compact) 10f else 12f)
-        if (compact) summary.tag = "compactAge"
-        info.addView(summary)
-        val metrics = LinearLayout(this)
-        val dark = com.girocerto.app.theme.AppearancePreferences.isDark(this)
-        val color = Color.parseColor(when (analysis.trafficLight) {
-            TrafficLightStatus.GREEN -> if (dark) "#6EE7B7" else "#087443"
-            TrafficLightStatus.RED -> if (dark) "#FDA4AF" else "#B42336"
-            else -> if (dark) "#FDE68A" else "#885600"
+        }, LinearLayout.LayoutParams(dpToPx(24), dpToPx(24)).apply { rightMargin = dpToPx(8) })
+        heading.addView(label(String.format(Locale.GERMANY, "R$ %.2f", offer.fare), 18f).apply { paint.isFakeBoldText = true },
+            LinearLayout.LayoutParams(0, -2, 1f))
+        heading.addView(label(decision, 12f).apply {
+            setTextColor(if (analysis.trafficLight == TrafficLightStatus.YELLOW || analysis.trafficLight == TrafficLightStatus.INVALID) Color.BLACK else Color.WHITE)
+            setPadding(dpToPx(8), dpToPx(5), dpToPx(8), dpToPx(5))
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor(when (analysis.trafficLight) { TrafficLightStatus.GREEN -> "#087443"; TrafficLightStatus.RED -> "#B42336"; else -> "#FDE68A" }))
+                cornerRadius = dpToPx(20).toFloat()
+            }
         })
+        card.addView(heading)
+        val body = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        val information = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val measures = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        fun measure(iconId: Int, text: String) {
+            val group = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+            group.addView(android.widget.ImageView(this).apply {
+                setImageResource(iconId); imageTintList = android.content.res.ColorStateList.valueOf(palette("#B5C9C7"))
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(dpToPx(16), dpToPx(16)).apply { rightMargin = dpToPx(4) })
+            group.addView(label(text, 16f))
+            measures.addView(group, LinearLayout.LayoutParams(0, -2, 1f))
+        }
+        val time = if (offer.durationMinutes <= 0) "— min" else if (offer.addedMinutes > 0)
+            "${offer.durationMinutes - offer.addedMinutes}+${offer.addedMinutes} min" else "${offer.durationMinutes} min"
+        measure(com.girocerto.app.R.drawable.ic_route_distance, String.format(Locale.GERMANY, "%.1f km", analysis.totalDistanceKm))
+        measure(com.girocerto.app.R.drawable.ic_trip_clock, time)
+        information.addView(measures)
+        val metrics = LinearLayout(this)
         val amounts = listOf(String.format(Locale.GERMANY, "%.2f", analysis.grossPerKm),
             if (offer.durationMinutes > 0) String.format(Locale.GERMANY, "%.2f", analysis.grossPerHour) else "—",
             String.format(Locale.GERMANY, "%.2f", analysis.estimatedProfit))
-        listOf("R$/km", "R$/hora", "Lucro est.").forEachIndexed { index, title ->
+        listOf("R$/km", "R$/hora", "Lucro Médio").forEachIndexed { index, title ->
             val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            val metricText: CharSequence = if (compact) android.text.SpannableString(amounts[index] + " " + listOf("R$/km", "R$/h", "lucro")[index]).apply {
-                setSpan(android.text.style.RelativeSizeSpan(.75f), amounts[index].length, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            } else amounts[index]
-            column.addView(label("", if (compact) 14f else 16f).apply {
-                text = metricText
-                setTextColor(if (index != 2) color else Color.parseColor(
-                    if (analysis.estimatedProfit > 0) { if (dark) "#6EE7B7" else "#087443" }
-                    else if (analysis.estimatedProfit < 0) { if (dark) "#FDA4AF" else "#B42336" }
-                    else { if (dark) "#FDE68A" else "#885600" }))
-                maxLines = 1
+            column.addView(label(amounts[index], 16f).apply {
+                setTextColor(if (index != 2) decisionColor else if (analysis.estimatedProfit > 0) gain else if (analysis.estimatedProfit < 0) loss else warning)
                 contentDescription = listOf("Ganho por quilômetro", "Rendimento por hora", "Lucro estimado")[index]
-                setAutoSizeTextTypeUniformWithConfiguration(12, if (compact) 14 else 16, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
-            }, LinearLayout.LayoutParams(-1, -2))
-            if (!compact) column.addView(label(title, 11f))
+            })
+            column.addView(label(title, 11f))
             metrics.addView(column, LinearLayout.LayoutParams(0, -2, 1f))
         }
-        info.addView(metrics, LinearLayout.LayoutParams(-1, -2).apply { topMargin = if (compact) 0 else dpToPx(4) })
-        if (!compact) info.addView(label("", 10f).apply { tag = "age" })
-        row.addView(info, LinearLayout.LayoutParams(0, -2, 1f))
-        row.addView(iconAction(com.girocerto.app.R.drawable.ic_open_app, "Abrir ${offer.appName}") { openPlatform(offer) },
-            LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)).apply { leftMargin = dpToPx(4) })
-        return row
+        information.addView(metrics, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(10) })
+        body.addView(information, LinearLayout.LayoutParams(0, -2, 1f))
+        body.addView(iconAction(com.girocerto.app.R.drawable.ic_open_app, "Abrir ${offer.appName}") { openPlatform(offer) },
+            LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)).apply { leftMargin = dpToPx(8) })
+        card.addView(body, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(12) })
+        card.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            tag = "offerLifetime"; max = 1000; progress = 1000
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1591EA"))
+            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(palette("#4B5563"))
+            contentDescription = "Tempo restante da oferta"
+        }, LinearLayout.LayoutParams(-1, dpToPx(4)).apply { topMargin = dpToPx(12) })
+        return card
     }
 
     private fun openPlatform(offer: RideOffer) {
-        val candidates = if (offer.sourcePackage.isNotBlank()) listOf(offer.sourcePackage) else when {
-            offer.appName.contains("uber", true) -> listOf("com.ubercab.driver", "com.ubermoto.driver", "com.ubereats.driver")
-            offer.appName.contains("99") || offer.appName.contains("didi", true) -> listOf("com.taxis99", "com.app99.driver", "com.didiglobal.food.driver", "com.didiglobal.driver")
-            offer.appName.contains("ifood", true) -> listOf("br.com.ifood.driver.app", "br.com.ifood.driver")
-            else -> emptyList()
+        val candidates = buildList {
+            if (offer.sourcePackage.isNotBlank()) add(offer.sourcePackage)
+            addAll(when {
+                offer.appName.contains("uber", true) -> listOf("com.ubercab.driver", "com.ubermoto.driver", "com.ubereats.driver")
+                offer.appName.contains("99") || offer.appName.contains("didi", true) -> listOf("com.taxis99", "com.app99.driver", "com.didiglobal.food.driver", "com.didiglobal.driver")
+                offer.appName.contains("ifood", true) -> listOf("br.com.ifood.driver.app", "br.com.ifood.driver")
+                else -> emptyList()
+            })
+        }.distinct()
+        for (pkg in candidates) {
+            // 1. Try standard launcher intent (which works for Uber, 99, etc.)
+            try {
+                val launch = packageManager.getLaunchIntentForPackage(pkg)
+                if (launch != null) {
+                    startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED))
+                    switchToBubble()
+                    return
+                }
+            } catch (error: Exception) {
+                com.girocerto.monitoring.ReaderDiagnostics.record("Abrir plataforma launchIntent $pkg", error)
+            }
+            // 2. Try LaunchIntentSender (Android 13+)
+            try {
+                if (Build.VERSION.SDK_INT >= 33) {
+                    val sender = packageManager.getLaunchIntentSenderForPackage(pkg)
+                    if (sender != null) {
+                        val options = if (Build.VERSION.SDK_INT >= 34) android.app.ActivityOptions.makeBasic().apply {
+                            setPendingIntentBackgroundActivityStartMode(if (Build.VERSION.SDK_INT >= 36)
+                                android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_IF_VISIBLE
+                            else android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+                        }.toBundle() else null
+                        startIntentSender(sender, null, 0, 0, 0, options)
+                        switchToBubble()
+                        return
+                    }
+                }
+            } catch (error: Exception) {
+                com.girocerto.monitoring.ReaderDiagnostics.record("Abrir plataforma intentSender $pkg", error)
+            }
         }
-        val intent = candidates.firstNotNullOfOrNull { packageManager.getLaunchIntentForPackage(it) }
-        if (intent == null) { Toast.makeText(this, "Aplicativo indisponível neste aparelho.", Toast.LENGTH_SHORT).show(); return }
-        runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)); switchToBubble() }
-            .onFailure { Toast.makeText(this, "Não foi possível abrir o aplicativo.", Toast.LENGTH_SHORT).show() }
+        Toast.makeText(this, "Não foi possível abrir ${offer.appName}. Confira se o aplicativo está instalado.", Toast.LENGTH_LONG).show()
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -797,16 +838,16 @@ class RideOverlayService : Service() {
     private fun palette(hex: String): Int {
         val dark = com.girocerto.app.theme.AppearancePreferences.isDark(this)
         val color = when (hex.uppercase(Locale.ROOT)) {
-            "#101818" -> if (dark) "#19152D" else "#F9F8FF"
-            "#243535" -> if (dark) "#302750" else "#FFFFFF"
+            "#101818" -> if (dark) "#102139" else "#F5FAFF"
+            "#243535" -> if (dark) "#193D65" else "#FFFFFF"
             "#304242" -> "#483B75"
-            "#4B5563" -> if (dark) "#65568B" else "#D9D2F2"
+            "#4B5563" -> if (dark) "#426C9C" else "#BCD7F1"
             "#F9FAFB" -> if (dark) "#FFFFFF" else "#10151D"
             "#B5C9C7" -> if (dark) "#CED8E7" else "#40536D"
             "#FACC15" -> "#DEE5EF"
             "#EF4444" -> "#080D15"
             "#6B7280" -> "#40536D"
-            "#19BFB0", "#22C55E", "#10B981", "#06B6D4", "#EA1D2C", "#F97316", "#F59E0B" -> "#371BE4"
+            "#19BFB0", "#22C55E", "#10B981", "#06B6D4", "#EA1D2C", "#F97316", "#F59E0B" -> "#0000FF"
             else -> hex
         }
         return Color.parseColor(color)

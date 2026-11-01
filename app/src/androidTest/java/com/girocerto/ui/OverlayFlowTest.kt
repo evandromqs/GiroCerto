@@ -119,7 +119,7 @@ class OverlayFlowTest {
         awaitBounds("Abrir 99")
         awaitBounds("Abrir iFood")
         val panel = awaitBounds("Análise da oferta")
-        assertTrue(panel.height() <= compose.activity.resources.displayMetrics.heightPixels * .30 + 2)
+        assertTrue(panel.height() <= compose.activity.resources.displayMetrics.heightPixels * .50 + 2)
         // Unknown package handling leaves the panel usable (no platform is installed in CI).
         tap(awaitBounds("Abrir iFood"))
         awaitBounds("Recolher painel")
@@ -132,6 +132,22 @@ class OverlayFlowTest {
         assertNull(boundsFor("Análise da oferta"))
         tap(awaitBounds("Giro Certo. Toque para abrir; arraste até a lixeira para ocultar."))
         assertNull(boundsFor("Abrir iFood"))
+        compose.runOnIdle { OverlayController.stopFloatingBubble(compose.activity) }
+    }
+
+    @Test fun openShortcutUsesInstalledLauncherAndCollapsesPanel() {
+        val pkg = compose.activity.packageName
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("appops set $pkg SYSTEM_ALERT_WINDOW allow")).use { it.readBytes() }
+        compose.runOnIdle {
+            val prefs = CopilotPreferences(compose.activity)
+            prefs.write(prefs.read().copy(enabled = true))
+            OverlayController.restore(compose.activity)
+            val offer = com.girocerto.domain.model.RideOffer(20.0, 5.0, 15, appName = "Uber", sourcePackage = pkg)
+            OverlayController.showOverlay(compose.activity, com.girocerto.domain.calculator.RideCalculator.calculate(offer, com.girocerto.domain.model.VehicleSettings()))
+        }
+        tap(awaitBounds("Abrir Uber"))
+        awaitBounds("Giro Certo. Toque para abrir; arraste até a lixeira para ocultar.")
+        assertNull(boundsFor("Análise da oferta"))
         compose.runOnIdle { OverlayController.stopFloatingBubble(compose.activity) }
     }
 
@@ -151,7 +167,7 @@ class OverlayFlowTest {
             val density = compose.activity.resources.displayMetrics.density
             assertEquals(screen.width / 2.0, panel.exactCenterX().toDouble(), 16.0 * density)
             assertTrue("Panel must stay at the top", panel.top < screen.height * .15)
-            assertTrue("Panel must occupy at most 30% of the screen", panel.height() <= screen.height * .30 + 2)
+            assertTrue("Panel must occupy at most 50% of the screen", panel.height() <= screen.height * .50 + 2)
         } finally { screen.recycle() }
         val km = awaitBounds("Ganho por quilômetro")
         val hour = awaitBounds("Rendimento por hora")

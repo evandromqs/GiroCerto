@@ -209,8 +209,8 @@ class AdversarialMilestone2StressTest {
     @Test
     fun testNeobrutalistCorePaletteContrast() {
         // Requirement R1 & R2: Neobrutal palette compliance
-        assertEquals(Color(0xFF371BE4), NeobrutalDarkBlue)
-        assertEquals(Color(0xFFF3F1FA), NeobrutalLightGray)
+        assertEquals(Color(0xFF0000FF), NeobrutalDarkBlue)
+        assertEquals(Color(0xFFF1F6FC), NeobrutalLightGray)
 
         // Status semantic colors
         assertEquals(Color(0xFF22C55E), StatusGreenSolid)

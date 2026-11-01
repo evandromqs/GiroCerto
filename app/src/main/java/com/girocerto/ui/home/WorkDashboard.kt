@@ -76,6 +76,22 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
+        val context = LocalContext.current
+        val policy = com.girocerto.monitoring.CopilotPreferences(context).read()
+        NeobrutalButton(
+            text = if (running && policy.enabled) "Mostrar copiloto" else "Ativar copiloto",
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_copilot), null, tint = MaterialTheme.colorScheme.onPrimary) },
+            onClick = {
+                if (GiroCertoAccessibilityService.isAccessibilityEnabled(context) && com.girocerto.overlay.OverlayController.canDrawOverlays(context)) {
+                    val preferences = com.girocerto.monitoring.CopilotPreferences(context)
+                    preferences.write(preferences.read().copy(enabled = true))
+                    com.girocerto.overlay.OverlayController.restore(context)
+                    com.girocerto.overlay.OverlayController.startFloatingBubble(context)
+                } else onCopilot()
+            }
+        )
+
         if (loading) {
             LinearProgressIndicator(
                 modifier = Modifier
@@ -209,7 +225,7 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
             borderColor = MaterialTheme.colorScheme.outline,
             borderWidth = AppSpacing.BorderAction,
             shape = RoundedCornerShape(AppSpacing.CornerButton),
-            text = if (running) "Copiloto conectado • ver ajustes" else "Configurar leitura de ofertas",
+            text = "Ajustes do copiloto",
             leadingIcon = { NavigationGlyph(Screen.COPILOT, true) }
         )
 

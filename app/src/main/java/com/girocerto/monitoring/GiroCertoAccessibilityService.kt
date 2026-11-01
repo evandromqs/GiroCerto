@@ -36,7 +36,8 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val savedOffers = mutableMapOf<RideOffer, Long>()
     private val screenshot by lazy { OfferScreenshot(this) }
-    private val ocrDelegate = lazy { OfferOcrReader(this, ::reportReader, ::acceptParsedOffer) }
+    private val windowOwners = WindowOwnerHints()
+    private val ocrDelegate = lazy { OfferOcrReader(this, ::reportReader, ::acceptParsedOffer, windowOwners) }
     private var voiceAnnouncer: VoiceAnnouncer? = null
 
     // Cache para evitar reprocessamento repetitivo da mesma oferta em intervalos curtos
@@ -64,14 +65,14 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 if (power.isInteractive && !lock.isKeyguardLocked && CopilotPreferences(this@GiroCertoAccessibilityService).read().enabled) {
                     // Popup windows may belong to a driver app while another app has focus.
                     val packages = linkedMapOf<String, Int>()
-                    windows.forEach { window ->
+                    windows.sortedByDescending { it.layer }.forEach { window ->
                         val root = window.root
-                        val pkg = root?.packageName?.toString()
+                        val pkg = windowOwners.owner(window.id, root?.packageName?.toString(), android.os.SystemClock.elapsedRealtime())
                         @Suppress("DEPRECATION")
                         root?.recycle()
-                        if (pkg in TARGET_PACKAGES) packages[pkg!!] = window.id
+                        if (pkg in TARGET_PACKAGES) packages.putIfAbsent(pkg!!, window.id)
                     }
-                    scanDelay = if (packages.isEmpty()) 5_000L else 2_500L
+                    scanDelay = if (packages.isEmpty()) 2_000L else 1_000L
                     packages.forEach { (pkg, id) -> readOfferWindow(pkg, id) }
                 }
             } catch (error: Exception) {
@@ -81,7 +82,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             finally { readHandler.postDelayed(this, scanDelay) }
         }
     }
-    private var lastEventRead = -500L
+    private val lastEventReads = mutableMapOf<String, Long>()
     private var scanDelay = 3_000L
     private var lastFormatTrace: String? = null
 
@@ -99,16 +100,22 @@ class GiroCertoAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            readHandler.removeCallbacks(scanVisibleWindows)
+            readHandler.post(scanVisibleWindows)
+            return
+        }
         val packageName = event.packageName?.toString() ?: return
         if (!TARGET_PACKAGES.contains(packageName)) return
+        windowOwners.observe(event.windowId, packageName, android.os.SystemClock.elapsedRealtime())
         if (!CopilotPreferences(this).read().monitors(packageName)) {
             reportReader("Monitoramento pausado para $packageName")
             return
         }
         if (ocrDelegate.isInitialized() && event.eventType in listOf(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, AccessibilityEvent.TYPE_WINDOWS_CHANGED)) ocrDelegate.value.invalidate(packageName)
         val now = android.os.SystemClock.elapsedRealtime()
-        if (now - lastEventRead < 400L) return
-        lastEventRead = now
+        if (now - (lastEventReads[packageName] ?: -500L) < 400L) return
+        lastEventReads[packageName] = now
         retryRead?.let { readHandler.removeCallbacks(it) }
         // Content can arrive in several frames; retry a bounded read, without
         // retaining AccessibilityEvent or mixing text from different offers.
@@ -161,12 +168,16 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         val candidates = mutableListOf<AccessibilityNodeInfo>()
         sourceRoot?.let { candidates.add(it) }
         try {
-            windows.sortedByDescending { it.id == windowId }.forEach { window ->
+            val visible = windows.sortedWith(compareByDescending<android.view.accessibility.AccessibilityWindowInfo> { it.id == windowId }.thenByDescending { it.layer })
+            val emittingWindow = visible.firstOrNull { it.id == windowId }
+            val selectedWindows = if (emittingWindow != null) listOf(emittingWindow) else visible
+            selectedWindows.forEach { window ->
                 val root = window.root ?: return@forEach
-                if (root.packageName?.toString() == packageName) candidates.add(root)
+                val owner = windowOwners.owner(window.id, root.packageName?.toString(), android.os.SystemClock.elapsedRealtime())
+                if (owner == packageName || root.packageName?.toString() == packageName) candidates.add(root)
                 else { @Suppress("DEPRECATION") root.recycle() }
             }
-            if (candidates.isEmpty()) {
+            if (candidates.isEmpty() && emittingWindow == null) {
                 rootInActiveWindow?.let { root ->
                     if (root.packageName?.toString() == packageName) candidates.add(root)
                     else { @Suppress("DEPRECATION") root.recycle() }
@@ -175,7 +186,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             if (candidates.isEmpty()) {
                 _readerObservation.value = "$packageName • evento recebido, janela sem texto acessível"
                 reportReader("$packageName: aguardando janela legível")
-                readImageFallback(packageName)
+                readImageFallback(packageName, windowId)
                 return false
             }
             for (root in candidates) {
@@ -212,21 +223,21 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 acceptParsedOffer(parsed, packageName)
                 return true
             }
-            readImageFallback(packageName)
+            readImageFallback(packageName, windowId)
             return false
         } catch (error: Exception) {
             recordFailure("Leitura de texto", error)
             reportReader("Texto temporariamente indisponível; tentando leitura por imagem")
-            readImageFallback(packageName)
+            readImageFallback(packageName, windowId)
             return false
         } finally {
             candidates.forEach { @Suppress("DEPRECATION") it.recycle() }
         }
     }
 
-    private fun readImageFallback(packageName: String) {
+    private fun readImageFallback(packageName: String, windowId: Int) {
         try {
-            if (CopilotPreferences(this).read().ocrEnabled) ocrDelegate.value.read(packageName)
+            if (CopilotPreferences(this).read().ocrEnabled) ocrDelegate.value.read(packageName, windowId)
             else reportReader("Oferta sem dados suficientes pelo texto. Ative Leitura local de imagem (OCR) no Copiloto para tentar ler o popup.")
         } catch (error: Exception) {
             recordFailure("Inicialização do OCR", error)

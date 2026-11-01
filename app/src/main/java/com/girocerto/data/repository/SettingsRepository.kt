@@ -38,7 +38,7 @@ class SettingsRepository(context: Context) {
             dailyFixedCost = readDecimal(KEY_DAILY_FIXED_COST, 0.00),
             isVoiceEnabled = prefs.getBoolean(KEY_VOICE_ENABLED, true),
             speechRate = prefs.getFloat(KEY_SPEECH_RATE, 1.1f),
-            cardDurationSeconds = prefs.getInt(KEY_CARD_DURATION, 18),
+            cardDurationSeconds = if (prefs.getInt(KEY_CARD_DURATION, 15) == 30) 30 else 15,
             isFloatingBubbleEnabled = prefs.getBoolean(KEY_FLOATING_BUBBLE, true)
         )
     }

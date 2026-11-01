@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.19",
+    "changes": [
+      "Nova paleta azul: primária #0000FF e secundária #1591EA, e novos ícones do app atualizados.",
+      "Painel mais espaçoso, até metade da tela, com marca Giro Certo, X menor, avaliação em pílula e ícones de distância e tempo.",
+      "Barra regressiva em cada oferta, duração padrão de 15 segundos e opção de 30 segundos em Cartão e voz.",
+      "Leitor prioriza a janela emissora e reconhece a origem de popups sem texto acessível por eventos recentes, sem misturar a atividade em segundo plano.",
+      "Atalho usa a abertura oficial do Android e alternativas da plataforma; botão para ativar ou mostrar o copiloto na tela inicial."
+    ]
+  },
+  {
     "version": "1.0.18",
     "changes": [
       "Nova identidade roxa #371BE4, superfícies com relevo suave e nova família de ícones vetoriais internos.",

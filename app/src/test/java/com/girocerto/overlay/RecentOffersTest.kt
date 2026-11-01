@@ -11,7 +11,7 @@ class RecentOffersTest {
         RideOffer(fare, 5.0, 15, appName = app), VehicleSettings())
 
     @Test fun eachPlatformExpiresIndependently() {
-        val queue = RecentOffers()
+        val queue = RecentOffers(30_000L)
         queue.add(offer("Uber"), 0)
         queue.add(offer("99"), 10_000)
         queue.add(offer("iFood"), 20_000)
@@ -22,7 +22,7 @@ class RecentOffersTest {
     }
 
     @Test fun repeatDoesNotExtendLifetimeOrResurrectExpiredOffer() {
-        val queue = RecentOffers()
+        val queue = RecentOffers(30_000L)
         val analysis = offer("Uber")
         assertTrue(queue.add(analysis, 0))
         assertFalse(queue.add(analysis, 29_999))
@@ -34,7 +34,7 @@ class RecentOffersTest {
     }
 
     @Test fun newOfferReplacesSamePlatformAndListIsBounded() {
-        val queue = RecentOffers()
+        val queue = RecentOffers(30_000L)
         queue.add(offer("Uber"), 0)
         queue.add(offer("99"), 1)
         queue.add(offer("99Food"), 2)
@@ -48,7 +48,7 @@ class RecentOffersTest {
     }
 
     @Test fun identicalTripCanReturnAfterObservationGapButNotContinuousRetries() {
-        val queue = RecentOffers()
+        val queue = RecentOffers(30_000L)
         val analysis = offer("99")
         assertTrue(queue.add(analysis, 0))
         for (time in listOf(30_000L, 60_000L, 90_000L, 120_000L)) {
@@ -57,5 +57,16 @@ class RecentOffersTest {
         }
         assertTrue(queue.add(analysis, 240_000L))
         assertEquals(1, queue.active(240_000L).size)
+    }
+    @Test fun defaultIsFifteenSecondsAndProgressDoesNotReset() {
+        val queue = RecentOffers()
+        val analysis = offer("Uber")
+        queue.add(analysis, 0)
+        assertEquals(.5f, queue.active(7500).single().remainingFraction(7500), .001f)
+        assertFalse(queue.add(analysis, 8000))
+        assertTrue(queue.active(15_000).isEmpty())
+        queue.add(offer("99"), 15_000, 30_000)
+        assertEquals(.5f, queue.active(30_000).single().remainingFraction(30_000), .001f)
+        assertTrue(queue.active(45_000).isEmpty())
     }
 }

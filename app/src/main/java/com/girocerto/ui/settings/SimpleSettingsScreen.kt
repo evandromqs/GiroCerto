@@ -124,7 +124,14 @@ fun CardAndVoiceScreen() {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 AppText("Duração do Cartão", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                AppText("Até três ofertas, uma por aplicativo, por 30 segundos desde a primeira leitura. A oferta pode já ter encerrado na plataforma.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AppText("Tempo de cada oferta na tela", style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(15, 30).forEach { seconds ->
+                        FilterChip(selected = settings.cardDurationSeconds == seconds,
+                            onClick = { repository.updateSettings(settings.copy(cardDurationSeconds = seconds)) },
+                            label = { AppText("${seconds}s") })
+                    }
+                }
             }
         }
 

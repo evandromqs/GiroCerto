@@ -14,7 +14,7 @@ data class VehicleSettings(
     val dailyFixedCost: Double = 0.00,
     val isVoiceEnabled: Boolean = true,
     val speechRate: Float = 1.1f,
-    val cardDurationSeconds: Int = 18,
+    val cardDurationSeconds: Int = 15,
     val isFloatingBubbleEnabled: Boolean = true
 ) {
     /**

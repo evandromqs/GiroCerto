@@ -365,13 +365,13 @@ class AdversarialPrimitiveStressTest {
         assertEquals(RobotoFamily, Poppins)
 
         // Palette core tokens
-        assertEquals(Color(0xFF371BE4), NeobrutalDarkBlue)
-        assertEquals(Color(0xFFF3F1FA), NeobrutalLightGray)
+        assertEquals(Color(0xFF0000FF), NeobrutalDarkBlue)
+        assertEquals(Color(0xFFF1F6FC), NeobrutalLightGray)
         assertEquals(Color(0xFF000000), NeobrutalBlack)
         assertEquals(Color(0xFFFFFFFF), NeobrutalWhite)
-        assertEquals(Color(0xFF100D20), NeobrutalDarkBackground)
-        assertEquals(Color(0xFF201A35), NeobrutalDarkSurface)
-        assertEquals(Color(0xFFEAE4FF), NeobrutalLightBlueTint)
+        assertEquals(Color(0xFF091427), NeobrutalDarkBackground)
+        assertEquals(Color(0xFF12243C), NeobrutalDarkSurface)
+        assertEquals(Color(0xFFE5F2FF), NeobrutalLightBlueTint)
 
         // Brand alias
         assertEquals(NeobrutalDarkBlue, Navy)

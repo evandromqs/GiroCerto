@@ -1,3 +1,15 @@
+# Giro Certo 1.0.19
+
+- Primária #0000FF; secundária #1591EA. Variações claras mantêm contraste no tema escuro.
+- Painel no topo até 50% da área disponível, com rolagem interna. Cards uniformes e respiro entre seções.
+- Cabeçalho com marca; X visual de 24dp em alvo de toque de 48dp.
+- Plataforma pelo ícone, tarifa e pílula de avaliação. Distância/tempo e indicadores em 16sp; mapa e relógio vetoriais.
+- Rótulos pedidos: Prejuízo e Lucro Médio. A fórmula de lucro continua a estimativa da oferta individual, sem mudança financeira.
+- Barra regressiva por oferta: 15s por padrão, 30s opcional em Ajustes → Cartão e voz.
+- Popups sem raiz acessível usam evidência de origem de eventos por até 10s, sempre limitada à janela visível identificada. Nenhuma captura arbitrária do app em foco.
+- Atalho de plataforma por IntentSender no Android 13+, iniciado somente por toque, com opção de abertura visível no Android 16; alternativas para os pacotes conhecidos.
+- Popups reais e abertura do Uber no aparelho do usuário ainda exigem confirmação em campo; testes locais não reproduzem o app proprietário.
+
 # Giro Certo 1.0.18 — visual e painel
 
 - Cor de marca: #371BE4. Tons claros de roxo mantêm contraste de textos no tema escuro.

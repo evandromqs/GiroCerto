@@ -62,13 +62,15 @@ object OfferOcrContext {
 class OfferOcrReader(
     private val service: AccessibilityService,
     private val status: (String) -> Unit,
-    private val offerReady: (OfferReaderResult, String) -> Unit
+    private val offerReady: (OfferReaderResult, String) -> Unit,
+    private val windowOwners: WindowOwnerHints = WindowOwnerHints()
 ) {
     data class Target(val id: Int, val bounds: Rect, val masks: List<Rect>)
 
     private val recognizerDelegate = lazy { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
     private val recognizer get() = recognizerDelegate.value
     private val handler = Handler(Looper.getMainLooper())
+    private val preferredWindows = mutableMapOf<String, Int>()
     private var retry: Runnable? = null
     private var busy = false
     private var closed = false
@@ -97,13 +99,16 @@ class OfferOcrReader(
 
     private fun findTarget(pkg: String): Target? {
         if (!allowed(pkg)) return null
-        val windows = try { service.windows.sortedByDescending { it.layer } } catch (_: Exception) { emptyList() }
-        for (window in windows) {
+        val windows = try { service.windows.sortedWith(compareByDescending<AccessibilityWindowInfo> { it.id == preferredWindows[pkg] }.thenByDescending { it.layer }) } catch (_: Exception) { emptyList() }
+        // If the emitting popup still exists, never substitute a background
+        // activity from the same package when that popup cannot be captured.
+        val preferred = windows.firstOrNull { it.id == preferredWindows[pkg] }
+        for (window in if (preferred != null) listOf(preferred) else windows) {
             if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION &&
                 window.type != AccessibilityWindowInfo.TYPE_SYSTEM) continue
             val root = window.root
             val matches = try {
-                root?.packageName?.toString() == pkg
+                windowOwners.owner(window.id, root?.packageName?.toString(), SystemClock.elapsedRealtime()) == pkg
             } catch (_: Exception) {
                 false
             } finally {
@@ -128,7 +133,10 @@ class OfferOcrReader(
 
     fun isObservable(pkg: String): Boolean = Build.VERSION.SDK_INT >= 30 && findTarget(pkg) != null
 
-    fun read(pkg: String) { attempt(pkg, 1) }
+    fun read(pkg: String, windowId: Int = -1) {
+        if (windowId >= 0) preferredWindows[pkg] = windowId
+        attempt(pkg, 2)
+    }
 
     private fun attempt(pkg: String, remaining: Int) {
         if (closed) return
