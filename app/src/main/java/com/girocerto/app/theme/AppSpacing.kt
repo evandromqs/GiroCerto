@@ -26,15 +26,15 @@ object AppSpacing {
     // Neobrutalist Geometry & Stroke Tokens (R1 / R2 / R4)
     // Standardized uniform rounded corners: CornerCard 12dp, CornerButton 10dp, CornerSmall 8dp
     // ========================================================================
-    val BorderThick = 2.5.dp       // Standard Neobrutal card & primary button border
-    val BorderAction = 2.0.dp      // Modal action buttons & compact dialog borders
-    val BorderThin = 1.5.dp        // Badges, chips, secondary outline
+    val BorderThick = 1.dp       // Standard Neobrutal card & primary button border
+    val BorderAction = 1.dp      // Modal action buttons & compact dialog borders
+    val BorderThin = 1.dp        // Badges, chips, secondary outline
     val ShadowOffset = 4.dp        // Hard drop shadow offset (x = 4.dp, y = 4.dp)
-    val ShadowOffsetSmall = 2.dp   // Pressed button / badge hard shadow
+    val ShadowOffsetSmall = 2.dp   // Pressed button / badge soft shadow
     val CornerNone = 0.dp          // Zero radius reference
     val CornerSmall = 8.dp         // Badges, chips, compact action buttons
-    val CornerCard = 12.dp         // Neobrutal cards standardized rounded corner
-    val CornerButton = 10.dp       // Standard tactile buttons rounded corner
+    val CornerCard = 18.dp         // Neobrutal cards standardized rounded corner
+    val CornerButton = 14.dp       // Standard tactile buttons rounded corner
     val MinTouchTarget = 48.dp     // WCAG accessibility minimum touch target
 
     // ========================================================================

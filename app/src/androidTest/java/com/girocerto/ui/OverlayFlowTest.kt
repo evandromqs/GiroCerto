@@ -71,11 +71,12 @@ class OverlayFlowTest {
             compose.runOnIdle {
                 com.girocerto.app.theme.AppearancePreferences.set(compose.activity, theme)
                 val prefs = CopilotPreferences(compose.activity); prefs.write(prefs.read().copy(enabled = true))
+                OverlayController.stopFloatingBubble(compose.activity)
                 OverlayController.restore(compose.activity)
                 assertTrue(OverlayController.showOverlay(compose.activity, analysis))
             }
-            val minimize = awaitBounds("Minimizar análise e manter copiloto ativo")
-            assertCenteredMetrics()
+            val minimize = awaitBounds("Recolher painel")
+            assertTopMetrics()
             SystemClock.sleep(300)
             val dir = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
             if(dir != null) java.io.File(dir,"offer-${theme.name}.png").outputStream().use { automation.takeScreenshot()?.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) }
@@ -89,12 +90,9 @@ class OverlayFlowTest {
             val density = compose.activity.resources.displayMetrics.density
             assertEquals((64 * density * .8f).toInt().toDouble(), docked.width().toDouble(), 2.0)
             tap(docked)
-            awaitBounds("Minimizar análise e manter copiloto ativo")
-            assertCenteredMetrics()
-            tap(awaitBounds("Alternar detalhes da oferta"))
-            SystemClock.sleep(200)
-            assertCenteredMetrics()
-            tap(awaitBounds("Minimizar análise e manter copiloto ativo"))
+            awaitBounds("Recolher painel")
+            assertTopMetrics()
+            tap(awaitBounds("Recolher painel"))
             val returned = awaitBounds("Giro Certo. Toque para abrir; arraste até a lixeira para ocultar.")
             assertEquals(docked, returned)
             assertTrue(CopilotPreferences(compose.activity).read().enabled)
@@ -103,6 +101,38 @@ class OverlayFlowTest {
             OverlayController.stopFloatingBubble(compose.activity)
             com.girocerto.app.theme.AppearancePreferences.set(compose.activity, com.girocerto.app.theme.ThemeMode.SYSTEM)
         }
+    }
+
+    @Test fun threePlatformsStayInBoundedPanelAndExpire() {
+        val pkg = compose.activity.packageName
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("appops set $pkg SYSTEM_ALERT_WINDOW allow")).use { it.readBytes() }
+        compose.runOnIdle {
+            val prefs = CopilotPreferences(compose.activity)
+            prefs.write(prefs.read().copy(enabled = true))
+            OverlayController.restore(compose.activity)
+            for (name in listOf("Uber", "99", "iFood")) {
+                val offer = com.girocerto.domain.model.RideOffer(20.0, 5.0, 15, appName = name)
+                OverlayController.showOverlay(compose.activity, com.girocerto.domain.calculator.RideCalculator.calculate(offer, com.girocerto.domain.model.VehicleSettings()))
+            }
+        }
+        awaitBounds("Abrir Uber")
+        awaitBounds("Abrir 99")
+        awaitBounds("Abrir iFood")
+        val panel = awaitBounds("Análise da oferta")
+        assertTrue(panel.height() <= compose.activity.resources.displayMetrics.heightPixels * .30 + 2)
+        // Unknown package handling leaves the panel usable (no platform is installed in CI).
+        tap(awaitBounds("Abrir iFood"))
+        awaitBounds("Recolher painel")
+        val dir = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
+        if (dir != null) java.io.File(dir, "offer-three-platforms.png").outputStream().use {
+            automation.takeScreenshot()?.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
+        val deadline = SystemClock.uptimeMillis() + 32_000
+        while (boundsFor("Análise da oferta") != null && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(200)
+        assertNull(boundsFor("Análise da oferta"))
+        tap(awaitBounds("Giro Certo. Toque para abrir; arraste até a lixeira para ocultar."))
+        assertNull(boundsFor("Abrir iFood"))
+        compose.runOnIdle { OverlayController.stopFloatingBubble(compose.activity) }
     }
 
     private fun tap(bounds: Rect) {
@@ -114,13 +144,14 @@ class OverlayFlowTest {
         }
     }
 
-    private fun assertCenteredMetrics() {
+    private fun assertTopMetrics() {
         val panel = awaitBounds("Análise da oferta")
         val screen = checkNotNull(automation.takeScreenshot())
         try {
             val density = compose.activity.resources.displayMetrics.density
             assertEquals(screen.width / 2.0, panel.exactCenterX().toDouble(), 16.0 * density)
-            assertEquals(screen.height / 2.0, panel.exactCenterY().toDouble(), 48.0 * density)
+            assertTrue("Panel must stay at the top", panel.top < screen.height * .15)
+            assertTrue("Panel must occupy at most 30% of the screen", panel.height() <= screen.height * .30 + 2)
         } finally { screen.recycle() }
         val km = awaitBounds("Ganho por quilômetro")
         val hour = awaitBounds("Rendimento por hora")

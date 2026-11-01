@@ -397,33 +397,10 @@ fun SettingsScreen(
                 )
             }
 
-            // Duração do card
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Duração do Card Flutuante", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
-                Text(
-                    text = "${cardDuration}s",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Slider(
-                value = cardDuration.toFloat(),
-                onValueChange = { cardDuration = it.toInt() },
-                valueRange = 5f..30f,
-                steps = 4,
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                )
-            )
+            Text("Ofertas recentes: 30 segundos por oferta, até três aplicativos.", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
+
             Text(
-                text = "O card fecha automaticamente após ${cardDuration}s sem interação.",
+                text = "Cada oferta expira individualmente. O X recolhe o painel e mantém o copiloto ativo.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 11.sp
             )

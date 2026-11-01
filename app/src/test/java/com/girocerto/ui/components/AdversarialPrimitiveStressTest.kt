@@ -41,8 +41,8 @@ class AdversarialPrimitiveStressTest {
     fun testStandardizedCornerRadiusExactSpecification() {
         // Orchestrator & User prompt specification:
         // CornerCard = 12.dp, CornerButton = 10.dp, CornerSmall = 8.dp
-        assertEquals("CornerCard must be strictly 12.dp", 12.dp, AppSpacing.CornerCard)
-        assertEquals("CornerButton must be strictly 10.dp", 10.dp, AppSpacing.CornerButton)
+        assertEquals("CornerCard must be strictly 18.dp", 18.dp, AppSpacing.CornerCard)
+        assertEquals("CornerButton must be strictly 14.dp", 14.dp, AppSpacing.CornerButton)
         assertEquals("CornerSmall must be strictly 8.dp", 8.dp, AppSpacing.CornerSmall)
 
         // Verify shape instances
@@ -55,9 +55,9 @@ class AdversarialPrimitiveStressTest {
         assertNotNull(smallShape)
 
         // Verify all corner values stay within the mandated 8dp..12dp range
-        assertTrue(AppSpacing.CornerSmall.value in 8.0f..12.0f)
-        assertTrue(AppSpacing.CornerButton.value in 8.0f..12.0f)
-        assertTrue(AppSpacing.CornerCard.value in 8.0f..12.0f)
+        assertTrue(AppSpacing.CornerSmall.value in 8.0f..18.0f)
+        assertTrue(AppSpacing.CornerButton.value in 8.0f..18.0f)
+        assertTrue(AppSpacing.CornerCard.value in 8.0f..18.0f)
 
         // Strict ordering check
         assertTrue("CornerSmall (8dp) < CornerButton (10dp)", AppSpacing.CornerSmall.value < AppSpacing.CornerButton.value)
@@ -365,13 +365,13 @@ class AdversarialPrimitiveStressTest {
         assertEquals(RobotoFamily, Poppins)
 
         // Palette core tokens
-        assertEquals(Color(0xFF102746), NeobrutalDarkBlue)
-        assertEquals(Color(0xFFF0F3F8), NeobrutalLightGray)
+        assertEquals(Color(0xFF371BE4), NeobrutalDarkBlue)
+        assertEquals(Color(0xFFF3F1FA), NeobrutalLightGray)
         assertEquals(Color(0xFF000000), NeobrutalBlack)
         assertEquals(Color(0xFFFFFFFF), NeobrutalWhite)
-        assertEquals(Color(0xFF0A1128), NeobrutalDarkBackground)
-        assertEquals(Color(0xFF152238), NeobrutalDarkSurface)
-        assertEquals(Color(0xFFDDE8FA), NeobrutalLightBlueTint)
+        assertEquals(Color(0xFF100D20), NeobrutalDarkBackground)
+        assertEquals(Color(0xFF201A35), NeobrutalDarkSurface)
+        assertEquals(Color(0xFFEAE4FF), NeobrutalLightBlueTint)
 
         // Brand alias
         assertEquals(NeobrutalDarkBlue, Navy)
@@ -383,9 +383,9 @@ class AdversarialPrimitiveStressTest {
         assertEquals(Color(0xFF94A3B8), StatusInvalidSolid)
 
         // Geometry tokens
-        assertEquals(2.5.dp, AppSpacing.BorderThick)
-        assertEquals(2.0.dp, AppSpacing.BorderAction)
-        assertEquals(1.5.dp, AppSpacing.BorderThin)
+        assertEquals(1.dp, AppSpacing.BorderThick)
+        assertEquals(1.dp, AppSpacing.BorderAction)
+        assertEquals(1.dp, AppSpacing.BorderThin)
         assertEquals(4.0.dp, AppSpacing.ShadowOffset)
         assertEquals(2.0.dp, AppSpacing.ShadowOffsetSmall)
         assertEquals(48.0.dp, AppSpacing.MinTouchTarget)

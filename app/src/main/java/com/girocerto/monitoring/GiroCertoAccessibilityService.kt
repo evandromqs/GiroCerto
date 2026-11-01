@@ -255,7 +255,9 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             appName = result.appName,
             destinationAddress = result.destination ?: "",
             pickupAddress = result.pickupAddress ?: "",
-            passengerRating = result.passengerRating
+            passengerRating = result.passengerRating,
+            sourcePackage = packageName,
+            addedMinutes = durationMinutes - (result.durationMinutes ?: 0)
         )
 
         serviceScope.launch {

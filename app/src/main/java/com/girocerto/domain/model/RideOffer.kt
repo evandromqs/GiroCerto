@@ -22,7 +22,9 @@ data class RideOffer(
     val destinationAddress: String = "",
     val pickupAddress: String = "",
     val category: String = "Corrida",
-    val passengerRating: Double? = null
+    val passengerRating: Double? = null,
+    val sourcePackage: String = "",
+    val addedMinutes: Int = 0
 ) {
     /**
      * Distância total considerada no cálculo (trajeto + deslocamento de embarque/coleta).

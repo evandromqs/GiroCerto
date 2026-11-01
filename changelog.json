@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.0.18",
+    "changes": [
+      "Nova identidade roxa #371BE4, superfícies com relevo suave e nova família de ícones vetoriais internos.",
+      "Painel fixo no topo limitado a 30% da tela, com rolagem para telas menores e fontes maiores.",
+      "Até três ofertas recentes, uma por aplicativo, com expiração individual em 30 segundos sem renovar o prazo em leituras repetidas.",
+      "Valor por km, valor por hora e lucro estimado lado a lado; botão para abrir o aplicativo de origem à direita.",
+      "X recolhe o painel para a lateral anterior sem pausar o copiloto. Ofertas vencidas não reaparecem ao abrir a bolha.",
+      "Margem opcional de cinco minutos identificada no tempo exibido. Regras de detecção Uber, 99 e iFood preservadas."
+    ]
+  },
+  {
     "version": "1.0.17",
     "changes": [
       "Regras específicas da 99 separam a tarifa do dinheiro a cobrar do cliente e de recompensas adicionais; regras de leitura da Uber preservadas.",

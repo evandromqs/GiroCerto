@@ -161,6 +161,8 @@ object OverlayController {
             putExtra("pickup_distance", analysis.offer.pickupDistanceKm)
             putExtra("pickup_address", analysis.offer.pickupAddress)
             putExtra("category", analysis.offer.category)
+            putExtra("source_package", analysis.offer.sourcePackage)
+            putExtra("added_minutes", analysis.offer.addedMinutes)
             analysis.offer.passengerRating?.let { putExtra("rating", it) }
         }
         if (owner != null) {

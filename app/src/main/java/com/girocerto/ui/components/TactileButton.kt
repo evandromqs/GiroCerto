@@ -25,7 +25,7 @@ import com.girocerto.app.theme.NeobrutalBlack
 
 /**
  * Standardized Neobrutalist Button conforming directly to M1 <-> M2 interface contract.
- * Features mechanical diagonal press translation (+2dp), solid border, hard shadow,
+ * Features mechanical diagonal press translation (+2dp), solid border, soft shadow,
  * standardized rounded corners (10dp), and 48dp minimum touch target.
  */
 @Composable
@@ -57,15 +57,8 @@ fun NeobrutalButton(
             .alpha(if (enabled) 1f else 0.5f),
         propagateMinConstraints = true
     ) {
-        // Hard drop shadow layer
-        if (shadowOffset > 0.dp) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .offset(x = shadowOffset, y = shadowOffset)
-                    .background(color = shadowColor, shape = shape)
-            )
-        }
+        // Elevation is supplied by the surface.
+
 
         // Foreground interactive surface translating upon press
         Surface(
@@ -79,11 +72,13 @@ fun NeobrutalButton(
                     onClick = onClick
                 ),
             shape = shape,
+            shadowElevation = if (isPressed) 1.dp else 5.dp,
             color = backgroundColor,
             border = BorderStroke(borderWidth, borderColor)
         ) {
             Row(
                 modifier = Modifier
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = if (isPressed) .02f else .16f), Color.Transparent, Color.Black.copy(alpha = .08f))))
                     .heightIn(min = AppSpacing.MinTouchTarget) // 48dp min touch target
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.Center,
@@ -141,14 +136,7 @@ fun TactileButton(
             .alpha(if (enabled) 1f else 0.5f),
         propagateMinConstraints = true
     ) {
-        if (shadowOffset > 0.dp) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .offset(x = shadowOffset, y = shadowOffset)
-                    .background(color = NeobrutalBlack, shape = shape)
-            )
-        }
+
 
         Surface(
             modifier = Modifier
@@ -161,12 +149,14 @@ fun TactileButton(
                     onClick = onClick
                 ),
             shape = shape,
+            shadowElevation = if (isPressed) 1.dp else 5.dp,
             color = containerBg,
             contentColor = contentFg,
             border = BorderStroke(borderWidth, borderColor)
         ) {
             Row(
                 modifier = Modifier
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = if (isPressed) .02f else .16f), Color.Transparent, Color.Black.copy(alpha = .08f))))
                     .heightIn(min = AppSpacing.MinTouchTarget)
                     .padding(contentPadding),
                 horizontalArrangement = Arrangement.Center,

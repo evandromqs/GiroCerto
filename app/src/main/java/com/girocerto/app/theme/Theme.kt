@@ -11,42 +11,42 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 // ============================================================================
-// Neobrutalist Dark Scheme: High-contrast pure white text, deep navy background
+// Dark violet scheme with lighter accent text for contrast
 // ============================================================================
 private val DarkScheme = darkColorScheme(
-    primary = Color(0xFF8BB5FF),
+    primary = Color(0xFFC1B3FF),
     onPrimary = NeobrutalBlack,
     primaryContainer = NeobrutalDarkBlue,
     onPrimaryContainer = NeobrutalWhite,
-    secondary = Color(0xFFB8C8DF),
+    secondary = Color(0xFFD0C8E6),
     onSecondary = NeobrutalBlack,
-    secondaryContainer = Color(0xFF1E3250),
+    secondaryContainer = Color(0xFF332B4E),
     onSecondaryContainer = NeobrutalWhite,
-    tertiary = Color(0xFF8BB5FF),
+    tertiary = Color(0xFFC1B3FF),
     onTertiary = NeobrutalDarkBlue,
-    background = NeobrutalDarkBackground,       // #0A1128
+    background = NeobrutalDarkBackground,       // Deep violet
     onBackground = NeobrutalWhite,             // Pure white text
-    surface = NeobrutalDarkSurface,            // #152238
+    surface = NeobrutalDarkSurface,            // Raised dark surface
     onSurface = NeobrutalWhite,                // Pure white text
-    surfaceVariant = Color(0xFF1D304B),
+    surfaceVariant = Color(0xFF2A2340),
     onSurfaceVariant = NeobrutalWhite,         // High-contrast secondary text
-    outline = NeobrutalWhite,                  // Crisp white border for dark cards
-    outlineVariant = Color(0xFF3C506B),
+    outline = Color(0xFF665A80),                  // Soft outline for dark cards
+    outlineVariant = Color(0xFF594D73),
     error = Color(0xFFFDA4AF),
     onError = NeobrutalBlack,
     errorContainer = Color(0xFF5C1220),
     onErrorContainer = Color(0xFFFFE4E8),
     surfaceContainer = NeobrutalDarkSurface,
-    surfaceContainerHigh = Color(0xFF20314A)
+    surfaceContainerHigh = Color(0xFF332B4E)
 )
 
 // ============================================================================
-// Neobrutalist Light Scheme: Dark Blue #102746, Light Gray #F0F3F8, Pure Black #000000 text
+// Light scheme with #371BE4 brand accents
 // ============================================================================
 private val LightScheme = lightColorScheme(
-    primary = NeobrutalDarkBlue,               // #102746
+    primary = NeobrutalDarkBlue,               // Brand violet
     onPrimary = NeobrutalWhite,                // Pure white
-    primaryContainer = NeobrutalLightBlueTint, // #DDE8FA
+    primaryContainer = NeobrutalLightBlueTint, // Pale violet
     onPrimaryContainer = NeobrutalDarkBlue,
     secondary = NeobrutalDarkBlue,
     onSecondary = NeobrutalWhite,
@@ -54,14 +54,14 @@ private val LightScheme = lightColorScheme(
     onSecondaryContainer = NeobrutalBlack,
     tertiary = NeobrutalDarkBlue,
     onTertiary = NeobrutalWhite,
-    background = NeobrutalLightGray,           // #F0F3F8
+    background = NeobrutalLightGray,           // Soft light background
     onBackground = NeobrutalBlack,             // Pure black text (#000000)
     surface = NeobrutalWhite,                  // #FFFFFF
     onSurface = NeobrutalBlack,                // Pure black text (#000000)
     surfaceVariant = NeobrutalLightGray,
     onSurfaceVariant = NeobrutalBlack,         // Pure black text (#000000)
-    outline = NeobrutalBlack,                  // Solid pure black 2.5dp borders (#000000)
-    outlineVariant = NeobrutalBlack,           // Card outline
+    outline = Color(0xFFC8BEDF),                  // Subtle surface outlines
+    outlineVariant = Color(0xFFE0D9EF),           // Card outline
     error = Color(0xFFB42336),
     onError = NeobrutalWhite,
     errorContainer = Color(0xFFFDE8EB),

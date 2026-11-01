@@ -24,8 +24,8 @@ import com.girocerto.app.theme.NeobrutalBlack
 import com.girocerto.app.theme.SurfaceDark
 
 /**
- * Neobrutalist Card Primitive:
- * Solid border, flat fill, hard offset drop shadow (0 blur), and standardized rounded corners.
+ * Tactile surface:
+ * Soft elevation, illuminated top edge and subtle shaded base.
  */
 @Composable
 fun NeobrutalCard(
@@ -42,20 +42,13 @@ fun NeobrutalCard(
         modifier = modifier.padding(end = shadowOffset, bottom = shadowOffset),
         propagateMinConstraints = true
     ) {
-        if (shadowOffset > 0.dp) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .offset(x = shadowOffset, y = shadowOffset)
-                    .background(color = shadowColor, shape = shape)
-            )
-        }
         Surface(
             shape = shape,
+            shadowElevation = shadowOffset * 2,
             color = backgroundColor,
             border = if (borderWidth > 0.dp) BorderStroke(borderWidth, borderColor) else null
         ) {
-            Column(content = content)
+            Column(modifier = Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = .09f), Color.Transparent, Color.Black.copy(alpha = .025f)))) , content = content)
         }
     }
 }

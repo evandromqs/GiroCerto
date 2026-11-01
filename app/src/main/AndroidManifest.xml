@@ -12,6 +12,21 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
+        <!-- Targeted visibility for the user-initiated Open app action. -->
+        <package android:name="com.ubercab.driver" />
+        <package android:name="com.ubermoto.driver" />
+        <package android:name="com.ubereats.driver" />
+        <package android:name="com.taxis99" />
+        <package android:name="com.app99.driver" />
+        <package android:name="com.didiglobal.driver" />
+        <package android:name="com.didiglobal.food.driver" />
+        <package android:name="br.com.ifood.driver.app" />
+        <package android:name="br.com.ifood.driver" />
+        <package android:name="sinet.startup.indriver" />
+        <package android:name="com.sankuai.meituan.dispatch.driver" />
+        <package android:name="com.keeta.driver" />
+        <package android:name="com.sankuai.sailor.courier" />
+
         <!-- Consulta para o serviço de fala nativo (TTS) -->
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />

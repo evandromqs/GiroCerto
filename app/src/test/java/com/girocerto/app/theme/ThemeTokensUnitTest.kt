@@ -15,14 +15,14 @@ class ThemeTokensUnitTest {
 
     @Test
     fun verifyNeobrutalistCorePalette() {
-        // R1: Dark blue #102746 and light gray #F0F3F8, pure black #000000 and pure white #FFFFFF
-        assertEquals("Dark Blue primary must be #102746", Color(0xFF102746), NeobrutalDarkBlue)
-        assertEquals("Light Gray background must be #F0F3F8", Color(0xFFF0F3F8), NeobrutalLightGray)
+        // R1: Dark blue #371BE4 and light gray #F3F1FA, pure black #000000 and pure white #FFFFFF
+        assertEquals("Dark Blue primary must be #371BE4", Color(0xFF371BE4), NeobrutalDarkBlue)
+        assertEquals("Light Gray background must be #F3F1FA", Color(0xFFF3F1FA), NeobrutalLightGray)
         assertEquals("Neobrutal Black must be pure #000000", Color(0xFF000000), NeobrutalBlack)
         assertEquals("Neobrutal White must be pure #FFFFFF", Color(0xFFFFFFFF), NeobrutalWhite)
-        assertEquals("Dark theme background must be #0A1128", Color(0xFF0A1128), NeobrutalDarkBackground)
-        assertEquals("Dark theme surface must be #152238", Color(0xFF152238), NeobrutalDarkSurface)
-        assertEquals("Primary container blue tint must be #DDE8FA", Color(0xFFDDE8FA), NeobrutalLightBlueTint)
+        assertEquals("Dark theme background must be #100D20", Color(0xFF100D20), NeobrutalDarkBackground)
+        assertEquals("Dark theme surface must be #201A35", Color(0xFF201A35), NeobrutalDarkSurface)
+        assertEquals("Primary container blue tint must be #EAE4FF", Color(0xFFEAE4FF), NeobrutalLightBlueTint)
         assertEquals("Brand alias Navy must match NeobrutalDarkBlue", NeobrutalDarkBlue, Navy)
     }
 
@@ -63,9 +63,9 @@ class ThemeTokensUnitTest {
     @Test
     fun verifyNeobrutalistSpacingAndGeometryTokens() {
         // R1 & R2: Neobrutal border, shadow, and standardized rounded corners
-        assertEquals(2.5.dp, AppSpacing.BorderThick)
-        assertEquals(2.0.dp, AppSpacing.BorderAction)
-        assertEquals(1.5.dp, AppSpacing.BorderThin)
+        assertEquals(1.dp, AppSpacing.BorderThick)
+        assertEquals(1.dp, AppSpacing.BorderAction)
+        assertEquals(1.dp, AppSpacing.BorderThin)
         assertEquals(4.0.dp, AppSpacing.ShadowOffset)
         assertEquals(2.0.dp, AppSpacing.ShadowOffsetSmall)
         assertEquals(48.0.dp, AppSpacing.MinTouchTarget)
@@ -73,8 +73,8 @@ class ThemeTokensUnitTest {
         assertEquals(280.0.dp, AppSpacing.ModalWidthCompact)
 
         // Standardized rounded corners
-        assertEquals(12.0.dp, AppSpacing.CornerCard)
-        assertEquals(10.0.dp, AppSpacing.CornerButton)
+        assertEquals(18.0.dp, AppSpacing.CornerCard)
+        assertEquals(14.0.dp, AppSpacing.CornerButton)
         assertEquals(8.0.dp, AppSpacing.CornerSmall)
         assertEquals(0.0.dp, AppSpacing.CornerNone)
 

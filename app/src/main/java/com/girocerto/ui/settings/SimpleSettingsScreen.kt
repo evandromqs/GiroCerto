@@ -124,18 +124,7 @@ fun CardAndVoiceScreen() {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 AppText("Duração do Cartão", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                AppText("Mostrar cartão por ${settings.cardDurationSeconds} segundos", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(10, 15, 30, 45, settings.cardDurationSeconds).distinct().sorted().forEach { seconds ->
-                        FilterChip(
-                            selected = settings.cardDurationSeconds == seconds,
-                            onClick = { repository.updateSettings(settings.copy(cardDurationSeconds = seconds)) },
-                            label = { AppText("${seconds}s", fontWeight = if (settings.cardDurationSeconds == seconds) FontWeight.Bold else FontWeight.Normal) },
-                            shape = RoundedCornerShape(AppSpacing.CornerSmall),
-                            border = BorderStroke(AppSpacing.BorderThin, MaterialTheme.colorScheme.outline)
-                        )
-                    }
-                }
+                AppText("Até três ofertas, uma por aplicativo, por 30 segundos desde a primeira leitura. A oferta pode já ter encerrado na plataforma.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
