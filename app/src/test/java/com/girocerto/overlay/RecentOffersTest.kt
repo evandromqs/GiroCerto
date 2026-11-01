@@ -46,4 +46,16 @@ class RecentOffersTest {
         assertTrue(queue.active(7).isEmpty())
         assertTrue(queue.add(offer("iFood"), 8))
     }
+
+    @Test fun identicalTripCanReturnAfterObservationGapButNotContinuousRetries() {
+        val queue = RecentOffers()
+        val analysis = offer("99")
+        assertTrue(queue.add(analysis, 0))
+        for (time in listOf(30_000L, 60_000L, 90_000L, 120_000L)) {
+            assertFalse(queue.add(analysis, time))
+            assertTrue(queue.active(time).isEmpty())
+        }
+        assertTrue(queue.add(analysis, 240_000L))
+        assertEquals(1, queue.active(240_000L).size)
+    }
 }

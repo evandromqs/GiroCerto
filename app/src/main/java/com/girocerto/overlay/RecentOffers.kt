@@ -6,10 +6,13 @@ import com.girocerto.domain.model.RideAnalysis
 internal class RecentOffers {
     data class Entry(val analysis: RideAnalysis, val firstSeen: Long)
     private val entries = linkedMapOf<String, Entry>()
-    // Remember expired identities so a repeated frame cannot resurrect an expired offer.
-    private val lastSeen = mutableMapOf<String, com.girocerto.domain.model.RideOffer>()
+    private data class Observation(val offer: com.girocerto.domain.model.RideOffer, val time: Long)
+    // Repeated observations cannot resurrect an expired offer. After two minutes
+    // without observations, an identical fare/route can legitimately be a new trip.
+    private val lastSeen = mutableMapOf<String, Observation>()
 
     fun add(analysis: RideAnalysis, now: Long): Boolean {
+        lastSeen.entries.removeAll { now - it.value.time >= 120_000L }
         val offer = analysis.offer
         val key = when {
             offer.appName.contains("uber", true) -> "uber"
@@ -17,8 +20,8 @@ internal class RecentOffers {
             offer.appName.contains("ifood", true) -> "ifood"
             else -> offer.appName.lowercase()
         }
-        if (lastSeen[key] == offer) return false
-        lastSeen[key] = offer
+        val previous = lastSeen.put(key, Observation(offer, now))
+        if (previous?.offer == offer) return false
         entries.remove(key)
         entries[key] = Entry(analysis, now)
         while (entries.size > 3) entries.remove(entries.keys.first())
