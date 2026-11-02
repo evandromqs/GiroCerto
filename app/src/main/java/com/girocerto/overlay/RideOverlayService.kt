@@ -196,9 +196,9 @@ class RideOverlayService : Service() {
             elevation = dpToPx(10).toFloat()
         }
         bubble.addView(android.widget.ImageView(this).apply {
-            setImageResource(com.girocerto.app.R.drawable.ic_launcher_monochrome)
+            setImageResource(com.girocerto.app.R.drawable.ic_girocerto_brand)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, FrameLayout.LayoutParams((dpToPx(96) * .8f).toInt(), (dpToPx(96) * .8f).toInt(), Gravity.CENTER))
+        }, FrameLayout.LayoutParams((dpToPx(96) * .72f).toInt(), (dpToPx(96) * .72f).toInt(), Gravity.CENTER))
         bubble.setOnClickListener {
             currentAnalysis = recentOffers.active(android.os.SystemClock.elapsedRealtime()).firstOrNull()?.analysis
             currentAnalysis?.let { analysis ->
@@ -386,8 +386,8 @@ class RideOverlayService : Service() {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = panelSurface()
-            elevation = dpToPx(10).toFloat()
-            setPadding(dpToPx(16), dpToPx(32), dpToPx(16), dpToPx(16))
+            elevation = dpToPx(12).toFloat()
+            setPadding(dpToPx(16), dpToPx(48), dpToPx(16), dpToPx(16))
         }
 
         // Close button at top right
@@ -397,7 +397,7 @@ class RideOverlayService : Service() {
         val closeBtn = iconAction(com.girocerto.app.R.drawable.ic_close_panel, "Recolher painel") { switchToBubble() }.apply {
             setPadding(dpToPx(5), dpToPx(5), dpToPx(5), dpToPx(5))
         }
-        closeRow.addView(closeBtn, LinearLayout.LayoutParams(dpToPx(24), dpToPx(24)))
+        closeRow.addView(closeBtn, LinearLayout.LayoutParams(dpToPx(26), dpToPx(26)))
         card.addView(closeRow)
 
         // Summary Data (Meta do dia, Total feito, Kms rodados)
@@ -409,7 +409,7 @@ class RideOverlayService : Service() {
 
         val summaryContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dpToPx(4), 0, dpToPx(12))
+            setPadding(0, dpToPx(2), 0, dpToPx(10))
         }
 
         val metricsRow = LinearLayout(this).apply {
@@ -421,13 +421,13 @@ class RideOverlayService : Service() {
             return LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
-                addView(label(value, 16f).apply {
+                addView(label(value, 17f).apply {
                     paint.isFakeBoldText = true
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER
                 })
                 addView(label(title, 11f).apply {
-                    setTextColor(palette("#B5C9C7"))
+                    setTextColor(Color.parseColor("#94A3B8"))
                     gravity = Gravity.CENTER
                 })
             }
@@ -442,20 +442,18 @@ class RideOverlayService : Service() {
         metricsRow.addView(summaryCol("Kms rodados", kmStr), LinearLayout.LayoutParams(0, -2, 1f))
         summaryContainer.addView(metricsRow)
 
-        if (goal > 0) {
-            val progress = (revenue / goal).toFloat().coerceIn(0f, 1f)
-            summaryContainer.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-                max = 1000
-                setProgress((progress * 1000).toInt())
-                progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1591EA"))
-                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(palette("#4B5563"))
-            }, LinearLayout.LayoutParams(-1, dpToPx(4)).apply { topMargin = dpToPx(10) })
-        }
+        val progress = if (goal > 0) (revenue / goal).toFloat().coerceIn(0f, 1f) else 0f
+        summaryContainer.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 1000
+            setProgress((progress * 1000).toInt())
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1591EA"))
+            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1E293B"))
+        }, LinearLayout.LayoutParams(-1, dpToPx(5)).apply { topMargin = dpToPx(10) })
         card.addView(summaryContainer)
 
         // Divider
         card.addView(View(this).apply {
-            setBackgroundColor(palette("#4B5563"))
+            setBackgroundColor(Color.parseColor("#263B57"))
         }, LinearLayout.LayoutParams(-1, dpToPx(1)).apply { topMargin = dpToPx(4); bottomMargin = dpToPx(14) })
 
         // 3 Buttons aligned horizontally centered
@@ -464,7 +462,7 @@ class RideOverlayService : Service() {
             gravity = Gravity.CENTER
         }
 
-        fun menuButton(iconRes: Int, text: String, activeBg: Int? = null, onClick: () -> Unit): LinearLayout {
+        fun menuButton(iconRes: Int, text: String, activeBg: Int? = null, strokeColor: Int? = null, onClick: () -> Unit): LinearLayout {
             val col = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
@@ -479,7 +477,7 @@ class RideOverlayService : Service() {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(activeBg ?: Color.parseColor("#1591EA"))
-                    setStroke(dpToPx(1), Color.parseColor("#72BFFF"))
+                    setStroke(dpToPx(1), strokeColor ?: Color.parseColor("#72BFFF"))
                 }
                 elevation = dpToPx(3).toFloat()
             }
@@ -492,7 +490,7 @@ class RideOverlayService : Service() {
         }
 
         // Button 1: Registrar Ponto
-        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_trip_clock, "Registrar Ponto") {
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_trip_clock, "Registrar Ponto", Color.parseColor("#1591EA"), Color.parseColor("#72BFFF")) {
             val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra("target_screen", "SHIFT")
@@ -502,7 +500,7 @@ class RideOverlayService : Service() {
         }, LinearLayout.LayoutParams(0, -2, 1f))
 
         // Button 2: Histórico de Corridas
-        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_history, "Histórico") {
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_history, "Histórico", Color.parseColor("#1591EA"), Color.parseColor("#72BFFF")) {
             val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra("target_screen", "HISTORY")
@@ -511,12 +509,13 @@ class RideOverlayService : Service() {
             switchToBubble()
         }, LinearLayout.LayoutParams(0, -2, 1f))
 
-        // Button 3: Ativar / Desativar Cálculo
+        // Button 3: Ativar / Desativar Cálculo (SEM COR VERDE - visual azul e slate refinado)
         val prefs = CopilotPreferences(this)
         val isCalcEnabled = prefs.read().enabled
-        val calcBg = if (isCalcEnabled) Color.parseColor("#087443") else Color.parseColor("#4B5563")
+        val calcBg = if (isCalcEnabled) Color.parseColor("#1591EA") else Color.parseColor("#1E293B")
+        val calcStroke = if (isCalcEnabled) Color.parseColor("#72BFFF") else Color.parseColor("#475569")
         val calcLabel = if (isCalcEnabled) "Cálculo Ativo" else "Cálculo Pausado"
-        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_copilot, calcLabel, calcBg) {
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_copilot, calcLabel, calcBg, calcStroke) {
             val current = prefs.read()
             val toggled = !current.enabled
             prefs.write(current.copy(enabled = toggled))
@@ -526,16 +525,16 @@ class RideOverlayService : Service() {
 
         card.addView(buttonsRow)
 
-        // Add card with topMargin of 28dp to leave space for overlapping top icon
-        root.addView(card, FrameLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(28) })
+        // Card com topMargin de 42dp para acomodar o ícone superior de 84dp sobreposto pela metade
+        root.addView(card, FrameLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(42) })
 
-        // Central Top Icon (Avatar like GigU) overlapping the top of the card
+        // Central Top Icon com girocerto.webp aumentado em 50% (84dp)
         val topIconContainer = FrameLayout(this).apply {
-            elevation = dpToPx(14).toFloat()
+            elevation = dpToPx(16).toFloat()
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(Color.parseColor("#0000FF"))
-                setStroke(dpToPx(2), Color.parseColor("#1591EA"))
+                setStroke(dpToPx(3), Color.parseColor("#1591EA"))
             }
             isClickable = true
             isFocusable = true
@@ -549,12 +548,11 @@ class RideOverlayService : Service() {
             }
         }
         topIconContainer.addView(android.widget.ImageView(this).apply {
-            setImageResource(com.girocerto.app.R.drawable.ic_launcher_monochrome)
-            imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            setImageResource(com.girocerto.app.R.drawable.ic_girocerto_brand)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, FrameLayout.LayoutParams(dpToPx(32), dpToPx(32), Gravity.CENTER))
+        }, FrameLayout.LayoutParams(dpToPx(72), dpToPx(72), Gravity.CENTER))
 
-        root.addView(topIconContainer, FrameLayout.LayoutParams(dpToPx(56), dpToPx(56), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+        root.addView(topIconContainer, FrameLayout.LayoutParams(dpToPx(84), dpToPx(84), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
 
         return root
     }
@@ -793,17 +791,27 @@ class RideOverlayService : Service() {
         val offer = analysis.offer
         // 1. Traz o aplicativo de motorista para o primeiro plano
         openPlatform(offer)
-        // 2. Dispara o clique automático de aceitar via acessibilidade
-        autoDismissHandler.postDelayed({
-            com.girocerto.monitoring.GiroCertoAccessibilityService.requestAcceptOffer(offer.sourcePackage)
-        }, 400)
+        // 2. Dispara o clique automático de aceitar via acessibilidade com retentativas
+        val targetPkg = offer.sourcePackage
+        var attempts = 0
+        val maxAttempts = 8
+        val clickRunnable = object : Runnable {
+            override fun run() {
+                val success = com.girocerto.monitoring.GiroCertoAccessibilityService.requestAcceptOffer(targetPkg)
+                if (!success && attempts < maxAttempts) {
+                    attempts++
+                    autoDismissHandler.postDelayed(this, 300)
+                }
+            }
+        }
+        autoDismissHandler.postDelayed(clickRunnable, 250)
         // 3. Salva a corrida no histórico e registra no fechamento diário
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             com.girocerto.app.GiroCertoApp.instance.rideRepository.saveRide(analysis)
             val platform = com.girocerto.domain.model.WorkPlatform.fromAppName(offer.appName)
             com.girocerto.app.GiroCertoApp.instance.workRepository.recordAcceptedRide(platform, offer.fare, analysis.totalDistanceKm)
         }
-        Toast.makeText(this, "Corrida aceita e registrada!", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Aceitando corrida...", Toast.LENGTH_SHORT).show()
         switchToBubble()
     }
 

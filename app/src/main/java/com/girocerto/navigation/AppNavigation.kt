@@ -7,6 +7,23 @@ import androidx.compose.runtime.LaunchedEffect
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.clip
+
 import android.content.Context
 import com.girocerto.ui.goals.GoalsScreen
 import com.girocerto.ui.copilot.CopilotScreen
@@ -124,30 +141,122 @@ fun AppNavigation() {
     val rootTabs = listOf(Screen.HOME, Screen.DIARY, Screen.GOALS, Screen.SETTINGS)
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = SurfaceDark,
-                contentColor = TextPrimary
-            ) {
-                listOf(Screen.HOME, Screen.DIARY, Screen.GOALS, Screen.SETTINGS).forEach { screen ->
-                    val selected = currentScreen == screen || (screen == Screen.SETTINGS && currentScreen == Screen.ADVANCED)
+            if (currentScreen in rootTabs) {
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                        .navigationBarsPadding(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(28.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                        tonalElevation = 6.dp,
+                        shadowElevation = 14.dp,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(62.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            rootTabs.forEach { screen ->
+                                val selected = currentScreen == screen || (screen == Screen.SETTINGS && currentScreen == Screen.ADVANCED)
+                                val tint by animateColorAsState(
+                                    targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    label = "tab_tint"
+                                )
 
+                                androidx.compose.foundation.layout.Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .clickable {
+                                            navigationHistory = arrayListOf()
+                                            currentScreen = screen
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (selected) {
+                                        androidx.compose.foundation.layout.Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth(0.85f)
+                                                .height(42.dp)
+                                                .clip(RoundedCornerShape(20.dp))
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                                        )
+                                    }
 
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = { navigationHistory = arrayListOf(); currentScreen = screen },
-                        icon = { NavigationGlyph(screen, selected) },
-                        label = {
-                            Text(
-                                text = screen.title,
-                                fontSize = 11.sp,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selected) PrimaryBlue else TextSecondary
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            painter = androidx.compose.ui.res.painterResource(
+                                                when (screen) {
+                                                    Screen.HOME -> com.girocerto.app.R.drawable.ic_home
+                                                    Screen.DIARY -> com.girocerto.app.R.drawable.ic_diary
+                                                    Screen.GOALS -> com.girocerto.app.R.drawable.ic_goals
+                                                    Screen.SETTINGS -> com.girocerto.app.R.drawable.ic_settings
+                                                    else -> com.girocerto.app.R.drawable.ic_home
+                                                }
+                                            ),
+                                            contentDescription = screen.title,
+                                            modifier = Modifier.size(24.dp),
+                                            tint = tint
+                                        )
+
+                                        AnimatedVisibility(
+                                            visible = selected,
+                                            enter = fadeIn(tween(150)) + expandHorizontally(tween(150)),
+                                            exit = fadeOut(tween(100)) + shrinkHorizontally(tween(100))
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Spacer(Modifier.width(4.dp))
+                                                androidx.compose.foundation.layout.Box(
+                                                    modifier = Modifier
+                                                        .size(5.dp)
+                                                        .clip(CircleShape)
+                                                        .background(MaterialTheme.colorScheme.primary)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Divisor vertical sutil antes do ícone de atalho
+                            androidx.compose.foundation.layout.Box(
+                                modifier = Modifier
+                                    .height(22.dp)
+                                    .width(1.dp)
+                                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                             )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = PrimaryBlue.copy(alpha = 0.12f)
-                        )
-                    )
+
+                            // Ícone à direita no menu do rodapé: Copiloto
+                            androidx.compose.foundation.layout.Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .clickable { navigate(Screen.COPILOT) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_copilot),
+                                    contentDescription = "Copiloto",
+                                    modifier = Modifier.size(22.dp),
+                                    tint = if (currentScreen == Screen.COPILOT) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -174,8 +283,17 @@ fun AppNavigation() {
                     Spacer(Modifier.width(72.dp))
                 }
             }
-            AnimatedContent(modifier = Modifier.weight(1f), targetState = currentScreen, label = "Troca de tela",
-                transitionSpec = { (fadeIn(tween(180)) + slideInHorizontally(tween(220)) { it / 16 }) togetherWith fadeOut(tween(120)) }) { screen ->
+            AnimatedContent(
+                modifier = Modifier.weight(1f),
+                targetState = currentScreen,
+                label = "Troca de tela",
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
+                        slideInHorizontally(animationSpec = tween(260, easing = FastOutSlowInEasing)) { fullWidth -> fullWidth / 4 }) togetherWith
+                        (fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing)) +
+                        slideOutHorizontally(animationSpec = tween(220, easing = FastOutSlowInEasing)) { fullWidth -> -fullWidth / 6 })
+                }
+            ) { screen ->
             stateHolder.SaveableStateProvider(screen.name) {
             when (screen) {
                 Screen.HOME -> com.girocerto.ui.home.WorkDashboard(

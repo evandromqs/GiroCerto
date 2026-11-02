@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.21",
+    "changes": [
+      "Novos ícones oficiais WebP aplicados em todas as densidades de tela e limpeza de arquivos legados.",
+      "Menu de rodapé flutuante com design fluido, títulos de sessão ocultos, indicador animado ao lado do ícone e atalho rápido do Copiloto à direita.",
+      "Transições suaves e fluidas entre as 4 telas do aplicativo com animação horizontal e fade.",
+      "Modal flutuante redesenhado: ícone central aumentado em 50% com a nova marca oficial Giro Certo, semáforo e posicionamento otimizado.",
+      "Removida a cor verde do cálculo ativo, padronizando os botões na paleta de azul e slate.",
+      "Correção e melhoria na detecção e clique automatizado de Aceitar Corrida com retentativas inteligentes e gesto de toque via Acessibilidade.",
+      "Correção na detecção do popup flutuante externo em segundo plano.",
+      "Revisão completa de contraste de fontes e superfícies nos temas Claro e Escuro."
+    ]
+  },
+  {
     "version": "1.0.20",
     "changes": [
       "Novo modal flutuante inspirado no design GigU com ícone centralizado sobreposto, resumo de Meta, Total Feito e Kms rodados no dia.",

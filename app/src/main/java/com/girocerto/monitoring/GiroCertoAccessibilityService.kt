@@ -170,15 +170,13 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         sourceRoot?.let { candidates.add(it) }
         try {
             val visible = windows.sortedWith(compareByDescending<android.view.accessibility.AccessibilityWindowInfo> { it.id == windowId }.thenByDescending { it.layer })
-            val emittingWindow = visible.firstOrNull { it.id == windowId }
-            val selectedWindows = if (emittingWindow != null) listOf(emittingWindow) else visible
-            selectedWindows.forEach { window ->
+            visible.forEach { window ->
                 val root = window.root ?: return@forEach
                 val owner = windowOwners.owner(window.id, root.packageName?.toString(), android.os.SystemClock.elapsedRealtime())
                 if (owner == packageName || root.packageName?.toString() == packageName) candidates.add(root)
                 else { @Suppress("DEPRECATION") root.recycle() }
             }
-            if (candidates.isEmpty() && emittingWindow == null) {
+            if (candidates.isEmpty()) {
                 rootInActiveWindow?.let { root ->
                     if (root.packageName?.toString() == packageName) candidates.add(root)
                     else { @Suppress("DEPRECATION") root.recycle() }
@@ -361,14 +359,31 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         return true
     }
 
-    fun clickAcceptCurrentOffer(targetPackage: String): Boolean {
-        val targetWindows = windows.sortedByDescending { it.layer }.filter {
-            val root = it.root
-            val pkg = windowOwners.owner(it.id, root?.packageName?.toString(), android.os.SystemClock.elapsedRealtime())
-            @Suppress("DEPRECATION") root?.recycle()
-            pkg == targetPackage
+    fun clickAcceptCurrentOffer(targetPackage: String = ""): Boolean {
+        // 1. Tenta janela ativa
+        rootInActiveWindow?.let { root ->
+            try {
+                val pkg = root.packageName?.toString() ?: ""
+                if (targetPackage.isBlank() || pkg == targetPackage || pkg in TARGET_PACKAGES) {
+                    if (findAndClickAcceptNode(root)) return true
+                }
+            } finally {
+                @Suppress("DEPRECATION") root.recycle()
+            }
         }
-        for (w in targetWindows) {
+
+        // 2. Tenta janelas visíveis ordenadas com prioridade no pacote alvo
+        val allWindows = try { windows.sortedByDescending { it.layer } } catch (_: Exception) { emptyList() }
+        val prioritized = if (targetPackage.isNotBlank()) {
+            allWindows.sortedByDescending { w ->
+                val root = w.root
+                val pkg = windowOwners.owner(w.id, root?.packageName?.toString(), android.os.SystemClock.elapsedRealtime())
+                @Suppress("DEPRECATION") root?.recycle()
+                pkg == targetPackage
+            }
+        } else allWindows
+
+        for (w in prioritized) {
             val root = w.root ?: continue
             try {
                 if (findAndClickAcceptNode(root)) return true
@@ -376,9 +391,11 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 @Suppress("DEPRECATION") root.recycle()
             }
         }
+
+        // 3. Fallback final na janela ativa sem filtro restritivo de pacote
         rootInActiveWindow?.let { root ->
             try {
-                if (root.packageName?.toString() == targetPackage && findAndClickAcceptNode(root)) return true
+                if (findAndClickAcceptNode(root)) return true
             } finally {
                 @Suppress("DEPRECATION") root.recycle()
             }
@@ -388,13 +405,26 @@ class GiroCertoAccessibilityService : AccessibilityService() {
 
     private fun findAndClickAcceptNode(node: AccessibilityNodeInfo): Boolean {
         val text = listOfNotNull(node.text?.toString(), node.contentDescription?.toString()).joinToString(" ")
-        if (text.isNotBlank() && Regex("(?i)\\b(aceitar)\\b").containsMatchIn(text)) {
+        val viewId = node.viewIdResourceName?.lowercase() ?: ""
+        val matchesAccept = (text.isNotBlank() && Regex("(?i)\\b(aceitar|accept)\\b").containsMatchIn(text)) ||
+            viewId.contains("accept") || viewId.contains("aceitar")
+
+        if (matchesAccept) {
+            // Tenta clicar pelo nó clicável ancestral ou direto
             var target: AccessibilityNodeInfo? = node
             while (target != null && !target.isClickable) {
                 target = target.parent
             }
             if (target != null && target.isClickable) {
-                return target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                if (target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+            }
+            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+
+            // Gesto de toque físico nas coordenadas centrais do botão
+            val bounds = android.graphics.Rect()
+            node.getBoundsInScreen(bounds)
+            if (bounds.width() > 0 && bounds.height() > 0) {
+                if (dispatchTap(bounds.centerX().toFloat(), bounds.centerY().toFloat())) return true
             }
         }
         for (i in 0 until node.childCount) {
@@ -408,24 +438,22 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         return false
     }
 
-    fun clickRejectCurrentOffer(targetPackage: String): Boolean {
-        val targetWindows = windows.sortedByDescending { it.layer }.filter {
-            val root = it.root
-            val pkg = windowOwners.owner(it.id, root?.packageName?.toString(), android.os.SystemClock.elapsedRealtime())
-            @Suppress("DEPRECATION") root?.recycle()
-            pkg == targetPackage
-        }
-        for (w in targetWindows) {
-            val root = w.root ?: continue
+    fun clickRejectCurrentOffer(targetPackage: String = ""): Boolean {
+        rootInActiveWindow?.let { root ->
             try {
-                if (findAndClickRejectNode(root)) return true
+                val pkg = root.packageName?.toString() ?: ""
+                if (targetPackage.isBlank() || pkg == targetPackage || pkg in TARGET_PACKAGES) {
+                    if (findAndClickRejectNode(root)) return true
+                }
             } finally {
                 @Suppress("DEPRECATION") root.recycle()
             }
         }
-        rootInActiveWindow?.let { root ->
+        val allWindows = try { windows.sortedByDescending { it.layer } } catch (_: Exception) { emptyList() }
+        for (w in allWindows) {
+            val root = w.root ?: continue
             try {
-                if (root.packageName?.toString() == targetPackage && findAndClickRejectNode(root)) return true
+                if (findAndClickRejectNode(root)) return true
             } finally {
                 @Suppress("DEPRECATION") root.recycle()
             }
@@ -436,7 +464,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     private fun findAndClickRejectNode(node: AccessibilityNodeInfo): Boolean {
         val text = listOfNotNull(node.text?.toString(), node.contentDescription?.toString()).joinToString(" ")
         val viewId = node.viewIdResourceName?.lowercase() ?: ""
-        val isRejectText = text.isNotBlank() && Regex("(?i)\\b(recusar|rejeitar|descartar|ignorar|fechar)\\b").containsMatchIn(text)
+        val isRejectText = text.isNotBlank() && Regex("(?i)\\b(recusar|rejeitar|descartar|ignorar|fechar|decline|reject|dismiss)\\b").containsMatchIn(text)
         val isRejectId = viewId.contains("close") || viewId.contains("reject") || viewId.contains("decline") || viewId.contains("dismiss")
         if (isRejectText || isRejectId) {
             var target: AccessibilityNodeInfo? = node
@@ -444,7 +472,13 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 target = target.parent
             }
             if (target != null && target.isClickable) {
-                return target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                if (target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+            }
+            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+            val bounds = android.graphics.Rect()
+            node.getBoundsInScreen(bounds)
+            if (bounds.width() > 0 && bounds.height() > 0) {
+                if (dispatchTap(bounds.centerX().toFloat(), bounds.centerY().toFloat())) return true
             }
         }
         for (i in 0 until node.childCount) {
@@ -454,6 +488,16 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             } finally {
                 @Suppress("DEPRECATION") child.recycle()
             }
+        }
+        return false
+    }
+
+    private fun dispatchTap(x: Float, y: Float): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            val path = android.graphics.Path().apply { moveTo(x, y) }
+            val stroke = android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 80)
+            val gesture = android.accessibilityservice.GestureDescription.Builder().addStroke(stroke).build()
+            return dispatchGesture(gesture, null, null)
         }
         return false
     }

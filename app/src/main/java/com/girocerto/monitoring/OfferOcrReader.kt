@@ -102,13 +102,13 @@ class OfferOcrReader(
         val windows = try { service.windows.sortedWith(compareByDescending<AccessibilityWindowInfo> { it.id == preferredWindows[pkg] }.thenByDescending { it.layer }) } catch (_: Exception) { emptyList() }
         // If the emitting popup still exists, never substitute a background
         // activity from the same package when that popup cannot be captured.
-        val preferred = windows.firstOrNull { it.id == preferredWindows[pkg] }
-        for (window in if (preferred != null) listOf(preferred) else windows) {
+        for (window in windows) {
             if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION &&
                 window.type != AccessibilityWindowInfo.TYPE_SYSTEM) continue
             val root = window.root
             val matches = try {
-                windowOwners.owner(window.id, root?.packageName?.toString(), SystemClock.elapsedRealtime()) == pkg
+                windowOwners.owner(window.id, root?.packageName?.toString(), SystemClock.elapsedRealtime()) == pkg ||
+                    root?.packageName?.toString() == pkg
             } catch (_: Exception) {
                 false
             } finally {
