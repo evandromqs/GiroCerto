@@ -14,6 +14,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -292,7 +293,9 @@ fun DiaryCalendarDialog(
                                     Surface(
                                         onClick = { onSelect(day) },
                                         enabled = allowed,
-                                        modifier = Modifier.size(36.dp),
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .testTag("diary-day-$dayNumber"),
                                         shape = CircleShape,
                                         color = when {
                                             isSelected -> MaterialTheme.colorScheme.primary
