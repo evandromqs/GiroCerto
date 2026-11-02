@@ -45,7 +45,7 @@ class ReleaseUiTest {
             capture("settings-${mode.name}")
             compose.onNodeWithText("Ocultar histórico de versões").performScrollTo().performClick()
         }
-        compose.runOnIdle { AppearancePreferences.set(context, ThemeMode.SYSTEM) }
+        compose.runOnIdle { AppearancePreferences.set(context, ThemeMode.LIGHT) }
     }
 
     @Test fun switchingDatesPreservesUnsavedEarnings() {

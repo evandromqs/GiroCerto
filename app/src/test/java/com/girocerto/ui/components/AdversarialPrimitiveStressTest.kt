@@ -40,9 +40,9 @@ class AdversarialPrimitiveStressTest {
     @Test
     fun testStandardizedCornerRadiusExactSpecification() {
         // Orchestrator & User prompt specification:
-        // CornerCard = 12.dp, CornerButton = 10.dp, CornerSmall = 8.dp
-        assertEquals("CornerCard must be strictly 18.dp", 18.dp, AppSpacing.CornerCard)
-        assertEquals("CornerButton must be strictly 14.dp", 14.dp, AppSpacing.CornerButton)
+        // CornerCard = 16.dp, CornerButton = 12.dp, CornerSmall = 8.dp
+        assertEquals("CornerCard must be strictly 16.dp", 16.dp, AppSpacing.CornerCard)
+        assertEquals("CornerButton must be strictly 12.dp", 12.dp, AppSpacing.CornerButton)
         assertEquals("CornerSmall must be strictly 8.dp", 8.dp, AppSpacing.CornerSmall)
 
         // Verify shape instances
@@ -54,14 +54,14 @@ class AdversarialPrimitiveStressTest {
         assertNotNull(buttonShape)
         assertNotNull(smallShape)
 
-        // Verify all corner values stay within the mandated 8dp..12dp range
-        assertTrue(AppSpacing.CornerSmall.value in 8.0f..18.0f)
-        assertTrue(AppSpacing.CornerButton.value in 8.0f..18.0f)
-        assertTrue(AppSpacing.CornerCard.value in 8.0f..18.0f)
+        // Verify all corner values stay within the mandated 8dp..16dp range
+        assertTrue(AppSpacing.CornerSmall.value in 8.0f..16.0f)
+        assertTrue(AppSpacing.CornerButton.value in 8.0f..16.0f)
+        assertTrue(AppSpacing.CornerCard.value in 8.0f..16.0f)
 
         // Strict ordering check
-        assertTrue("CornerSmall (8dp) < CornerButton (10dp)", AppSpacing.CornerSmall.value < AppSpacing.CornerButton.value)
-        assertTrue("CornerButton (10dp) < CornerCard (12dp)", AppSpacing.CornerButton.value < AppSpacing.CornerCard.value)
+        assertTrue("CornerSmall (8dp) < CornerButton (12dp)", AppSpacing.CornerSmall.value < AppSpacing.CornerButton.value)
+        assertTrue("CornerButton (12dp) < CornerCard (16dp)", AppSpacing.CornerButton.value < AppSpacing.CornerCard.value)
     }
 
     // ========================================================================
@@ -357,34 +357,33 @@ class AdversarialPrimitiveStressTest {
     @Test
     fun testBackwardCompatibilityAliasesAndTokens() {
         // ThemeMode preservation
-        assertEquals("Sistema", ThemeMode.SYSTEM.label)
         assertEquals("Claro", ThemeMode.LIGHT.label)
         assertEquals("Escuro", ThemeMode.DARK.label)
 
         // Palette core tokens
-        assertEquals(Color(0xFF0000FF), NeobrutalDarkBlue)
-        assertEquals(Color(0xFFF1F6FC), NeobrutalLightGray)
+        assertEquals(Color(0xFF1D4ED8), NeobrutalDarkBlue)
+        assertEquals(Color(0xFFF5F7FB), NeobrutalLightGray)
         assertEquals(Color(0xFF000000), NeobrutalBlack)
         assertEquals(Color(0xFFFFFFFF), NeobrutalWhite)
-        assertEquals(Color(0xFF091427), NeobrutalDarkBackground)
-        assertEquals(Color(0xFF12243C), NeobrutalDarkSurface)
-        assertEquals(Color(0xFFE5F2FF), NeobrutalLightBlueTint)
+        assertEquals(Color(0xFF0B1120), NeobrutalDarkBackground)
+        assertEquals(Color(0xFF121B2C), NeobrutalDarkSurface)
+        assertEquals(Color(0xFFEEF2F7), NeobrutalLightBlueTint)
 
         // Brand alias
         assertEquals(NeobrutalDarkBlue, Navy)
 
         // Status tokens
-        assertEquals(Color(0xFF22C55E), StatusGreenSolid)
-        assertEquals(Color(0xFFFACC15), StatusYellowSolid)
-        assertEquals(Color(0xFFEF4444), StatusRedSolid)
+        assertEquals(Color(0xFF16A34A), StatusGreenSolid)
+        assertEquals(Color(0xFFEAB308), StatusYellowSolid)
+        assertEquals(Color(0xFFDC2626), StatusRedSolid)
         assertEquals(Color(0xFF94A3B8), StatusInvalidSolid)
 
         // Geometry tokens
         assertEquals(1.dp, AppSpacing.BorderThick)
         assertEquals(1.dp, AppSpacing.BorderAction)
         assertEquals(1.dp, AppSpacing.BorderThin)
-        assertEquals(4.0.dp, AppSpacing.ShadowOffset)
-        assertEquals(2.0.dp, AppSpacing.ShadowOffsetSmall)
+        assertEquals(0.0.dp, AppSpacing.ShadowOffset)
+        assertEquals(0.0.dp, AppSpacing.ShadowOffsetSmall)
         assertEquals(48.0.dp, AppSpacing.MinTouchTarget)
     }
 }

@@ -99,7 +99,7 @@ class OverlayFlowTest {
         }
         compose.runOnIdle {
             OverlayController.stopFloatingBubble(compose.activity)
-            com.girocerto.app.theme.AppearancePreferences.set(compose.activity, com.girocerto.app.theme.ThemeMode.SYSTEM)
+            com.girocerto.app.theme.AppearancePreferences.set(compose.activity, com.girocerto.app.theme.ThemeMode.LIGHT)
         }
     }
 

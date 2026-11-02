@@ -13,17 +13,17 @@ import org.junit.Test
 
 /**
  * Tier 1: Feature Coverage for Requirement R1.
- * Neobrutalist visual design, dark blue (#0000FF) and light gray (#F1F6FC) palette,
+ * Royal blue (#1D4ED8) and light gray (#F5F7FB) palette,
  * global light/dark theme switching, and Roboto typography standard.
  */
 class ThemeAndColorPaletteE2ETest {
 
     @Test
     fun testNavyPrimaryColorTokenMatchesSpecification() {
-        // Requirement R1: Primary Dark Blue must be #0000FF
-        val expectedColor = Color(0xFF0000FF)
+        // Requirement R1: Primary royal blue must be #1D4ED8
+        val expectedColor = Color(0xFF1D4ED8)
         assertEquals(
-            "Primary navy color must match 0xFF0000FF specified in R1",
+            "Primary navy color must match 0xFF1D4ED8 specified in R1",
             expectedColor,
             Navy
         )
@@ -31,10 +31,10 @@ class ThemeAndColorPaletteE2ETest {
 
     @Test
     fun testLightGrayBackgroundTokenMatchesSpecification() {
-        // Requirement R1: Light theme background must be #F1F6FC
-        val expectedLightBackground = Color(0xFFF1F6FC)
+        // Requirement R1: Light theme background must be #F5F7FB
+        val expectedLightBackground = Color(0xFFF5F7FB)
         assertEquals(
-            "Light gray background token must match 0xFFF1F6FC",
+            "Light gray background token must match 0xFFF5F7FB",
             expectedLightBackground,
             com.girocerto.app.theme.NeobrutalLightGray
         )
@@ -52,19 +52,18 @@ class ThemeAndColorPaletteE2ETest {
 
     @Test
     fun testGlobalThemeModesSupported() {
-        // Requirement R1: Must support global themes SYSTEM, LIGHT, and DARK
+        // Requirement R1: Must support global themes LIGHT and DARK
         val modes = ThemeMode.entries
-        assertTrue("ThemeMode must include SYSTEM", modes.contains(ThemeMode.SYSTEM))
         assertTrue("ThemeMode must include LIGHT", modes.contains(ThemeMode.LIGHT))
         assertTrue("ThemeMode must include DARK", modes.contains(ThemeMode.DARK))
-        assertEquals("ThemeMode must contain exactly 3 standard modes", 3, modes.size)
+        assertEquals("ThemeMode must contain exactly 2 modes", 2, modes.size)
     }
 
     @Test
     fun testAppearancePreferencesDefaultMode() {
-        // Opaque-box test: default theme mode should start at SYSTEM
+        // Opaque-box test: default theme mode should start at LIGHT
         val currentMode = AppearancePreferences.mode.value
-        assertEquals("Default appearance theme mode must be SYSTEM", ThemeMode.SYSTEM, currentMode)
+        assertEquals("Default appearance theme mode must be LIGHT", ThemeMode.LIGHT, currentMode)
     }
 
     @Test

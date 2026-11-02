@@ -185,12 +185,11 @@ class AdversarialMilestone2StressTest {
     fun testStandardizedCornerRadiusHierarchy() {
         // Requirement R2 & User Specification:
         // "os cantos dos elementos deve ser todo arredondados de forma padronizada"
-        // 12dp: cards, containers
-        // 10dp: buttons
+        // 16dp: cards, containers
+        // 12dp: buttons
         // 8dp: small items, inputs, chips, badges
-        // 16dp: modal dialogs
-        assertEquals("Cards must be standardized to 18dp", 18.dp, AppSpacing.CornerCard)
-        assertEquals("Buttons must be standardized to 14dp", 14.dp, AppSpacing.CornerButton)
+        assertEquals("Cards must be standardized to 16dp", 16.dp, AppSpacing.CornerCard)
+        assertEquals("Buttons must be standardized to 12dp", 12.dp, AppSpacing.CornerButton)
         assertEquals("Small items must be standardized to 8dp", 8.dp, AppSpacing.CornerSmall)
         assertEquals("CornerNone must be 0dp", 0.dp, AppSpacing.CornerNone)
 
@@ -209,13 +208,13 @@ class AdversarialMilestone2StressTest {
     @Test
     fun testNeobrutalistCorePaletteContrast() {
         // Requirement R1 & R2: Neobrutal palette compliance
-        assertEquals(Color(0xFF0000FF), NeobrutalDarkBlue)
-        assertEquals(Color(0xFFF1F6FC), NeobrutalLightGray)
+        assertEquals(Color(0xFF1D4ED8), NeobrutalDarkBlue)
+        assertEquals(Color(0xFFF5F7FB), NeobrutalLightGray)
 
         // Status semantic colors
-        assertEquals(Color(0xFF22C55E), StatusGreenSolid)
-        assertEquals(Color(0xFFFACC15), StatusYellowSolid)
-        assertEquals(Color(0xFFEF4444), StatusRedSolid)
+        assertEquals(Color(0xFF16A34A), StatusGreenSolid)
+        assertEquals(Color(0xFFEAB308), StatusYellowSolid)
+        assertEquals(Color(0xFFDC2626), StatusRedSolid)
         assertEquals(Color(0xFF94A3B8), StatusInvalidSolid)
     }
 
