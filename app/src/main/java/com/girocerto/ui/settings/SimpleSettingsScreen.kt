@@ -1,6 +1,8 @@
 package com.girocerto.ui.settings
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,17 +37,21 @@ fun SimpleSettingsScreen(onCopilot: () -> Unit, onProfile: () -> Unit, onAdvance
     ) {
         AppText(
             text = "Ajustes",
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         AppText(
             text = "O essencial para trabalhar do seu jeito.",
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         SettingsLink(Screen.COPILOT, "Copiloto e permissões", "Leitura de ofertas, janela flutuante e alertas", onCopilot)
-        SettingsLink(Screen.GOALS, "Minha moto e metas", "Contrato semanal, custo por km e planejamento", onProfile)
+        SettingsLink(Screen.GOALS, "Meu veículo e metas", "Contrato, combustível, custos por km e planejamento", onProfile)
         SettingsLink(Screen.SETTINGS, "Cartão e voz", "Duração, velocidade da fala e bolha flutuante", onAdvanced)
         AppearancePicker()
         com.girocerto.update.AppUpdateSettings()
@@ -75,6 +81,8 @@ fun CardAndVoiceScreen() {
     ) {
         AppText(
             text = "Cartão e voz",
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
@@ -92,7 +100,7 @@ fun CardAndVoiceScreen() {
                 modifier = Modifier.padding(AppSpacing.Content),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                AppText("Aviso por Voz", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                AppText("Aviso por Voz", modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     AppText("Ouvir análise das ofertas", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
                     Switch(checked = settings.isVoiceEnabled, onCheckedChange = { repository.updateSettings(settings.copy(isVoiceEnabled = it)) })
@@ -123,7 +131,7 @@ fun CardAndVoiceScreen() {
                 modifier = Modifier.padding(AppSpacing.Content),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                AppText("Duração do Cartão", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                AppText("Duração do Cartão", modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 AppText("Tempo de cada oferta na tela", style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(15, 30).forEach { seconds ->
@@ -141,7 +149,7 @@ fun CardAndVoiceScreen() {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         AppText(
-            text = "Alterações salvas automaticamente. Para mudar os custos da moto e os valores do semáforo, abra Metas.",
+            text = "Alterações salvas automaticamente. Para mudar os custos do veículo e os valores do semáforo, abra Metas.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -167,7 +175,14 @@ private fun SettingsLink(icon: Screen, title: String, subtitle: String, action: 
         ) {
             NavigationGlyph(icon, true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.Start) {
-                AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                AppText(
+                    title,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 AppText(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -188,21 +203,91 @@ private fun AppearancePicker() {
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(AppSpacing.Content),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.Start
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            AppText("Aparência", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ThemeMode.entries.forEach { option ->
-                    FilterChip(
-                        selected = mode == option,
-                        onClick = { com.girocerto.app.theme.AppearancePreferences.set(context, option) },
-                        label = { AppText(option.label, maxLines = 1, fontWeight = if (mode == option) FontWeight.Bold else FontWeight.Normal) },
-                        shape = RoundedCornerShape(AppSpacing.CornerSmall),
-                        border = BorderStroke(AppSpacing.BorderThin, MaterialTheme.colorScheme.outline)
-                    )
-                }
+            AppText(
+                "Aparência",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ThemeChoice(
+                    label = "Claro",
+                    icon = com.girocerto.app.R.drawable.ic_sun,
+                    selected = mode == ThemeMode.LIGHT,
+                    modifier = Modifier.weight(1f),
+                    onClick = { com.girocerto.app.theme.AppearancePreferences.set(context, ThemeMode.LIGHT) }
+                )
+                ThemeChoice(
+                    label = "Escuro",
+                    icon = com.girocerto.app.R.drawable.ic_moon,
+                    selected = mode == ThemeMode.DARK,
+                    modifier = Modifier.weight(1f),
+                    onClick = { com.girocerto.app.theme.AppearancePreferences.set(context, ThemeMode.DARK) }
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun ThemeChoice(
+    label: String,
+    icon: Int,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val container by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        else MaterialTheme.colorScheme.surface,
+        animationSpec = tween(180),
+        label = "theme_choice_container"
+    )
+    val content by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(180),
+        label = "theme_choice_content"
+    )
+    val border by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+        animationSpec = tween(180),
+        label = "theme_choice_border"
+    )
+    Surface(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 76.dp),
+        shape = RoundedCornerShape(AppSpacing.CornerSmall),
+        color = container,
+        contentColor = content,
+        border = BorderStroke(AppSpacing.BorderAction, border),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                painter = androidx.compose.ui.res.painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(Modifier.height(6.dp))
+            AppText(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+            )
         }
     }
 }

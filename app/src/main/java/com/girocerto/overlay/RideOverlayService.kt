@@ -189,7 +189,7 @@ class RideOverlayService : Service() {
         val bubble = FrameLayout(this).apply {
             contentDescription = "Giro Certo. Toque para abrir; arraste até a lixeira para ocultar."
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.parseColor("#1591EA"), Color.parseColor("#0000FF"), Color.parseColor("#000080"))).apply {
+                intArrayOf(Color.parseColor("#2563EB"), Color.parseColor("#1D4ED8"), Color.parseColor("#1E40AF"))).apply {
                 shape = GradientDrawable.OVAL
                 setStroke(dpToPx(2), palette("#C9D5E6"))
             }
@@ -423,11 +423,11 @@ class RideOverlayService : Service() {
                 gravity = Gravity.CENTER_HORIZONTAL
                 addView(label(value, 17f).apply {
                     paint.isFakeBoldText = true
-                    setTextColor(Color.WHITE)
+                    setTextColor(palette("#F9FAFB"))
                     gravity = Gravity.CENTER
                 })
                 addView(label(title, 11f).apply {
-                    setTextColor(Color.parseColor("#94A3B8"))
+                    setTextColor(palette("#B5C9C7"))
                     gravity = Gravity.CENTER
                 })
             }
@@ -446,14 +446,14 @@ class RideOverlayService : Service() {
         summaryContainer.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 1000
             setProgress((progress * 1000).toInt())
-            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1591EA"))
-            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1E293B"))
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1D4ED8"))
+            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(palette("#4B5563"))
         }, LinearLayout.LayoutParams(-1, dpToPx(5)).apply { topMargin = dpToPx(10) })
         card.addView(summaryContainer)
 
         // Divider
         card.addView(View(this).apply {
-            setBackgroundColor(Color.parseColor("#263B57"))
+            setBackgroundColor(palette("#4B5563"))
         }, LinearLayout.LayoutParams(-1, dpToPx(1)).apply { topMargin = dpToPx(4); bottomMargin = dpToPx(14) })
 
         // 3 Buttons aligned horizontally centered
@@ -476,21 +476,21 @@ class RideOverlayService : Service() {
                 setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(activeBg ?: Color.parseColor("#1591EA"))
-                    setStroke(dpToPx(1), strokeColor ?: Color.parseColor("#72BFFF"))
+                    setColor(activeBg ?: Color.parseColor("#1D4ED8"))
+                    setStroke(dpToPx(1), strokeColor ?: Color.parseColor("#60A5FA"))
                 }
                 elevation = dpToPx(3).toFloat()
             }
             col.addView(iconBtn, LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)))
             col.addView(label(text, 11f).apply {
                 gravity = Gravity.CENTER
-                setTextColor(Color.WHITE)
+                setTextColor(palette("#F9FAFB"))
             }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dpToPx(6) })
             return col
         }
 
         // Button 1: Registrar Ponto
-        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_trip_clock, "Registrar Ponto", Color.parseColor("#1591EA"), Color.parseColor("#72BFFF")) {
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_trip_clock, "Registrar Ponto", Color.parseColor("#1D4ED8"), Color.parseColor("#60A5FA")) {
             val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra("target_screen", "SHIFT")
@@ -500,7 +500,7 @@ class RideOverlayService : Service() {
         }, LinearLayout.LayoutParams(0, -2, 1f))
 
         // Button 2: Histórico de Corridas
-        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_history, "Histórico", Color.parseColor("#1591EA"), Color.parseColor("#72BFFF")) {
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_history, "Histórico", Color.parseColor("#1D4ED8"), Color.parseColor("#60A5FA")) {
             val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra("target_screen", "HISTORY")
@@ -512,8 +512,8 @@ class RideOverlayService : Service() {
         // Button 3: Ativar / Desativar Cálculo (SEM COR VERDE - visual azul e slate refinado)
         val prefs = CopilotPreferences(this)
         val isCalcEnabled = prefs.read().enabled
-        val calcBg = if (isCalcEnabled) Color.parseColor("#1591EA") else Color.parseColor("#1E293B")
-        val calcStroke = if (isCalcEnabled) Color.parseColor("#72BFFF") else Color.parseColor("#475569")
+        val calcBg = if (isCalcEnabled) Color.parseColor("#1D4ED8") else Color.parseColor("#1E293B")
+        val calcStroke = if (isCalcEnabled) Color.parseColor("#60A5FA") else Color.parseColor("#475569")
         val calcLabel = if (isCalcEnabled) "Cálculo Ativo" else "Cálculo Pausado"
         buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_copilot, calcLabel, calcBg, calcStroke) {
             val current = prefs.read()
@@ -533,8 +533,8 @@ class RideOverlayService : Service() {
             elevation = dpToPx(16).toFloat()
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#0000FF"))
-                setStroke(dpToPx(3), Color.parseColor("#1591EA"))
+                setColor(Color.parseColor("#1D4ED8"))
+                setStroke(dpToPx(3), Color.parseColor("#93B4FF"))
             }
             isClickable = true
             isFocusable = true
@@ -629,8 +629,8 @@ class RideOverlayService : Service() {
         imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
         setPadding(dpToPx(13), dpToPx(13), dpToPx(13), dpToPx(13))
         background = android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x40FFFFFF),
-            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.parseColor("#1591EA"), Color.parseColor("#0000FF"))).apply {
-                cornerRadius = dpToPx(14).toFloat(); setStroke(dpToPx(1), Color.parseColor("#72BFFF"))
+            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.parseColor("#2563EB"), Color.parseColor("#1D4ED8"))).apply {
+                cornerRadius = dpToPx(14).toFloat(); setStroke(dpToPx(1), Color.parseColor("#60A5FA"))
             }, null)
         elevation = dpToPx(2).toFloat()
         setOnClickListener { click() }
@@ -651,7 +651,7 @@ class RideOverlayService : Service() {
         header.addView(android.widget.ImageView(this).apply {
             setImageResource(com.girocerto.app.R.drawable.ic_launcher_monochrome)
             imageTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(
-                if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#1591EA" else "#0000FF"))
+                if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#93B4FF" else "#1D4ED8"))
             contentDescription = "Giro Certo"
         }, LinearLayout.LayoutParams(dpToPx(24), dpToPx(24)).apply { rightMargin = dpToPx(8) })
         header.addView(label("Giro Certo", 16f), LinearLayout.LayoutParams(0, -2, 1f))
@@ -780,7 +780,7 @@ class RideOverlayService : Service() {
         card.addView(acceptBtn, LinearLayout.LayoutParams(-1, dpToPx(40)).apply { topMargin = dpToPx(8) })
         card.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             tag = "offerLifetime"; max = 1000; progress = 1000
-            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1591EA"))
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1D4ED8"))
             progressBackgroundTintList = android.content.res.ColorStateList.valueOf(palette("#4B5563"))
             contentDescription = "Tempo restante da oferta"
         }, LinearLayout.LayoutParams(-1, dpToPx(4)).apply { topMargin = dpToPx(12) })
@@ -950,16 +950,16 @@ class RideOverlayService : Service() {
     private fun palette(hex: String): Int {
         val dark = com.girocerto.app.theme.AppearancePreferences.isDark(this)
         val color = when (hex.uppercase(Locale.ROOT)) {
-            "#101818" -> if (dark) "#102139" else "#F5FAFF"
-            "#243535" -> if (dark) "#193D65" else "#FFFFFF"
-            "#304242" -> "#483B75"
-            "#4B5563" -> if (dark) "#426C9C" else "#BCD7F1"
-            "#F9FAFB" -> if (dark) "#FFFFFF" else "#10151D"
-            "#B5C9C7" -> if (dark) "#CED8E7" else "#40536D"
-            "#FACC15" -> "#DEE5EF"
-            "#EF4444" -> "#080D15"
-            "#6B7280" -> "#40536D"
-            "#19BFB0", "#22C55E", "#10B981", "#06B6D4", "#EA1D2C", "#F97316", "#F59E0B" -> "#0000FF"
+            "#101818" -> if (dark) "#0B1120" else "#F5F7FB"
+            "#243535" -> if (dark) "#121B2C" else "#FFFFFF"
+            "#304242" -> if (dark) "#1A263A" else "#EEF2F7"
+            "#4B5563" -> if (dark) "#2B3A52" else "#D6DEE9"
+            "#F9FAFB" -> if (dark) "#F4F7FD" else "#0F172A"
+            "#B5C9C7" -> if (dark) "#9BA9BE" else "#5B6678"
+            "#FACC15" -> if (dark) "#F4F7FD" else "#0F172A"
+            "#EF4444" -> if (dark) "#F4F7FD" else "#0F172A"
+            "#6B7280" -> if (dark) "#9BA9BE" else "#5B6678"
+            "#19BFB0", "#22C55E", "#10B981", "#06B6D4", "#EA1D2C", "#F97316", "#F59E0B" -> "#1D4ED8"
             else -> hex
         }
         return Color.parseColor(color)

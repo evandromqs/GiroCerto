@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.0.22",
+    "changes": [
+      "Wizard do perfil revisado: botão Continuar sempre ativo com validação clara em cada etapa, barra de progresso animada, rótulos mais curtos e o botão Voltar do sistema fecha o teclado antes de retroceder de passo.",
+      "Filtro de período do Histórico virou botões segmentados e as ações da análise (compartilhar, ver no mapa, excluir) agora ficam dentro do card expandido.",
+      "Escolha de aparência com transição suave de cores e cartões padronizados em todas as telas de ajustes.",
+      "Seletor de canto do copiloto com pré-visualização visual da posição escolhida.",
+      "Diário com data em uma linha, ícone de calendário nos dias registrados e diálogos com largura máxima em telas grandes.",
+      "Títulos principais padronizados, diálogos centralizados com formato consistente e botões de texto com ícones.",
+      "Limpeza de código morto e ajustes de textos e formatação de data no padrão pt-BR."
+    ]
+  },
+  {
     "version": "1.0.21",
     "changes": [
       "Novos ícones oficiais WebP aplicados em todas as densidades de tela e limpeza de arquivos legados.",

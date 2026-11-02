@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -24,10 +26,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TextButton
@@ -114,33 +120,49 @@ fun HistoryScreen(
         }
         loadError?.let { message ->
             AppText(message, modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = { rideRepo.retryLoad() }) { AppText("Tentar recuperar histórico") }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                TextButton(onClick = { rideRepo.retryLoad() }) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_refresh),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    AppText("Tentar recuperar histórico")
+                }
+            }
         }
 
         // Barra Superior do Histórico
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column {
-                AppText(
-                    text = "Histórico de Análises",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                AppText(
-                    text = "${rides.size} corridas salvas localmente",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
+            AppText(
+                text = "Histórico de Análises",
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            AppText(
+                text = "${rides.size} corridas salvas localmente",
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Start
+            )
             if (rides.isNotEmpty()) {
                 TextButton(
                     onClick = { showClearAllDialog = true }
                 ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_trash),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(Modifier.width(6.dp))
                     AppText("Limpar tudo", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 }
             }
@@ -159,19 +181,42 @@ fun HistoryScreen(
                 )
             }
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Todo período", "Hoje", "7 dias").forEach { period ->
-                FilterChip(
-                    selected = periodFilter == period,
-                    onClick = { periodFilter = period },
-                    label = { AppText(period, fontWeight = if (periodFilter == period) FontWeight.Bold else FontWeight.Normal) },
-                    shape = RoundedCornerShape(AppSpacing.CornerSmall),
-                    border = BorderStroke(AppSpacing.BorderThin, MaterialTheme.colorScheme.outline)
-                )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val periodOptions = listOf("Todo período", "Hoje", "7 dias")
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                periodOptions.forEachIndexed { index, period ->
+                    SegmentedButton(
+                        selected = periodFilter == period,
+                        onClick = { periodFilter = period },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = periodOptions.size),
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                            activeContentColor = MaterialTheme.colorScheme.primary,
+                            activeBorderColor = MaterialTheme.colorScheme.primary,
+                            inactiveContainerColor = MaterialTheme.colorScheme.surface,
+                            inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            inactiveBorderColor = MaterialTheme.colorScheme.outline
+                        )
+                    ) {
+                        AppText(
+                            period,
+                            fontWeight = if (periodFilter == period) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1
+                        )
+                    }
+                }
             }
         }
         if (rides.isNotEmpty() && filteredRides.isEmpty()) {
-            AppText("Nenhuma análise corresponde aos filtros.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))
+            AppText(
+                "Nenhuma análise corresponde aos filtros.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                textAlign = TextAlign.Center
+            )
         }
         if (rides.isEmpty()) {
             EmptyHistoryView(onNavigateToCopilot = onNavigateToCopilot)
@@ -247,10 +292,17 @@ private fun HistoryItemCard(
     if (showMessageDraft) {
         AlertDialog(
             onDismissRequest = { showMessageDraft = false },
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.medium,
             containerColor = MaterialTheme.colorScheme.surface,
             title = {
-                AppText("Revise a mensagem", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                AppText(
+                    "Revise a mensagem",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -283,6 +335,12 @@ private fun HistoryItemCard(
                     },
                     shape = RoundedCornerShape(AppSpacing.CornerButton)
                 ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_share),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
                     AppText("Escolher aplicativo", fontWeight = FontWeight.Bold)
                 }
             },
@@ -291,6 +349,12 @@ private fun HistoryItemCard(
                     onClick = { showMessageDraft = false },
                     shape = RoundedCornerShape(AppSpacing.CornerButton)
                 ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_close),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
                     AppText("Cancelar", color = MaterialTheme.colorScheme.onSurface)
                 }
             }
@@ -364,51 +428,6 @@ private fun HistoryItemCard(
                 )
             }
 
-            if (expanded) {
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(
-                    onClick = {
-                        passengerDraft = PassengerMessagePreferences(context).read()
-                        showMessageDraft = true
-                    },
-                    modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
-                ) {
-                    AppText("Compartilhar mensagem ao passageiro", fontWeight = FontWeight.SemiBold)
-                }
-                TextButton(
-                    onClick = {
-                        val message = "Giro Certo · ${ride.offer.appName}\nOferta: ${Formatters.formatCurrency(ride.offer.fare)}\nDistância: ${Formatters.formatKm(ride.totalDistanceKm)}\nLucro estimado: ${Formatters.formatCurrency(ride.estimatedProfit)}\n${ride.decisionReason}"
-                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"; putExtra(Intent.EXTRA_TEXT, message)
-                        }, "Compartilhar análise"))
-                    },
-                    modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
-                ) {
-                    AppText("Compartilhar resumo", fontWeight = FontWeight.SemiBold)
-                }
-                ride.offer.pickupAddress.takeIf { it.isNotBlank() }?.let { address ->
-                    TextButton(
-                        onClick = {
-                            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(address)}"))) }
-                        },
-                        modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
-                    ) {
-                        AppText("Ver embarque no mapa", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                ride.offer.destinationAddress.takeIf { it.isNotBlank() }?.let { address ->
-                    TextButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(address)}"))
-                            runCatching { context.startActivity(intent) }
-                        },
-                        modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
-                    ) {
-                        AppText("Ver destino no mapa", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-
             // Área Expansível com Detalhes Completos
             AnimatedVisibility(visible = expanded) {
                 Column(
@@ -454,9 +473,77 @@ private fun HistoryItemCard(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
+                    TextButton(
+                        onClick = {
+                            passengerDraft = PassengerMessagePreferences(context).read()
+                            showMessageDraft = true
+                        },
+                        modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = AppSpacing.MinTouchTarget)
+                    ) {
+                        Icon(
+                            painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_share),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        AppText("Compartilhar mensagem ao passageiro", fontWeight = FontWeight.SemiBold)
+                    }
+                    TextButton(
+                        onClick = {
+                            val message = "Giro Certo · ${ride.offer.appName}\nOferta: ${Formatters.formatCurrency(ride.offer.fare)}\nDistância: ${Formatters.formatKm(ride.totalDistanceKm)}\nLucro estimado: ${Formatters.formatCurrency(ride.estimatedProfit)}\n${ride.decisionReason}"
+                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"; putExtra(Intent.EXTRA_TEXT, message)
+                            }, "Compartilhar análise"))
+                        },
+                        modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = AppSpacing.MinTouchTarget)
+                    ) {
+                        Icon(
+                            painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_share),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        AppText("Compartilhar resumo", fontWeight = FontWeight.SemiBold)
+                    }
+                    ride.offer.pickupAddress.takeIf { it.isNotBlank() }?.let { address ->
+                        TextButton(
+                            onClick = {
+                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(address)}"))) }
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = AppSpacing.MinTouchTarget)
+                        ) {
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_map),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            AppText("Ver embarque no mapa", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    ride.offer.destinationAddress.takeIf { it.isNotBlank() }?.let { address ->
+                        TextButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(address)}"))
+                                runCatching { context.startActivity(intent) }
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = AppSpacing.MinTouchTarget)
+                        ) {
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_map),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            AppText("Ver destino no mapa", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         NeobrutalButton(
@@ -466,13 +553,27 @@ private fun HistoryItemCard(
                             borderColor = MaterialTheme.colorScheme.outline,
                             borderWidth = AppSpacing.BorderAction,
                             shape = RoundedCornerShape(AppSpacing.CornerButton),
-                            text = "Abrir Janela Flutuante"
+                            text = "Abrir Janela Flutuante",
+                            leadingIcon = {
+                                Icon(
+                                    painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_open_app),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         )
 
                         TextButton(
                             onClick = onDelete,
                             modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
                         ) {
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_trash),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(Modifier.width(6.dp))
                             AppText("Excluir", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                         }
                     }
@@ -517,7 +618,14 @@ private fun EmptyHistoryView(onNavigateToCopilot: () -> Unit) {
                 backgroundColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = RoundedCornerShape(AppSpacing.CornerButton),
-                text = "Configurar copiloto"
+                text = "Configurar copiloto",
+                leadingIcon = {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_copilot),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             )
         }
     }

@@ -41,7 +41,6 @@ class ThemeTokensUnitTest {
         // R1: Default font family must be Roboto (SansSerif)
         assertEquals(FontFamily.SansSerif, Roboto)
         assertEquals(FontFamily.SansSerif, RobotoFamily)
-        assertEquals(RobotoFamily, Poppins)
 
         assertNotNull(Typography.bodyLarge)
         assertNotNull(Typography.headlineMedium)

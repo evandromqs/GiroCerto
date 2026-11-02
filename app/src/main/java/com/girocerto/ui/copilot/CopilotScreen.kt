@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,12 +17,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.girocerto.app.R
 import com.girocerto.app.theme.AppSpacing
 import com.girocerto.domain.model.WorkPlatform
 import com.girocerto.monitoring.CopilotPolicy
@@ -35,9 +42,67 @@ import com.girocerto.ui.components.NeobrutalCard
 import com.girocerto.ui.components.PlatformIcon
 import com.girocerto.ui.components.TactileButton
 
+@Composable
+fun CopilotModal(onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .widthIn(max = 480.dp)
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.84f),
+            shape = RoundedCornerShape(AppSpacing.CornerCard),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(AppSpacing.BorderThick, MaterialTheme.colorScheme.outline),
+            tonalElevation = 0.dp,
+            shadowElevation = 24.dp
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Ajustes do copiloto",
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .fillMaxWidth()
+                            .padding(horizontal = 48.dp),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(AppSpacing.MinTouchTarget)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_close),
+                            contentDescription = "Fechar ajustes do copiloto",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                )
+                Box(Modifier.weight(1f)) {
+                    CopilotScreen(inModal = true)
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun CopilotScreen() {
+fun CopilotScreen(inModal: Boolean = false) {
     val context = LocalContext.current
     val repository = remember(context) { CopilotPreferences(context) }
     var policy by remember { mutableStateOf(repository.read()) }
@@ -80,23 +145,27 @@ fun CopilotScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(if (inModal) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(AppSpacing.Screen),
         verticalArrangement = Arrangement.spacedBy(AppSpacing.Section),
         horizontalAlignment = Alignment.Start
     ) {
-        Text(
-            text = "Seu copiloto",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        if (!inModal) {
+            Text(
+                text = "Seu copiloto",
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
+            )
+        }
 
         Text(
             text = "Escolha o que acompanhar e ouvir. Você decide sobre cada oferta.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start
         )
 
         val statusText = when {
@@ -111,7 +180,8 @@ fun CopilotScreen() {
             text = statusText,
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
 
         // SEÇÃO: Permissões Essenciais
@@ -122,6 +192,8 @@ fun CopilotScreen() {
             ) {
                 Text(
                     text = "Permissões do Copiloto",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -138,6 +210,8 @@ fun CopilotScreen() {
                     shape = RoundedCornerShape(AppSpacing.CornerButton),
                     border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
                 ) {
+                    Icon(painterResource(R.drawable.ic_copilot), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = if (readingAllowed || connected) "Leitura de ofertas • permitida" else "Autorizar leitura de ofertas",
                         fontWeight = FontWeight.Bold
@@ -156,6 +230,8 @@ fun CopilotScreen() {
                     shape = RoundedCornerShape(AppSpacing.CornerButton),
                     border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
                 ) {
+                    Icon(painterResource(R.drawable.ic_open_app), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = if (overlayAllowed) "Cartão flutuante • permitido" else "Autorizar cartão flutuante",
                         fontWeight = FontWeight.Bold
@@ -169,12 +245,14 @@ fun CopilotScreen() {
                             .fillMaxWidth()
                             .heightIn(min = AppSpacing.MinTouchTarget),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = MaterialTheme.colorScheme.onSecondary
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         shape = RoundedCornerShape(AppSpacing.CornerButton),
                         border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
                     ) {
+                        Icon(painterResource(R.drawable.ic_open_app), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("Mostrar botão flutuante", fontWeight = FontWeight.Bold)
                     }
                 }
@@ -207,6 +285,8 @@ fun CopilotScreen() {
 
                 Text(
                     text = "Aplicativos acompanhados",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -240,6 +320,8 @@ fun CopilotScreen() {
             ) {
                 Text(
                     text = "Canto de repouso do modal",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -258,61 +340,39 @@ fun CopilotScreen() {
 
                 // 2x2 grid for corner picker
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        for (corner in corners.take(2)) {
-                            val selected = policy.restingCorner == corner
-                            TactileButton(
-                                onClick = { update(policy.copy(restingCorner = corner)) },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .heightIn(min = AppSpacing.MinTouchTarget),
-                                shape = RoundedCornerShape(AppSpacing.CornerSmall),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                                ),
-                                border = BorderStroke(
-                                    AppSpacing.BorderThin,
-                                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                                )
-                            ) {
-                                Text(
-                                    text = corner.label,
-                                    fontSize = 11.sp,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        for (corner in corners.drop(2)) {
-                            val selected = policy.restingCorner == corner
-                            TactileButton(
-                                onClick = { update(policy.copy(restingCorner = corner)) },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .heightIn(min = AppSpacing.MinTouchTarget),
-                                shape = RoundedCornerShape(AppSpacing.CornerSmall),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                                ),
-                                border = BorderStroke(
-                                    AppSpacing.BorderThin,
-                                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                                )
-                            ) {
-                                Text(
-                                    text = corner.label,
-                                    fontSize = 11.sp,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                                )
+                    corners.chunked(2).forEach { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            for (corner in row) {
+                                val selected = policy.restingCorner == corner
+                                TactileButton(
+                                    onClick = { update(policy.copy(restingCorner = corner)) },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(min = AppSpacing.MinTouchTarget),
+                                    shape = RoundedCornerShape(AppSpacing.CornerSmall),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    border = BorderStroke(
+                                        AppSpacing.BorderThin,
+                                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                    )
+                                ) {
+                                    CornerPreview(
+                                        corner = corner,
+                                        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = corner.label,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                }
                             }
                         }
                     }
@@ -333,6 +393,12 @@ fun CopilotScreen() {
             shape = RoundedCornerShape(AppSpacing.CornerButton),
             border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
         ) {
+            Icon(
+                painter = painterResource(if (showMore) R.drawable.ic_expand_less else R.drawable.ic_expand_more),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = if (showMore) "Ocultar mais opções" else "Mais opções",
                 fontWeight = FontWeight.Bold
@@ -348,6 +414,8 @@ fun CopilotScreen() {
                 ) {
                     Text(
                         text = "Alertas por classificação",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -376,6 +444,8 @@ fun CopilotScreen() {
 
                     Text(
                         text = "Nota do passageiro",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -420,6 +490,8 @@ fun CopilotScreen() {
                 ) {
                     Text(
                         text = "Leitura e Registro de Ofertas",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -456,6 +528,8 @@ fun CopilotScreen() {
                         shape = RoundedCornerShape(AppSpacing.CornerButton),
                         border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
                     ) {
+                        Icon(painterResource(R.drawable.ic_info), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("Saiba mais sobre estas opções", fontWeight = FontWeight.Bold)
                     }
                 }
@@ -469,6 +543,8 @@ fun CopilotScreen() {
                 ) {
                     Text(
                         text = "Diagnóstico da leitura",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -505,6 +581,8 @@ fun CopilotScreen() {
                         shape = RoundedCornerShape(AppSpacing.CornerButton),
                         border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
                     ) {
+                        Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text("Copiar diagnóstico", fontWeight = FontWeight.Bold)
                     }
                 }
@@ -515,7 +593,7 @@ fun CopilotScreen() {
         if (showReadingDisclosure) {
             AlertDialog(
                 onDismissRequest = { showReadingDisclosure = false },
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.medium,
                 containerColor = MaterialTheme.colorScheme.surface,
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                 textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -568,7 +646,7 @@ fun CopilotScreen() {
         if (showDetails) {
             AlertDialog(
                 onDismissRequest = { showDetails = false },
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.medium,
                 containerColor = MaterialTheme.colorScheme.surface,
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                 textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -601,6 +679,29 @@ fun CopilotScreen() {
                 }
             )
         }
+    }
+}
+
+@Composable
+private fun CornerPreview(corner: OverlayCorner, contentColor: Color) {
+    val alignment = when (corner) {
+        OverlayCorner.TOP_LEFT -> Alignment.TopStart
+        OverlayCorner.TOP_RIGHT -> Alignment.TopEnd
+        OverlayCorner.BOTTOM_LEFT -> Alignment.BottomStart
+        OverlayCorner.BOTTOM_RIGHT -> Alignment.BottomEnd
+    }
+    Box(
+        modifier = Modifier
+            .size(22.dp)
+            .border(BorderStroke(1.dp, contentColor.copy(alpha = 0.6f)), RoundedCornerShape(5.dp)),
+        contentAlignment = alignment
+    ) {
+        Box(
+            Modifier
+                .padding(3.dp)
+                .size(7.dp)
+                .background(contentColor, RoundedCornerShape(2.dp))
+        )
     }
 }
 

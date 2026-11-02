@@ -9,10 +9,15 @@ import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.girocerto.app.GiroCertoApp
+import com.girocerto.app.R
 
 @Composable
 internal fun AppUpdatePrompt() {
@@ -23,7 +28,20 @@ internal fun AppUpdatePrompt() {
     if (!state.showPrompt) return
     AlertDialog(
         onDismissRequest = manager::dismiss,
-        title = { Text("Giro Certo ${release.versionName}") },
+        shape = MaterialTheme.shapes.medium,
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        title = {
+            Text(
+                "Giro Certo ${release.versionName}",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                 Text("Sua versão: ${manager.installedName}")
@@ -43,10 +61,20 @@ internal fun AppUpdatePrompt() {
         confirmButton = {
             when (state.phase) {
                 DownloadPhase.AVAILABLE, DownloadPhase.FAILED -> TextButton(onClick = manager::download) {
+                    Icon(painterResource(R.drawable.ic_download), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(if (state.phase == DownloadPhase.FAILED) "Tentar novamente" else "Baixar atualização")
                 }
-                DownloadPhase.READY -> TextButton(onClick = manager::install) { Text("Instalar atualização") }
-                DownloadPhase.DOWNLOADING -> TextButton(onClick = manager::cancelDownload) { Text("Cancelar download") }
+                DownloadPhase.READY -> TextButton(onClick = manager::install) {
+                    Icon(painterResource(R.drawable.ic_open_app), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Instalar atualização")
+                }
+                DownloadPhase.DOWNLOADING -> TextButton(onClick = manager::cancelDownload) {
+                    Icon(painterResource(R.drawable.ic_close), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Cancelar download")
+                }
                 else -> Unit
             }
         },
@@ -60,12 +88,20 @@ internal fun AppUpdatePrompt() {
 internal fun AppUpdateSettings() {
     val manager = GiroCertoApp.instance.appUpdates
     val state by manager.state.collectAsStateWithLifecycle()
-    OutlinedCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Atualizações", style = MaterialTheme.typography.titleMedium)
+    com.girocerto.ui.components.NeobrutalCard(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "Atualizações",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
             Text("Versão instalada: ${manager.installedName}")
             Text(if (state.checking) "Consultando nova versão…" else state.message)
             TextButton(onClick = manager::open, enabled = !state.checking) {
+                Icon(painterResource(R.drawable.ic_refresh), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
                 Text(if (state.release == null) "Verificar atualização" else "Ver atualização")
             }
             Text("A consulta usa o GitHub. Seus ganhos e os dados das ofertas continuam no aparelho.", style = MaterialTheme.typography.bodySmall)

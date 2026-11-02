@@ -22,28 +22,52 @@ enum class WorkPlatform(val label: String) {
     }
 }
 
+enum class VehicleType(val label: String, val isElectric: Boolean = false) {
+    ELECTRIC_MOTO("Moto elétrica", isElectric = true),
+    COMBUSTION_MOTO("Moto a combustão"),
+    CAR("Carro")
+}
+
 data class ElectricProfile(
     val name: String, val weeklyRent: Double, val chargedPerKm: Double,
     val extraPerKm: Double, val workDays: Int, val hoursPerDay: Double,
-    val kmPerDay: Double, val weeklyNetGoal: Double
+    val kmPerDay: Double, val weeklyNetGoal: Double,
+    val vehicleType: VehicleType = VehicleType.ELECTRIC_MOTO,
+    val fuelPricePerLiter: Double = 0.0,
+    val fuelConsumptionKmL: Double = 0.0,
+    val weeklyFixedExpenses: Double = 0.0,
+    val vehicleName: String = ""
 ) {
     fun valid() = name.isNotBlank() && name.length <= 60 && workDays in 1..7 &&
-        listOf(weeklyRent, chargedPerKm, extraPerKm, weeklyNetGoal).all { it.isFinite() && it in 0.0..1_000_000.0 } &&
+        vehicleName.length <= 40 &&
+        listOf(weeklyRent, chargedPerKm, extraPerKm, weeklyNetGoal, weeklyFixedExpenses)
+            .all { it.isFinite() && it in 0.0..1_000_000.0 } &&
+        fuelPricePerLiter.isFinite() && fuelPricePerLiter in 0.0..1_000_000.0 &&
+        fuelConsumptionKmL.isFinite() && fuelConsumptionKmL in 0.0..100.0 &&
+        (vehicleType.isElectric || fuelConsumptionKmL > 0.0) &&
         hoursPerDay.isFinite() && hoursPerDay > 0 && hoursPerDay <= 24 &&
         kmPerDay.isFinite() && kmPerDay > 0 && kmPerDay <= 2000
-    val variablePerKm get() = chargedPerKm + extraPerKm
+
+    val fuelPerKm get() = if (!vehicleType.isElectric && fuelConsumptionKmL > 0)
+        fuelPricePerLiter / fuelConsumptionKmL else 0.0
+    val variablePerKm get() = chargedPerKm + extraPerKm + fuelPerKm
     val dailyRent get() = weeklyRent / workDays
-    val weeklyCosts get() = weeklyRent + variablePerKm * kmPerDay * workDays
+    val dailyFixedCost get() = (weeklyRent + weeklyFixedExpenses) / workDays
+    val weeklyCosts get() = weeklyRent + weeklyFixedExpenses + variablePerKm * kmPerDay * workDays
     val dailyGrossGoal get() = (weeklyNetGoal + weeklyCosts) / workDays
     val targetPerKm get() = dailyGrossGoal / kmPerDay
     val targetPerHour get() = dailyGrossGoal / hoursPerDay
 
     fun vehicleSettings(previous: VehicleSettings): VehicleSettings {
         require(valid())
-        return previous.copy(fuelType = FuelType.ELETRICO, fuelPricePerLiter = 0.0,
-            fuelConsumptionKmL = 1.0, additionalCostPerKm = variablePerKm,
-            fixedCostPerRide = 0.0, dailyFixedCost = dailyRent,
-            minTargetPerKm = targetPerKm, minTargetPerHour = targetPerHour)
+        return previous.copy(
+            fuelType = if (vehicleType.isElectric) FuelType.ELETRICO else FuelType.GASOLINA,
+            fuelPricePerLiter = if (vehicleType.isElectric) 0.0 else fuelPricePerLiter,
+            fuelConsumptionKmL = if (vehicleType.isElectric) 1.0 else fuelConsumptionKmL,
+            additionalCostPerKm = chargedPerKm + extraPerKm,
+            fixedCostPerRide = 0.0, dailyFixedCost = dailyFixedCost,
+            minTargetPerKm = targetPerKm, minTargetPerHour = targetPerHour
+        )
     }
 }
 

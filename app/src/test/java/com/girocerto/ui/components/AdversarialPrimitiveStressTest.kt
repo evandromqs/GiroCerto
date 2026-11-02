@@ -361,9 +361,6 @@ class AdversarialPrimitiveStressTest {
         assertEquals("Claro", ThemeMode.LIGHT.label)
         assertEquals("Escuro", ThemeMode.DARK.label)
 
-        // Poppins alias points to Roboto
-        assertEquals(RobotoFamily, Poppins)
-
         // Palette core tokens
         assertEquals(Color(0xFF0000FF), NeobrutalDarkBlue)
         assertEquals(Color(0xFFF1F6FC), NeobrutalLightGray)

@@ -3,7 +3,6 @@ package com.girocerto.app.theme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,69 +10,74 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 // ============================================================================
-// Dark violet scheme with lighter accent text for contrast
+// Single-accent dark scheme: neutral navy surfaces, one brand hue.
+// secondary and tertiary mirror the primary family so no second accent appears.
 // ============================================================================
 private val DarkScheme = darkColorScheme(
-    primary = Color(0xFF1591EA),
-    onPrimary = NeobrutalWhite,
-    primaryContainer = Color(0xFF0000FF),
-    onPrimaryContainer = NeobrutalWhite,
-    secondary = Color(0xFF1591EA),
-    onSecondary = NeobrutalWhite,
-    secondaryContainer = Color(0xFF193754),
-    onSecondaryContainer = NeobrutalWhite,
-    tertiary = Color(0xFF8BCBFF),
-    onTertiary = Color(0xFF0000FF),
-    background = NeobrutalDarkBackground,       // Deep navy background
-    onBackground = NeobrutalWhite,             // Pure white text
-    surface = NeobrutalDarkSurface,            // Raised dark surface
-    onSurface = NeobrutalWhite,                // Pure white text
-    surfaceVariant = Color(0xFF19334F),
-    onSurfaceVariant = Color(0xFF94A3B8),       // Slate-400 clear contrast for secondary labels
-    outline = Color(0xFF4B7298),                  // Soft outline for dark cards
-    outlineVariant = Color(0xFF594D73),
-    error = Color(0xFFFDA4AF),
-    onError = NeobrutalBlack,
-    errorContainer = Color(0xFF5C1220),
-    onErrorContainer = Color(0xFFFFE4E8),
+    primary = BrandBlueDark,
+    onPrimary = Color(0xFF08142B),
+    primaryContainer = Color(0xFF1A263A),
+    onPrimaryContainer = Color(0xFFF4F7FD),
+    secondary = BrandBlueDark,
+    onSecondary = Color(0xFF08142B),
+    secondaryContainer = Color(0xFF1A263A),
+    onSecondaryContainer = Color(0xFFF4F7FD),
+    tertiary = BrandBlueDark,
+    onTertiary = Color(0xFF08142B),
+    tertiaryContainer = Color(0xFF1A263A),
+    onTertiaryContainer = Color(0xFFF4F7FD),
+    background = NeobrutalDarkBackground,
+    onBackground = Color(0xFFF4F7FD),
+    surface = NeobrutalDarkSurface,
+    onSurface = Color(0xFFF4F7FD),
+    surfaceVariant = Color(0xFF1A263A),
+    onSurfaceVariant = Color(0xFF9BA9BE),
+    outline = Color(0xFF2B3A52),
+    outlineVariant = Color(0xFF223047),
+    error = Color(0xFFFFB3BE),
+    onError = Color(0xFF3A0710),
+    errorContainer = Color(0xFF5A1520),
+    onErrorContainer = Color(0xFFFFD9DE),
     surfaceContainer = NeobrutalDarkSurface,
-    surfaceContainerHigh = Color(0xFF193754)
+    surfaceContainerHigh = Color(0xFF1A263A)
 )
 
 // ============================================================================
-// Light scheme with #0000FF brand accents
+// Single-accent light scheme: soft neutral canvas, one brand hue.
 // ============================================================================
 private val LightScheme = lightColorScheme(
-    primary = NeobrutalDarkBlue,               // Brand violet
-    onPrimary = NeobrutalWhite,                // Pure white
-    primaryContainer = NeobrutalLightBlueTint, // Pale violet
-    onPrimaryContainer = NeobrutalDarkBlue,
-    secondary = Color(0xFF1591EA),
+    primary = BrandBlue,
+    onPrimary = NeobrutalWhite,
+    primaryContainer = NeobrutalLightBlueTint,
+    onPrimaryContainer = Color(0xFF0F172A),
+    secondary = BrandBlue,
     onSecondary = NeobrutalWhite,
-    secondaryContainer = Color(0xFFE2E8F0),
-    onSecondaryContainer = NeobrutalBlack,
-    tertiary = NeobrutalDarkBlue,
+    secondaryContainer = NeobrutalLightBlueTint,
+    onSecondaryContainer = Color(0xFF0F172A),
+    tertiary = BrandBlue,
     onTertiary = NeobrutalWhite,
-    background = NeobrutalLightGray,           // Soft light background
-    onBackground = NeobrutalBlack,             // Pure black text (#000000)
-    surface = NeobrutalWhite,                  // #FFFFFF
-    onSurface = NeobrutalBlack,                // Pure black text (#000000)
-    surfaceVariant = NeobrutalLightGray,
-    onSurfaceVariant = Color(0xFF475569),      // Refined slate-600 secondary text
-    outline = Color(0xFFBCD2E8),                  // Subtle surface outlines
-    outlineVariant = Color(0xFFD8E8F6),           // Card outline
+    tertiaryContainer = NeobrutalLightBlueTint,
+    onTertiaryContainer = Color(0xFF0F172A),
+    background = NeobrutalLightGray,
+    onBackground = Color(0xFF0F172A),
+    surface = NeobrutalWhite,
+    onSurface = Color(0xFF0F172A),
+    surfaceVariant = NeobrutalLightBlueTint,
+    onSurfaceVariant = Color(0xFF5B6678),
+    outline = Color(0xFFD6DEE9),
+    outlineVariant = Color(0xFFE6EBF2),
     error = Color(0xFFB42336),
     onError = NeobrutalWhite,
-    errorContainer = Color(0xFFFDE8EB),
-    onErrorContainer = Color(0xFF3B0610),
+    errorContainer = Color(0xFFFBE7EA),
+    onErrorContainer = Color(0xFF4A0A13),
     surfaceContainer = NeobrutalWhite,
-    surfaceContainerHigh = NeobrutalLightGray
+    surfaceContainerHigh = Color(0xFFF1F4F9)
 )
 
 @Composable
 fun GiroCertoTheme(content: @Composable () -> Unit) {
     val mode by AppearancePreferences.mode.collectAsStateWithLifecycle()
-    val dark = when (mode) { ThemeMode.SYSTEM -> isSystemInDarkTheme(); ThemeMode.DARK -> true; ThemeMode.LIGHT -> false }
+    val dark = mode == ThemeMode.DARK
     val activity = androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity
     SideEffect {
         activity?.let {
@@ -88,7 +92,7 @@ fun GiroCertoTheme(content: @Composable () -> Unit) {
         shapes = Shapes(
             small = RoundedCornerShape(AppSpacing.CornerSmall),
             medium = RoundedCornerShape(AppSpacing.CornerCard),
-            large = RoundedCornerShape(16.dp)
+            large = RoundedCornerShape(20.dp)
         ),
         content = content
     )

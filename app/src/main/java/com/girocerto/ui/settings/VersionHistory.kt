@@ -7,9 +7,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.girocerto.app.R
 import com.girocerto.app.theme.AppSpacing
 import com.girocerto.ui.components.AppText as Text
 import com.girocerto.ui.components.NeobrutalCard
@@ -49,6 +51,8 @@ fun VersionHistorySection() {
                 shape = RoundedCornerShape(AppSpacing.CornerButton),
                 border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
             ) {
+                Icon(painterResource(R.drawable.ic_history), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = if (expanded) "Ocultar histórico de versões" else "Histórico de versões",
                     fontWeight = FontWeight.Bold

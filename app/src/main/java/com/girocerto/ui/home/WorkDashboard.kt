@@ -1,8 +1,6 @@
 package com.girocerto.ui.home
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import android.app.DatePickerDialog
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -66,12 +63,16 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
     ) {
         AppText(
             text = "Giro Certo",
-            style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         AppText(
             text = profile?.let { "Olá, ${it.name}. Vamos fechar seu dia?" } ?: "Seu trabalho, suas metas, tudo em um lugar.",
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Start,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -127,13 +128,15 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
                     horizontalAlignment = Alignment.Start
                 ) {
                     AppText(
-                        text = "Comece pela sua moto",
+                        text = "Comece pelo seu veículo",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     AppText(
-                        text = "Responda quatro passos rápidos. O Giro Certo calcula quanto buscar por dia, hora e km.",
+                        text = "Responda cinco passos rápidos. O Giro Certo calcula quanto buscar por dia, hora e km.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -143,7 +146,8 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
                         backgroundColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = RoundedCornerShape(AppSpacing.CornerButton),
-                        text = "Criar meu perfil"
+                        text = "Criar meu perfil",
+                        leadingIcon = { Icon(androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_profile), null, tint = MaterialTheme.colorScheme.onPrimary) }
                     )
                 }
             }
@@ -220,7 +224,16 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
                         backgroundColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = RoundedCornerShape(AppSpacing.CornerButton),
-                        text = if (today == null) "Registrar meu dia" else "Editar meu dia"
+                        text = if (today == null) "Registrar meu dia" else "Editar meu dia",
+                        leadingIcon = {
+                            Icon(
+                                androidx.compose.ui.res.painterResource(
+                                    if (today == null) com.girocerto.app.R.drawable.ic_diary else com.girocerto.app.R.drawable.ic_edit
+                                ),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
                     )
                 }
             }
@@ -249,7 +262,8 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
             borderColor = MaterialTheme.colorScheme.outline,
             borderWidth = AppSpacing.BorderAction,
             shape = RoundedCornerShape(AppSpacing.CornerButton),
-            text = "Ver ofertas analisadas"
+            text = "Ver ofertas analisadas",
+            leadingIcon = { NavigationGlyph(Screen.HISTORY, true) }
         )
 
         if (days.isNotEmpty()) {
@@ -267,6 +281,8 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
                 ) {
                     AppText(
                         text = "Últimos fechamentos",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -293,6 +309,7 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
     val profile by repo.profile.collectAsStateWithLifecycle()
     val days by repo.days.collectAsStateWithLifecycle()
     var selectedDate by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
+    var showCalendar by rememberSaveable { mutableStateOf(false) }
     val viewModel: LedgerViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val loading by repo.loading.collectAsStateWithLifecycle()
     val loadError by repo.loadError.collectAsStateWithLifecycle()
@@ -315,7 +332,7 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
         visited = ArrayList(recent.takeLast(12))
     }
     val date = remember(selectedDate) { LocalDate.parse(selectedDate) }
-    val context = LocalContext.current
+    val recordedDates = remember(days) { days.map { it.date }.toSet() }
 
     LazyColumn(
         modifier = Modifier
@@ -331,60 +348,50 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 AppText(
                     text = "Meus ganhos",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 AppText(
                     text = "Informe o que recebeu em cada app após as taxas da plataforma.",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Start,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 val todayDate = rememberCurrentDay()
-                AppText(
-                    text = date.format(dayFormat),
-                    modifier = Modifier.testTag("diary-selected-date"),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                DiaryDateHeader(date = date, onOpenCalendar = { showCalendar = true })
+                DiaryWeekSelector(
+                    selected = date,
+                    today = todayDate,
+                    recorded = recordedDates,
+                    onSelect = { selectedDate = it.toString() }
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    FilterChip(
-                        selected = date == todayDate,
-                        onClick = { selectedDate = todayDate.toString() },
-                        label = { AppText("Hoje", fontWeight = if (date == todayDate) FontWeight.Bold else FontWeight.Normal) },
-                        shape = RoundedCornerShape(AppSpacing.CornerSmall),
-                        border = BorderStroke(AppSpacing.BorderThin, MaterialTheme.colorScheme.outline)
-                    )
-                    FilterChip(
-                        selected = date == todayDate.minusDays(1),
-                        onClick = { selectedDate = todayDate.minusDays(1).toString() },
-                        label = { AppText("Ontem", fontWeight = if (date == todayDate.minusDays(1)) FontWeight.Bold else FontWeight.Normal) },
-                        shape = RoundedCornerShape(AppSpacing.CornerSmall),
-                        border = BorderStroke(AppSpacing.BorderThin, MaterialTheme.colorScheme.outline)
-                    )
-                    NeobrutalButton(
-                        onClick = {
-                            DatePickerDialog(
-                                context,
-                                { _, y, m, d -> selectedDate = LocalDate.of(y, m + 1, d).toString() },
-                                date.year, date.monthValue - 1, date.dayOfMonth
-                            ).apply { datePicker.maxDate = System.currentTimeMillis() }.show()
-                        },
-                        text = "Calendário",
-                        backgroundColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                        borderWidth = AppSpacing.BorderAction,
-                        shape = RoundedCornerShape(AppSpacing.CornerButton)
+                if (showCalendar) {
+                    DiaryCalendarDialog(
+                        initial = date,
+                        today = todayDate,
+                        recorded = recordedDates,
+                        onSelect = { selectedDate = it.toString(); showCalendar = false },
+                        onDismiss = { showCalendar = false }
                     )
                 }
                 WorkPlatformPicker()
                 loadError?.let {
                     AppText(it, color = MaterialTheme.colorScheme.error)
-                    TextButton(onClick = repo::retryLoad) { AppText("Tentar recuperar") }
+                    TextButton(
+                        onClick = repo::retryLoad,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Icon(
+                            painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_refresh),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        AppText("Tentar recuperar")
+                    }
                 }
                 if (loading || !viewModel.draftsLoaded) {
                     LinearProgressIndicator(
@@ -394,20 +401,29 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
                             .clip(RoundedCornerShape(AppSpacing.CornerSmall))
                     )
                 } else if (profile == null) {
-                    AppText("Cadastre os custos da sua moto antes do primeiro fechamento.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AppText("Cadastre os custos do seu veículo antes do primeiro fechamento.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     NeobrutalButton(
                         onClick = onProfile,
                         text = "Criar perfil",
+                        modifier = Modifier.fillMaxWidth(),
                         backgroundColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = RoundedCornerShape(AppSpacing.CornerButton)
+                        shape = RoundedCornerShape(AppSpacing.CornerButton),
+                        leadingIcon = { NavigationGlyph(Screen.PROFILE, true) }
                     )
                 } else {
                     dayDrafts.SaveableStateProvider(selectedDate) {
                         DayEditor(date, days.firstOrNull { it.date == date }, profile!!, viewModel)
                     }
                 }
-                AppText("Dias registrados", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                AppText(
+                    text = "Dias registrados",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 if (days.isEmpty()) AppText("Seus fechamentos aparecerão aqui.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 profile?.let { WeeklySummary(date, days, it) }
             }
@@ -419,6 +435,13 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
                     .fillMaxWidth()
                     .heightIn(min = AppSpacing.MinTouchTarget)
             ) {
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_calendar),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(8.dp))
                 AppText(day.date.format(dayFormat), Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
                 AppText(Formatters.formatCurrency(day.net), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
@@ -451,11 +474,18 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
     val entries = allEntries.filter { it.platform in visiblePlatforms }
     val draft = WorkDay(
         date, entries, inputNumber(km) ?: -1.0, inputNumber(hours) ?: -1.0,
-        existing?.fixedCost ?: profile.dailyRent, existing?.variablePerKm ?: profile.variablePerKm,
+        existing?.fixedCost ?: profile.dailyFixedCost, existing?.variablePerKm ?: profile.variablePerKm,
         existing?.grossGoal ?: profile.dailyGrossGoal, if (existing != null) existing.weeklyRent else profile.weeklyRent
     )
 
-    AppText("Totais reais do dia", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+    AppText(
+        "Totais reais do dia",
+        modifier = Modifier.fillMaxWidth(),
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface
+    )
     MoneyField("Km rodados no dia", km, { km = it; message = null }, maximum = 2000.0)
     MoneyField("Horas ativas no dia", hours, { hours = it; message = null }, maximum = 24.0)
     AppText("Inclua todos os deslocamentos e a espera. Se dois apps ficaram ligados por 3 horas juntos, o total é 3 horas, não 6.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
@@ -474,14 +504,30 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
                 if (platform !in selectedPlatforms) {
                     AppText("App desmarcado, com valores neste dia. O registro foi preservado.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
+                ) {
                     PlatformIcon(platform)
                     AppText(platform.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 }
                 MoneyField("${platform.label} • recebido (R$)", revenueFields[i], {
                     revenueFields = ArrayList(revenueFields).apply { set(i, it) }; message = null
                 })
-                TextButton(onClick = { expanded = if (expanded == platform.name) null else platform.name }) {
+                TextButton(
+                    onClick = { expanded = if (expanded == platform.name) null else platform.name },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(
+                            if (expanded == platform.name) com.girocerto.app.R.drawable.ic_expand_less
+                            else com.girocerto.app.R.drawable.ic_expand_more
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
                     AppText(if (expanded == platform.name) "Ocultar detalhes" else "Km e horas em ${platform.label}", fontWeight = FontWeight.SemiBold)
                 }
                 if (expanded == platform.name) {
@@ -535,26 +581,49 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
         backgroundColor = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary,
         shape = RoundedCornerShape(AppSpacing.CornerButton),
-        text = if (busy) "Salvando…" else "Salvar fechamento"
+        text = if (busy) "Salvando…" else "Salvar fechamento",
+        leadingIcon = {
+            Icon(
+                painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_check),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimary
+            )
+        }
     )
 
     if (existing != null) {
-        TextButton(
-            onClick = { deletePrompt = true },
-            enabled = !busy,
-            modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
-        ) {
-            AppText("Excluir este dia", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            TextButton(
+                onClick = { deletePrompt = true },
+                enabled = !busy,
+                modifier = Modifier.heightIn(min = AppSpacing.MinTouchTarget)
+            ) {
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_trash),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.width(8.dp))
+                AppText("Excluir este dia", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+            }
         }
     }
 
     if (deletePrompt) {
         AlertDialog(
             onDismissRequest = { deletePrompt = false },
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.medium,
             containerColor = MaterialTheme.colorScheme.surface,
             title = {
-                AppText("Excluir fechamento?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                AppText(
+                    "Excluir fechamento?",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             },
             text = {
                 AppText("Os ganhos registrados em ${date.format(dayFormat)} serão removidos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -565,6 +634,13 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
                     enabled = !busy,
                     shape = RoundedCornerShape(AppSpacing.CornerButton)
                 ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_trash),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(Modifier.width(6.dp))
                     AppText("Excluir", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                 }
             },
@@ -599,7 +675,8 @@ private fun WorkPlatformPicker() {
         borderColor = MaterialTheme.colorScheme.outline,
         borderWidth = AppSpacing.BorderAction,
         shape = RoundedCornerShape(AppSpacing.CornerButton),
-        text = "Meus apps de trabalho • alterar"
+        text = "Meus apps de trabalho • alterar",
+        leadingIcon = { NavigationGlyph(Screen.SETTINGS, true) }
     )
     AppText(
         WorkPlatform.entries.filter { it in selected }.joinToString { it.label },
@@ -610,10 +687,17 @@ private fun WorkPlatformPicker() {
     if (open) {
         AlertDialog(
             onDismissRequest = { if (!saving) open = false },
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.medium,
             containerColor = MaterialTheme.colorScheme.surface,
             title = {
-                AppText("Em quais apps você trabalha?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                AppText(
+                    "Em quais apps você trabalha?",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -655,6 +739,12 @@ private fun WorkPlatformPicker() {
                     },
                     shape = RoundedCornerShape(AppSpacing.CornerButton)
                 ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_check),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
                     AppText(if (saving) "Salvando…" else "Salvar apps", fontWeight = FontWeight.Bold)
                 }
             },
@@ -673,7 +763,11 @@ private fun WorkPlatformPicker() {
 
 @Composable
 private fun WeeklySummary(date: LocalDate, days: List<WorkDay>, profile: ElectricProfile) {
-    val closing = remember(date, days, profile.weeklyRent) { com.girocerto.domain.calculator.WeeklyLedger.calculate(date, days, profile.weeklyRent) }
+    val closing = remember(date, days, profile.weeklyRent, profile.weeklyFixedExpenses) {
+        com.girocerto.domain.calculator.WeeklyLedger.calculate(
+            date, days, profile.weeklyRent, profile.weeklyFixedExpenses
+        )
+    }
     NeobrutalCard(
         modifier = Modifier.fillMaxWidth(),
         backgroundColor = MaterialTheme.colorScheme.surface,
@@ -686,9 +780,19 @@ private fun WeeklySummary(date: LocalDate, days: List<WorkDay>, profile: Electri
             modifier = Modifier.padding(AppSpacing.Content),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            AppText("Semana de ${closing.start.format(dayFormat)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            AppText(
+                "Semana de ${closing.start.format(dayFormat)}",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
             SummaryLine("Recebido registrado", Formatters.formatCurrency(closing.revenue))
             SummaryLine("Contrato semanal", Formatters.formatCurrency(closing.contract))
+            if (closing.fixedExpenses > 0) {
+                SummaryLine("Gastos fixos do veículo", Formatters.formatCurrency(closing.fixedExpenses))
+            }
             SummaryLine("Custos dos km", Formatters.formatCurrency(closing.variableCost))
             SummaryLine("Saldo da semana", Formatters.formatCurrency(closing.net))
             HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))

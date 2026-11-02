@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -17,12 +18,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.girocerto.app.GiroCertoApp
+import com.girocerto.app.R
 import com.girocerto.app.theme.AppSpacing
-import com.girocerto.app.theme.BorderDark
-import com.girocerto.app.theme.PrimaryBlue
-import com.girocerto.app.theme.SurfaceDark
-import com.girocerto.app.theme.TextPrimary
-import com.girocerto.app.theme.TextSecondary
 import com.girocerto.domain.model.ShiftRecord
 import com.girocerto.domain.model.WorkDay
 import com.girocerto.ui.components.AppText
@@ -49,6 +46,7 @@ fun ShiftDialog(
     Dialog(onDismissRequest = onDismiss) {
         NeobrutalCard(
             modifier = Modifier
+                .widthIn(max = 480.dp)
                 .fillMaxWidth()
                 .padding(AppSpacing.Screen),
             backgroundColor = MaterialTheme.colorScheme.surface,
@@ -70,6 +68,8 @@ fun ShiftDialog(
                 ) {
                     AppText(
                         text = if (!isActive) "Registrar Ponto • Início" else "Registrar Ponto • Encerramento",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -85,8 +85,8 @@ fun ShiftDialog(
                 } else {
                     val activeShift = currentShift!!
                     AppText(
-                        text = "Turno em andamento desde às ${activeShift.startTime}" +
-                            (activeShift.startKm?.let { " (odômetro inicial: ${String.format(java.util.Locale.GERMANY, "%.0f km", it)})" } ?: "") +
+                        text = "Turno em andamento desde as ${activeShift.startTime}" +
+                            (activeShift.startKm?.let { " (odômetro inicial: ${String.format(java.util.Locale.forLanguageTag("pt-BR"), "%.0f km", it)})" } ?: "") +
                             ".",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
@@ -139,6 +139,8 @@ fun ShiftDialog(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f)
                     ) {
+                        Icon(painterResource(R.drawable.ic_close), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
                         AppText("Cancelar")
                     }
 
@@ -147,6 +149,9 @@ fun ShiftDialog(
                         modifier = Modifier.weight(1.5f),
                         backgroundColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
+                        leadingIcon = {
+                            Icon(painterResource(R.drawable.ic_check), contentDescription = null, modifier = Modifier.size(18.dp))
+                        },
                         onClick = {
                             val kmValue = kmInput.replace(',', '.').toDoubleOrNull()
                             if (isActive) {
@@ -176,7 +181,7 @@ fun ShiftDialog(
                                                 entries = emptyList(),
                                                 totalKm = totalOdometer ?: 0.0,
                                                 activeHours = duration ?: 0.0,
-                                                fixedCost = profile?.dailyRent ?: 0.0,
+                                                fixedCost = profile?.dailyFixedCost ?: 0.0,
                                                 variablePerKm = profile?.variablePerKm ?: 0.0,
                                                 grossGoal = profile?.dailyGrossGoal ?: 0.0,
                                                 weeklyRent = profile?.weeklyRent
@@ -185,8 +190,8 @@ fun ShiftDialog(
                                         }
                                     }
                                     val msg = "Turno encerrado! " +
-                                        (duration?.let { String.format(java.util.Locale.GERMANY, "%.1fh", it) } ?: "") +
-                                        (totalOdometer?.let { " • " + String.format(java.util.Locale.GERMANY, "%.1f km", it) } ?: "")
+                                        (duration?.let { String.format(java.util.Locale.forLanguageTag("pt-BR"), "%.1fh", it) } ?: "") +
+                                        (totalOdometer?.let { " • " + String.format(java.util.Locale.forLanguageTag("pt-BR"), "%.1f km", it) } ?: "")
                                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                 }
                             } else {

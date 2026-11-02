@@ -1,3 +1,12 @@
+# Giro Certo 1.0.21 — paleta única e superfícies planas
+
+- Uma única cor de marca: azul royal #1D4ED8 no tema claro; #7BA7FF no escuro para manter contraste. Secondary e tertiary espelham a primária — não há mais azul-claro secundário.
+- Superfícies neutras: fundo #F5F7FB / #0B1120, cartões #FFFFFF / #121B2C, contorno de 1dp.
+- Cards e botões sem sombra dura, gradiente ou deslocamento ao pressionar; elevação por contraste tonal.
+- Cantos padronizados: card 16dp, botão 12dp, chip/badge 8dp. Alvos de toque de 48dp preservados.
+- Cores semânticas do semáforo mantidas (verde/amarelo/vermelho) e aplicadas em pílulas suaves.
+- Barra inferior com 4 abas rotuladas; Copiloto acessível pela Home, Histórico e Ajustes.
+
 # Giro Certo 1.0.19
 
 - Primária #0000FF; secundária #1591EA. Variações claras mantêm contraste no tema escuro.

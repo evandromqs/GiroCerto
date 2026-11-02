@@ -7,11 +7,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.girocerto.app.GiroCertoApp
+import com.girocerto.app.R
 import com.girocerto.app.theme.AppSpacing
 import com.girocerto.data.repository.WorkExport
 import com.girocerto.ui.components.AppText as Text
@@ -66,13 +70,15 @@ fun DataExportSection() {
     if (pendingBackup != null) {
         AlertDialog(
             onDismissRequest = { pendingBackup = null },
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.medium,
             containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = MaterialTheme.colorScheme.onSurface,
             textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             title = {
                 Text(
                     text = "Restaurar backup?",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -105,6 +111,8 @@ fun DataExportSection() {
                     shape = RoundedCornerShape(AppSpacing.CornerButton),
                     border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
                 ) {
+                    Icon(painterResource(R.drawable.ic_check), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text("Restaurar", fontWeight = FontWeight.Bold)
                 }
             },
@@ -118,6 +126,8 @@ fun DataExportSection() {
                     shape = RoundedCornerShape(AppSpacing.CornerButton),
                     border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
                 ) {
+                    Icon(painterResource(R.drawable.ic_close), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text("Cancelar")
                 }
             }
@@ -127,8 +137,16 @@ fun DataExportSection() {
     NeobrutalCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(AppSpacing.Content),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                "Dados e backup",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
             TactileButton(
                 onClick = { export.launch("GiroCerto-ganhos.csv") },
                 modifier = Modifier
@@ -141,6 +159,8 @@ fun DataExportSection() {
                 shape = RoundedCornerShape(AppSpacing.CornerButton),
                 border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
             ) {
+                Icon(painterResource(R.drawable.ic_download), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
                 Text("Exportar meus ganhos", fontWeight = FontWeight.Bold)
             }
             TactileButton(
@@ -155,6 +175,8 @@ fun DataExportSection() {
                 shape = RoundedCornerShape(AppSpacing.CornerButton),
                 border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
             ) {
+                Icon(painterResource(R.drawable.ic_download), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
                 Text("Exportar backup completo", fontWeight = FontWeight.Bold)
             }
             TactileButton(
@@ -169,6 +191,8 @@ fun DataExportSection() {
                 shape = RoundedCornerShape(AppSpacing.CornerButton),
                 border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline)
             ) {
+                Icon(painterResource(R.drawable.ic_upload), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
                 Text("Restaurar backup", fontWeight = FontWeight.Bold)
             }
             message?.let {

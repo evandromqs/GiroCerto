@@ -13,9 +13,6 @@ import androidx.compose.ui.unit.sp
 val RobotoFamily: FontFamily = FontFamily.SansSerif
 val Roboto: FontFamily = RobotoFamily
 
-// Backward-compatibility alias during refactoring
-val Poppins: FontFamily = RobotoFamily
-
 private fun roboto(
     size: Int,
     lineHeight: Int,

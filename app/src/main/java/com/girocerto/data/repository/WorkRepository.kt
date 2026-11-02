@@ -77,7 +77,7 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
             }
             val totalKm = (existing?.totalKm ?: 0.0) + distanceKm
             val goal = existing?.grossGoal ?: profile?.dailyGrossGoal ?: 0.0
-            val fixed = existing?.fixedCost ?: profile?.dailyRent ?: 0.0
+            val fixed = existing?.fixedCost ?: profile?.dailyFixedCost ?: 0.0
             val variable = existing?.variablePerKm ?: profile?.variablePerKm ?: 0.0
             val activeHours = existing?.activeHours ?: 0.0
             val updatedDay = WorkDay(
@@ -140,10 +140,18 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
         entries.forEach { (key,value) -> editor.putString(key,value) }
         check(editor.commit()); load()
     } }
-    private fun decodeProfile(j: JSONObject) = ElectricProfile(j.getString("name"), j.getDouble("rent"), j.getDouble("kmCost"),
-        j.getDouble("extra"), j.getInt("days"), j.getDouble("hours"), j.getDouble("km"), j.getDouble("goal")).also { require(it.valid()) }
+    private fun decodeProfile(j: JSONObject) = ElectricProfile(
+        j.getString("name"), j.getDouble("rent"), j.getDouble("kmCost"),
+        j.getDouble("extra"), j.getInt("days"), j.getDouble("hours"), j.getDouble("km"), j.getDouble("goal"),
+        runCatching { VehicleType.valueOf(j.optString("vehicle", VehicleType.ELECTRIC_MOTO.name)) }
+            .getOrDefault(VehicleType.ELECTRIC_MOTO),
+        j.optDouble("fuelPrice", 0.0), j.optDouble("fuelKm", 0.0), j.optDouble("weeklyFixed", 0.0),
+        j.optString("vehicleName", "").take(40)
+    ).also { require(it.valid()) }
     private fun encodeProfile(v: ElectricProfile) = JSONObject().put("name",v.name).put("rent",v.weeklyRent).put("kmCost",v.chargedPerKm)
         .put("extra",v.extraPerKm).put("days",v.workDays).put("hours",v.hoursPerDay).put("km",v.kmPerDay).put("goal",v.weeklyNetGoal)
+        .put("vehicle",v.vehicleType.name).put("fuelPrice",v.fuelPricePerLiter).put("fuelKm",v.fuelConsumptionKmL)
+        .put("weeklyFixed",v.weeklyFixedExpenses).put("vehicleName",v.vehicleName)
     private fun decodeDay(date: LocalDate, j: JSONObject): WorkDay {
         val a = j.getJSONArray("entries")
         val entries = (0 until a.length()).map { i -> val r = a.getJSONObject(i)
