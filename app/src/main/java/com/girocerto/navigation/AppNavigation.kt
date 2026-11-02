@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 
 import android.content.Context
 import com.girocerto.ui.goals.GoalsScreen
@@ -184,6 +185,10 @@ fun AppNavigation() {
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
+                                    androidx.compose.foundation.text.BasicText(
+                                        text = screen.title,
+                                        modifier = Modifier.size(1.dp).alpha(0f)
+                                    )
                                     if (selected) {
                                         androidx.compose.foundation.layout.Box(
                                             modifier = Modifier
