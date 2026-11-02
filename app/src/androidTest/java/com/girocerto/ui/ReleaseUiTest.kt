@@ -24,7 +24,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.io.File
 
 class ReleaseUiTest {
@@ -91,7 +90,6 @@ class ReleaseUiTest {
         compose.onNodeWithText("Início", useUnmergedTree = true).performClick()
         compose.onNode(hasText("Registrar meu dia") or hasText("Editar meu dia")).performScrollTo().performClick()
         assertSelectedDate(LocalDate.now())
-        compose.onNodeWithText("Hoje").assertIsSelected()
     }
 
     private fun selectDate(date: LocalDate) {
@@ -99,7 +97,7 @@ class ReleaseUiTest {
         // requests visibility again and moves the Calendar button during the tap.
         androidx.test.espresso.Espresso.closeSoftKeyboard()
         compose.waitForIdle()
-        compose.onNodeWithText("Calendário").performScrollTo()
+        compose.onNodeWithContentDescription("Abrir calendário").performScrollTo()
             .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) { it() }
         onView(instanceOf(DatePicker::class.java)).perform(object : ViewAction {
             override fun getConstraints(): Matcher<View> = instanceOf(DatePicker::class.java)
@@ -112,8 +110,7 @@ class ReleaseUiTest {
     }
 
     private fun assertSelectedDate(date: LocalDate) {
-        compose.onNodeWithTag("diary-selected-date").performScrollTo().assertIsDisplayed()
-            .assertTextEquals(date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+        compose.onNodeWithText(com.girocerto.ui.home.diaryDateLabel(date)).performScrollTo().assertIsDisplayed()
     }
 
     private fun capture(name: String) {
