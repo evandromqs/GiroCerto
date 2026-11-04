@@ -27,6 +27,10 @@ import com.girocerto.ui.components.AppText as Text
 
 @Composable
 fun AppEntry() {
+    if (com.girocerto.app.RuntimeMode.bypassOnboarding) {
+        AppNavigation()
+        return
+    }
     val app = GiroCertoApp.instance
     val auth by app.auth.state.collectAsStateWithLifecycle()
     val profile by app.workRepository.profile.collectAsStateWithLifecycle()
