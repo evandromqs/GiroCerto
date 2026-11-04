@@ -1,4 +1,4 @@
-> Versão 1.0.19: painel azul com mais espaço, tempo configurável de 15/30s e leitura de janelas de oferta priorizada. [Detalhes](design/README.md).
+> Versão 1.0.23: login Google, onboarding obrigatório, backup em nuvem e detecção ampliada de popups em segundo plano.
 
 > Versão 1.0.18: [novo visual roxo e painel de ofertas recentes](design/README.md). Painel fixo no topo, até três aplicativos, expiração individual em 30 segundos e atalho para abrir a plataforma.
 

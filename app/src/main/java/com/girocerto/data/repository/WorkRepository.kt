@@ -12,6 +12,7 @@ import org.json.JSONObject
 import java.time.LocalDate
 
 class WorkRepository(context: Context, deferLoading: Boolean = false) {
+    private val appContext = context.applicationContext
     private val prefs by lazy { context.getSharedPreferences("work_ledger_v1", Context.MODE_PRIVATE) }
     private val mutex = Mutex()
     private val ready = CompletableDeferred<Unit>()
@@ -93,6 +94,7 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
             val key = "day:${updatedDay.date}"; writable(key)
             check(prefs.edit().putString(key, encodeDay(updatedDay).toString()).commit())
             _days.value = (_days.value.filterNot { it.date == updatedDay.date } + updatedDay).sortedByDescending { it.date }
+            queueCloudBackup()
         }
     }
 
@@ -100,21 +102,25 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
         require(platforms.isNotEmpty()); writable("selected_platforms")
         check(prefs.edit().putStringSet("selected_platforms", platforms.map { it.name }.toSet()).commit())
         _selectedPlatforms.value = platforms.toSet()
+        queueCloudBackup()
     } }
     suspend fun saveProfile(value: ElectricProfile) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
         require(value.valid()); writable("profile")
         check(prefs.edit().putString("profile", encodeProfile(value).toString()).commit())
         _profile.value = value
+        queueCloudBackup()
     } }
     suspend fun saveDay(value: WorkDay) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
         require(value.valid()); val key = "day:${value.date}"; writable(key)
         check(prefs.edit().putString(key, encodeDay(value).toString()).commit())
         _days.value = (_days.value.filterNot { it.date == value.date } + value).sortedByDescending { it.date }
+        queueCloudBackup()
     } }
     suspend fun deleteDay(date: LocalDate) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
         writable("day:$date")
         check(prefs.edit().remove("day:$date").commit())
         _days.value = _days.value.filterNot { it.date == date }
+        queueCloudBackup()
     } }
     suspend fun backup(): String = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
         val records = JSONObject()
@@ -139,7 +145,11 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
         val editor = prefs.edit().putLong("restore_revision", _restoreRevision.value + 1).putStringSet("selected_platforms", platforms.map { it.name }.toSet())
         entries.forEach { (key,value) -> editor.putString(key,value) }
         check(editor.commit()); load()
+        queueCloudBackup()
     } }
+    private fun queueCloudBackup() {
+        runCatching { com.girocerto.data.cloud.CloudBackupManager.enqueueSync(appContext) }
+    }
     private fun decodeProfile(j: JSONObject) = ElectricProfile(
         j.getString("name"), j.getDouble("rent"), j.getDouble("kmCost"),
         j.getDouble("extra"), j.getInt("days"), j.getDouble("hours"), j.getDouble("km"), j.getDouble("goal"),

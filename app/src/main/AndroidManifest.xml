@@ -5,7 +5,7 @@
     <!-- Only release metadata and APK downloads use the network. OCR remains local. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Permissão para exibir a Janela Flutuante com indicadores da análise sob consentimento explícito do usuário -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -55,6 +55,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="girocerto" android:host="auth" android:pathPrefix="/callback" />
             </intent-filter>
         </activity>
 

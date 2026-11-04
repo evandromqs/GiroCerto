@@ -25,6 +25,12 @@ class GiroCertoApp : Application() {
     lateinit var shiftRepository: com.girocerto.data.repository.ShiftRepository
         private set
 
+    lateinit var cloudBackup: com.girocerto.data.cloud.CloudBackupManager
+        private set
+
+    lateinit var auth: com.girocerto.auth.AuthManager
+        private set
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -34,6 +40,9 @@ class GiroCertoApp : Application() {
         rideRepository = RideRepository(this, deferLoading = true)
         shiftRepository = com.girocerto.data.repository.ShiftRepository(this)
         workRepository = com.girocerto.data.repository.WorkRepository(this, deferLoading = true)
+        cloudBackup = com.girocerto.data.cloud.CloudBackupManager(this, workRepository, rideRepository)
+        auth = com.girocerto.auth.AuthManager(this)
+        cloudBackup.schedule()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             workRepository.profile.collectLatest { profile ->
                 profile?.let { settingsRepository.updateSettings(it.vehicleSettings(settingsRepository.settings.value)) }

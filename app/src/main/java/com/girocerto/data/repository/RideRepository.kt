@@ -106,6 +106,7 @@ class RideRepository(
             val updated = listOf(saved) + _rides.value
             persistToFile(updated)
             _rides.value = updated
+            queueCloudBackup()
             saved
         }
     }
@@ -116,6 +117,7 @@ class RideRepository(
             val updated = _rides.value.filterNot { it.id == id }
             persistToFile(updated)
             _rides.value = updated
+            queueCloudBackup()
         }
     }
 
@@ -124,7 +126,33 @@ class RideRepository(
         writeMutex.withLock {
             persistToFile(emptyList())
             _rides.value = emptyList()
+            queueCloudBackup()
         }
+    }
+
+    suspend fun backup(): String = withContext(ioDispatcher) {
+        ready.await()
+        writeMutex.withLock {
+            JSONArray().apply { _rides.value.forEach { put(toJson(it)) } }.toString()
+        }
+    }
+
+    suspend fun restoreBackup(text: String) = withContext(ioDispatcher) {
+        require(text.toByteArray(Charsets.UTF_8).size <= 5_000_000)
+        val array = JSONArray(text)
+        val restored = (0 until array.length()).map { fromJson(array.getJSONObject(it)) }
+            .distinctBy { it.id }
+            .sortedByDescending { it.timestamp }
+        ready.await()
+        writeMutex.withLock {
+            persistToFile(restored)
+            _rides.value = restored
+            queueCloudBackup()
+        }
+    }
+
+    private fun queueCloudBackup() {
+        runCatching { com.girocerto.data.cloud.CloudBackupManager.enqueueSync(context) }
     }
 
     /**

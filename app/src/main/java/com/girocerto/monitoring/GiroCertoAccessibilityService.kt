@@ -104,13 +104,18 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         if (event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
             readHandler.removeCallbacks(scanVisibleWindows)
             readHandler.post(scanVisibleWindows)
-            return
         }
         val packageName = event.packageName?.toString() ?: return
         if (!TARGET_PACKAGES.contains(packageName)) return
         windowOwners.observe(event.windowId, packageName, android.os.SystemClock.elapsedRealtime())
         if (!CopilotPreferences(this).read().monitors(packageName)) {
             reportReader("Monitoramento pausado para $packageName")
+            return
+        }
+        if (event.eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
+            readNotificationOffer(event, packageName)
+            readHandler.removeCallbacks(scanVisibleWindows)
+            readHandler.postDelayed(scanVisibleWindows, 100L)
             return
         }
         if (ocrDelegate.isInitialized() && event.eventType in listOf(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED, AccessibilityEvent.TYPE_WINDOWS_CHANGED)) ocrDelegate.value.invalidate(packageName)
@@ -129,6 +134,37 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 }
             }
             readHandler.postDelayed(retryRead!!, 250)
+        }
+    }
+
+    /**
+     * Driver apps may publish a heads-up notification while Maps, music or another app owns
+     * the foreground. Notification text is attributed to the emitting package and is parsed
+     * without reading unrelated notification content.
+     */
+    private fun readNotificationOffer(event: AccessibilityEvent, packageName: String) {
+        val lines = mutableListOf<String>()
+        lines += event.text.mapNotNull { it?.toString()?.trim()?.takeIf(String::isNotEmpty) }
+        val notification = event.parcelableData as? android.app.Notification
+        notification?.extras?.let { extras ->
+            listOf(
+                android.app.Notification.EXTRA_TITLE,
+                android.app.Notification.EXTRA_TEXT,
+                android.app.Notification.EXTRA_BIG_TEXT,
+                android.app.Notification.EXTRA_SUB_TEXT,
+                android.app.Notification.EXTRA_SUMMARY_TEXT,
+            ).mapNotNullTo(lines) { key -> extras.getCharSequence(key)?.toString()?.trim()?.takeIf(String::isNotEmpty) }
+            extras.getCharSequenceArray(android.app.Notification.EXTRA_TEXT_LINES)
+                ?.mapNotNullTo(lines) { it?.toString()?.trim()?.takeIf(String::isNotEmpty) }
+        }
+        val distinct = lines.distinct().take(24)
+        if (distinct.isEmpty()) return
+        val parsed = AccessibilityOfferReader.parse(distinct, packageName)
+        _readerObservation.value = "$packageName • notificação de oferta • ${distinct.size} textos"
+        if (parsed.isComplete && OfferScreenContext.hasOfferAction(distinct)) {
+            acceptParsedOffer(parsed, packageName)
+        } else {
+            reportReader("${parsed.appName}: popup detectado; aguardando dados completos da oferta")
         }
     }
 

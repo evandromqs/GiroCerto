@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.0.23",
+    "changes": [
+      "Nova entrada protegida com login Google gerenciado pelo Neon Auth.",
+      "Perfil financeiro obrigatório antes do primeiro acesso ao aplicativo.",
+      "Tutorial guiado apresenta análise de ofertas, semáforo e funcionamento offline.",
+      "Guia inicial orienta e valida as permissões de acessibilidade e sobreposição.",
+      "Backup automático em nuvem com código de recuperação, sincronização imediata e restauração pelo aparelho.",
+      "Detecção ampliada para popups e notificações de Uber, 99, iFood, inDrive e Keeta mesmo com outro aplicativo em primeiro plano."
+    ]
+  },
+  {
     "version": "1.0.22",
     "changes": [
       "Wizard do perfil revisado: botão Continuar sempre ativo com validação clara em cada etapa, barra de progresso animada, rótulos mais curtos e o botão Voltar do sistema fecha o teclado antes de retroceder de passo.",

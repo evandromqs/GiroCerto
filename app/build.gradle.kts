@@ -55,9 +55,12 @@ android {
     }
     buildFeatures {
       compose = true
+      buildConfig = true
       aidl = false
-      buildConfig = false
       shaders = false
+    }
+    defaultConfig {
+        buildConfigField("String", "CLOUD_BACKUP_URL", "\"https://br-mute-recipe-be1746pa-backups.compute.c-9.us-east-2.aws.neon.tech/\"")
     }
 
     packaging {
@@ -85,6 +88,7 @@ dependencies {
   // Arch Components
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
+  implementation("androidx.work:work-runtime-ktx:2.11.0")
 
   // Compose
   implementation(libs.androidx.compose.ui)

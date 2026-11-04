@@ -10,7 +10,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,8 +30,14 @@ import kotlinx.coroutines.withContext
 @Composable
 fun DataExportSection() {
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf<String?>(null) }
+    val cloud = GiroCertoApp.instance.cloudBackup
+    val cloudStatus by cloud.status.collectAsState()
+    val recoveryCode = remember { cloud.recoveryCode }
+    var showCloudRestore by remember { mutableStateOf(false) }
+    var cloudCode by remember { mutableStateOf("") }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) scope.launch {
             message = try {
@@ -133,6 +141,37 @@ fun DataExportSection() {
             }
         )
     }
+    if (showCloudRestore) {
+        AlertDialog(
+            onDismissRequest = { showCloudRestore = false },
+            title = { Text("Restaurar da nuvem", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Cole o código de recuperação. Os dados deste aparelho serão substituídos pelo backup vinculado ao código.")
+                    OutlinedTextField(
+                        value = cloudCode,
+                        onValueChange = { cloudCode = it.trim() },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Código de recuperação") },
+                        singleLine = true,
+                    )
+                }
+            },
+            confirmButton = {
+                TactileButton(onClick = {
+                    val code = cloudCode
+                    showCloudRestore = false
+                    scope.launch {
+                        message = cloud.restore(code).fold(
+                            onSuccess = { "Backup em nuvem restaurado." },
+                            onFailure = { "Não foi possível restaurar: código inválido ou backup indisponível." },
+                        )
+                    }
+                }) { Text("Restaurar", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { showCloudRestore = false }) { Text("Cancelar") } },
+        )
+    }
 
     NeobrutalCard(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -195,6 +234,48 @@ fun DataExportSection() {
                 Spacer(Modifier.width(6.dp))
                 Text("Restaurar backup", fontWeight = FontWeight.Bold)
             }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            Text(
+                "Proteção em nuvem",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                cloudStatus,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TactileButton(
+                onClick = {
+                    clipboard.setText(AnnotatedString(recoveryCode))
+                    message = "Código de recuperação copiado. Guarde-o em local seguro."
+                },
+                modifier = Modifier.fillMaxWidth().heightIn(min = AppSpacing.MinTouchTarget),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+                shape = RoundedCornerShape(AppSpacing.CornerButton),
+                border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline),
+            ) {
+                Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Copiar código de recuperação", fontWeight = FontWeight.Bold)
+            }
+            TactileButton(
+                onClick = { scope.launch { message = if (cloud.upload().isSuccess) "Backup em nuvem atualizado." else "Sem conexão; tentaremos novamente automaticamente." } },
+                modifier = Modifier.fillMaxWidth().heightIn(min = AppSpacing.MinTouchTarget),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                shape = RoundedCornerShape(AppSpacing.CornerButton),
+                border = BorderStroke(AppSpacing.BorderAction, MaterialTheme.colorScheme.outline),
+            ) { Text("Sincronizar agora", fontWeight = FontWeight.Bold) }
+            TextButton(onClick = { showCloudRestore = true }) { Text("Restaurar usando código") }
             message?.let {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
