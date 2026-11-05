@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.0.25",
+    "changes": [
+      "Qida removido das plataformas, mantendo somente aplicativos de trabalho confirmados, incluindo Keeta.",
+      "Novo modo de comandos de voz com escuta em primeiro plano e indicador persistente do Android.",
+      "Comando para recusar a oferta atual exige confirmação por voz antes de executar o toque.",
+      "Comando para desconectar Uber, 99, iFood, inDrive ou Keeta abre o aplicativo e procura somente ações seguras de ficar offline.",
+      "Comandos para voltar ao Waze ou abrir o Google Maps diretamente durante o trabalho.",
+      "Backups e rascunhos da versão anterior são migrados sem falhar ao remover a plataforma Qida."
+    ]
+  },
+  {
     "version": "1.0.24",
     "changes": [
       "Cadastro e login com e-mail e senha adicionados pelo Neon Auth, mantendo a opção de continuar com Google.",

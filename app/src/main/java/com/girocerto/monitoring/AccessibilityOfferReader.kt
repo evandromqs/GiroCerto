@@ -344,7 +344,6 @@ object AccessibilityOfferReader {
             packageName.contains("indriver") -> "inDrive"
             packageName.contains("ifood") -> "iFood"
             packageName.contains("keeta") || packageName.contains("meituan") || packageName == "com.sankuai.sailor.courier" -> "Keeta"
-            packageName.contains("qida") -> "Qida"
             packageName.contains("girocerto") -> "Giro Certo (Simulação)"
             else -> {
                 val fullText = lines.joinToString(" ")

@@ -528,6 +528,46 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         return false
     }
 
+    fun clickDisconnectCurrentApp(targetPackage: String = ""): Boolean {
+        val roots = mutableListOf<AccessibilityNodeInfo>()
+        rootInActiveWindow?.let(roots::add)
+        try {
+            windows.sortedByDescending { it.layer }.forEach { window ->
+                val root = window.root ?: return@forEach
+                val pkg = root.packageName?.toString().orEmpty()
+                if (targetPackage.isBlank() || pkg == targetPackage) roots.add(root)
+                else { @Suppress("DEPRECATION") root.recycle() }
+            }
+            for (root in roots) if (findAndClickDisconnectNode(root)) return true
+        } finally {
+            roots.forEach { @Suppress("DEPRECATION") it.recycle() }
+        }
+        return false
+    }
+
+    private fun findAndClickDisconnectNode(node: AccessibilityNodeInfo): Boolean {
+        val text = listOfNotNull(node.text?.toString(), node.contentDescription?.toString())
+            .joinToString(" ").trim()
+        val viewId = node.viewIdResourceName?.lowercase().orEmpty()
+        val matches = Regex("(?i)^(ficar offline|desconectar|parar de receber( corridas| ofertas)?|go offline|stop requests)$")
+            .matches(text) || viewId.contains("go_offline") || viewId.contains("offline_button")
+        if (matches) {
+            var target: AccessibilityNodeInfo? = node
+            while (target != null && !target.isClickable) target = target.parent
+            if (target?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true) return true
+            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+            val bounds = android.graphics.Rect()
+            node.getBoundsInScreen(bounds)
+            if (bounds.width() > 0 && bounds.height() > 0 && dispatchTap(bounds.centerX().toFloat(), bounds.centerY().toFloat())) return true
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try { if (findAndClickDisconnectNode(child)) return true }
+            finally { @Suppress("DEPRECATION") child.recycle() }
+        }
+        return false
+    }
+
     private fun dispatchTap(x: Float, y: Float): Boolean {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
             val path = android.graphics.Path().apply { moveTo(x, y) }
@@ -566,6 +606,11 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         fun requestRejectOffer(targetPackage: String): Boolean =
             serviceInstance?.clickRejectCurrentOffer(targetPackage) ?: false
 
+        fun requestDisconnect(targetPackage: String): Boolean =
+            serviceInstance?.clickDisconnectCurrentApp(targetPackage) ?: false
+
+        fun currentOfferPackage(): String = _lastAnalyzedRide.value?.offer?.sourcePackage.orEmpty()
+
         // Aplicativos suportados para leitura de ofertas
         val TARGET_PACKAGES = setOf(
             // Uber (motorista, moto e entregador)
@@ -585,9 +630,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             // Keeta
             "com.sankuai.meituan.dispatch.driver",
             "com.keeta.driver",
-            "com.sankuai.sailor.courier",
-            // Qida
-            "com.qida.app"
+            "com.sankuai.sailor.courier"
         )
 
         private val _readerObservation = MutableStateFlow("Nenhuma janela de app de trabalho identificada nesta sessão")

@@ -7,11 +7,11 @@ import com.girocerto.overlay.OverlayCorner
 
 data class CopilotPolicy(
     val enabled: Boolean = true,
+    val voiceCommandsEnabled: Boolean = false,
     val uber: Boolean = true,
     val ninetyNine: Boolean = true,
     val ifood: Boolean = true,
     val inDrive: Boolean = true,
-    val qida: Boolean = true,
     val otherApps: Boolean = false,
     val speakGreen: Boolean = true,
     val speakYellow: Boolean = true,
@@ -39,7 +39,6 @@ data class CopilotPolicy(
         packageName == "com.app99.driver" || packageName.contains("taxis99") || packageName.contains("didiglobal") -> ninetyNine
         packageName.contains("ifood") -> ifood
         packageName.contains("indriver") -> inDrive
-        packageName == "com.qida.app" || packageName.contains("qida") -> qida
         else -> otherApps
     }
     fun speaks(status: TrafficLightStatus): Boolean = enabled && when (status) {
@@ -57,11 +56,11 @@ class CopilotPreferences(private val context: Context) {
         val corner = runCatching { OverlayCorner.valueOf(cornerStr) }.getOrDefault(OverlayCorner.TOP_RIGHT)
         return CopilotPolicy(
             enabled = prefs.getBoolean("enabled", true),
+            voiceCommandsEnabled = prefs.getBoolean("voice_commands", false),
             uber = prefs.getBoolean("uber", true),
             ninetyNine = prefs.getBoolean("99", true),
             ifood = prefs.getBoolean("ifood", true),
             inDrive = prefs.getBoolean("indrive", false),
-            qida = prefs.getBoolean("qida", true),
             otherApps = prefs.getBoolean("others", false),
             speakGreen = prefs.getBoolean("green", true),
             speakYellow = prefs.getBoolean("yellow", true),
@@ -78,9 +77,9 @@ class CopilotPreferences(private val context: Context) {
     }
     fun write(policy: CopilotPolicy) {
         prefs.edit().putBoolean("enabled", policy.enabled).putBoolean("uber", policy.uber)
+            .putBoolean("voice_commands", policy.voiceCommandsEnabled)
             .putBoolean("99", policy.ninetyNine).putBoolean("ifood", policy.ifood)
             .putBoolean("indrive", policy.inDrive).putBoolean("others", policy.otherApps)
-            .putBoolean("qida", policy.qida)
             .putBoolean("green", policy.speakGreen)
             .putBoolean("yellow", policy.speakYellow).putBoolean("red", policy.speakRed)
             .putString("minimum_rating", policy.minimumPassengerRating.toString())

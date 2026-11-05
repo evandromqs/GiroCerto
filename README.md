@@ -1,4 +1,4 @@
-> Versão 1.0.24: login Neon por e-mail/senha ou Google, perfil financeiro obrigatório, suporte ao Qida e voz sem repetição da mesma oferta.
+> Versão 1.0.25: comandos de voz confirmados para recusar ofertas, ficar offline e voltar ao Waze ou Google Maps; Qida removido.
 
 > Versão 1.0.18: [novo visual roxo e painel de ofertas recentes](design/README.md). Painel fixo no topo, até três aplicativos, expiração individual em 30 segundos e atalho para abrir a plataforma.
 

@@ -140,8 +140,9 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
             else { require(key.startsWith("day:")); decodeDay(LocalDate.parse(key.removePrefix("day:")), JSONObject(raw)) }
             writable(key); raw
         }
-        val platforms = json.getJSONArray("platforms").let { a -> (0 until a.length()).map { WorkPlatform.valueOf(a.getString(it)) }.toSet() }
-        require(platforms.isNotEmpty())
+        val platforms = json.getJSONArray("platforms").let { a ->
+            (0 until a.length()).mapNotNull { decodePlatform(a.getString(it)) }.toSet()
+        }.ifEmpty { setOf(WorkPlatform.UBER, WorkPlatform.NINETY_NINE, WorkPlatform.IFOOD) }
         val editor = prefs.edit().putLong("restore_revision", _restoreRevision.value + 1).putStringSet("selected_platforms", platforms.map { it.name }.toSet())
         entries.forEach { (key,value) -> editor.putString(key,value) }
         check(editor.commit()); load()
@@ -164,11 +165,12 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
         .put("weeklyFixed",v.weeklyFixedExpenses).put("vehicleName",v.vehicleName)
     private fun decodeDay(date: LocalDate, j: JSONObject): WorkDay {
         val a = j.getJSONArray("entries")
-        val entries = (0 until a.length()).map { i -> val r = a.getJSONObject(i)
-            PlatformWork(WorkPlatform.valueOf(r.getString("app")),r.getDouble("revenue"),r.getDouble("km"),r.getDouble("hours")) }
+        val entries = (0 until a.length()).mapNotNull { i -> val r = a.getJSONObject(i)
+            decodePlatform(r.getString("app"))?.let { PlatformWork(it,r.getDouble("revenue"),r.getDouble("km"),r.getDouble("hours")) } }
         return WorkDay(date, entries,j.getDouble("km"),j.getDouble("hours"),j.getDouble("fixed"),j.getDouble("variable"),j.getDouble("goal"),
             if (j.has("weeklyRent")) j.getDouble("weeklyRent") else null).also { require(it.valid()) }
     }
+    private fun decodePlatform(name: String): WorkPlatform? = if (name == "QIDA") null else WorkPlatform.valueOf(name)
     private fun encodeDay(v: WorkDay): JSONObject {
         val a = JSONArray(); v.entries.forEach { a.put(JSONObject().put("app",it.platform.name).put("revenue",it.revenue).put("km",it.km).put("hours",it.hours)) }
         return JSONObject().put("entries",a).put("km",v.totalKm).put("hours",v.activeHours).put("fixed",v.fixedCost)

@@ -41,6 +41,7 @@ import com.girocerto.ui.components.AppText as Text
 import com.girocerto.ui.components.NeobrutalCard
 import com.girocerto.ui.components.PlatformIcon
 import com.girocerto.ui.components.TactileButton
+import com.girocerto.voice.VoiceCommandService
 
 @Composable
 fun CopilotModal(onDismiss: () -> Unit) {
@@ -111,6 +112,8 @@ fun CopilotScreen(inModal: Boolean = false) {
     val floating by OverlayController.isOverlayActive.collectAsStateWithLifecycle()
     val reader by GiroCertoAccessibilityService.readerStatus.collectAsStateWithLifecycle()
     val observation by GiroCertoAccessibilityService.readerObservation.collectAsStateWithLifecycle()
+    val voiceRunning by VoiceCommandService.running.collectAsStateWithLifecycle()
+    val voiceStatus by VoiceCommandService.status.collectAsStateWithLifecycle()
     var overlayAllowed by remember { mutableStateOf(OverlayController.canDrawOverlays(context)) }
     var readingAllowed by remember { mutableStateOf(GiroCertoAccessibilityService.isAccessibilityEnabled(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -140,6 +143,11 @@ fun CopilotScreen(inModal: Boolean = false) {
 
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         update(policy.copy(notifyOffers = granted))
+    }
+    val microphonePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val next = policy.copy(voiceCommandsEnabled = granted)
+        update(next)
+        if (granted) VoiceCommandService.start(context)
     }
 
     Column(
@@ -183,6 +191,30 @@ fun CopilotScreen(inModal: Boolean = false) {
             modifier = Modifier.fillMaxWidth(),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
+
+        NeobrutalCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(AppSpacing.Content), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PreferenceRow(
+                    label = "Comandos de voz",
+                    checked = policy.voiceCommandsEnabled && voiceRunning,
+                    onCheckedChange = { enabled ->
+                        if (!enabled) {
+                            update(policy.copy(voiceCommandsEnabled = false))
+                            VoiceCommandService.stop(context)
+                        } else if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                            update(policy.copy(voiceCommandsEnabled = true))
+                            VoiceCommandService.start(context)
+                        } else microphonePermission.launch(android.Manifest.permission.RECORD_AUDIO)
+                    }
+                )
+                Text(voiceStatus, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Comandos: “recusar corrida”, “desconectar Uber”, “voltar para o Waze” e “abrir Google Maps”. Recusar e desconectar sempre pedem confirmação.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
 
         // SEÇÃO: Permissões Essenciais
         NeobrutalCard(modifier = Modifier.fillMaxWidth()) {
@@ -308,12 +340,6 @@ fun CopilotScreen(inModal: Boolean = false) {
                     checked = policy.ifood,
                     platform = WorkPlatform.IFOOD,
                     onCheckedChange = { update(policy.copy(ifood = it)) }
-                )
-                PreferenceRow(
-                    label = "Qida",
-                    checked = policy.qida,
-                    platform = WorkPlatform.QIDA,
-                    onCheckedChange = { update(policy.copy(qida = it)) }
                 )
             }
         }

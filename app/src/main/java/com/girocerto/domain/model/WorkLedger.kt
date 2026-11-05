@@ -4,7 +4,7 @@ import java.time.LocalDate
 
 enum class WorkPlatform(val label: String) {
     UBER("Uber"), UBER_EATS("Uber Eats"), IFOOD("iFood"),
-    NINETY_NINE("99"), FOOD_99("99Food"), KEETA("Keeta"), QIDA("Qida");
+    NINETY_NINE("99"), FOOD_99("99Food"), KEETA("Keeta");
 
     companion object {
         fun fromAppName(appName: String): WorkPlatform {
@@ -16,7 +16,6 @@ enum class WorkPlatform(val label: String) {
                 lower.contains("99") || lower.contains("didi") -> NINETY_NINE
                 lower.contains("ifood") -> IFOOD
                 lower.contains("keeta") -> KEETA
-                lower.contains("qida") -> QIDA
                 else -> UBER
             }
         }

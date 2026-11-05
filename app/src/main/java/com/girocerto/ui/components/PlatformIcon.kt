@@ -17,7 +17,6 @@ fun PlatformIcon(platform: WorkPlatform, modifier: Modifier = Modifier) {
         WorkPlatform.NINETY_NINE, WorkPlatform.FOOD_99 -> R.drawable.platform_ninety_nine
         WorkPlatform.IFOOD -> R.drawable.platform_ifood
         WorkPlatform.KEETA -> R.drawable.platform_keeta
-        WorkPlatform.QIDA -> R.drawable.ic_open_app
     }
     Image(painterResource(image), contentDescription = platform.label, modifier = modifier.size(36.dp))
 }

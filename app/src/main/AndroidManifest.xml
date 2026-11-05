@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <!-- Permissão para exibir a Janela Flutuante com indicadores da análise sob consentimento explícito do usuário -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -26,10 +29,14 @@
         <package android:name="com.sankuai.meituan.dispatch.driver" />
         <package android:name="com.keeta.driver" />
         <package android:name="com.sankuai.sailor.courier" />
+        <package android:name="com.waze" />
 
         <!-- Consulta para o serviço de fala nativo (TTS) -->
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
         <!-- Consulta para abertura direta no Google Maps / Street View -->
         <package android:name="com.google.android.apps.maps" />
@@ -73,6 +80,11 @@
         <service
             android:name="com.girocerto.overlay.RideOverlayService"
             android:exported="false" />
+
+        <service
+            android:name="com.girocerto.voice.VoiceCommandService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
         <!-- Serviço de Acessibilidade para leitura em tempo real das ofertas das plataformas -->
         <service

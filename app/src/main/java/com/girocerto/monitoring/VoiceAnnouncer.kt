@@ -87,7 +87,6 @@ class VoiceAnnouncer(private val context: Context) : TextToSpeech.OnInitListener
             "indrive" -> "In drive"
             "ifood" -> "I fud"
             "keeta" -> "Kíta"
-            "qida" -> "Quida"
             else -> appName.ifBlank { "Nova oferta" }
         }
     }

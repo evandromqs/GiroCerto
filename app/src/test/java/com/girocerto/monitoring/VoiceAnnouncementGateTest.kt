@@ -14,7 +14,7 @@ class VoiceAnnouncementGateTest {
 
     @Test fun `identity can be announced after retention expires`() {
         val gate = VoiceAnnouncementGate(retentionMs = 1_000)
-        assertTrue(gate.accepts("qida|15|3|8", 100))
-        assertTrue(gate.accepts("qida|15|3|8", 1_100))
+        assertTrue(gate.accepts("keeta|15|3|8", 100))
+        assertTrue(gate.accepts("keeta|15|3|8", 1_100))
     }
 }
