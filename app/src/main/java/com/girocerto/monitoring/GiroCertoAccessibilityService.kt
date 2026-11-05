@@ -585,7 +585,9 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             // Keeta
             "com.sankuai.meituan.dispatch.driver",
             "com.keeta.driver",
-            "com.sankuai.sailor.courier"
+            "com.sankuai.sailor.courier",
+            // Qida
+            "com.qida.app"
         )
 
         private val _readerObservation = MutableStateFlow("Nenhuma janela de app de trabalho identificada nesta sessão")

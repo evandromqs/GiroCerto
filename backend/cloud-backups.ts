@@ -47,6 +47,51 @@ function credentials(request: Request): { id: string; secretHash: string } | Res
   return { id, secretHash: createHash("sha256").update(secret, "utf8").digest("hex") };
 }
 
+async function createMobileSession(user: { id: string; email?: string; name?: string }) {
+  const token = randomBytes(32).toString("base64url");
+  await pool.query(
+    `insert into mobile_sessions(token_hash,user_id,email,display_name,expires_at)
+     values($1,$2,$3,$4,now()+interval '90 days')`,
+    [hash(token), user.id, user.email ?? "", user.name?.trim() || "Motorista"],
+  );
+  return { token, user: { id: user.id, email: user.email ?? "", name: user.name?.trim() || "Motorista" } };
+}
+
+async function emailAuth(request: Request, action: "sign-up" | "sign-in"): Promise<Response> {
+  const body = await request.json().catch(() => ({})) as { email?: string; password?: string; name?: string };
+  const email = body.email?.trim().toLowerCase() ?? "";
+  const password = body.password ?? "";
+  const name = body.name?.trim() ?? "";
+  if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8 || (action === "sign-up" && name.length < 2)) {
+    return json({ error: "Preencha nome, e-mail válido e senha com pelo menos 8 caracteres" }, 400);
+  }
+  const callbackURL = `${new URL(request.url).origin}/auth/callback`;
+  const authResponse = await fetch(`${authBaseUrl}/${action}/email`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "accept": "application/json",
+      "Origin": new URL(request.url).origin,
+      "Referer": `${new URL(request.url).origin}/`,
+    },
+    body: JSON.stringify(action === "sign-up" ? { email, password, name, callbackURL } : { email, password, callbackURL }),
+  });
+  const result = await authResponse.json().catch(() => ({})) as {
+    user?: { id?: string; email?: string; name?: string };
+    message?: string; code?: string;
+  };
+  if (!authResponse.ok || !result.user?.id) {
+    const fallback = action === "sign-up" ? "Não foi possível criar a conta" : "E-mail ou senha incorretos";
+    const status = authResponse.status >= 400 && authResponse.status < 500 ? authResponse.status : 502;
+    return json({ error: result.message ?? fallback, code: result.code }, status);
+  }
+  return json(await createMobileSession({
+    id: result.user.id,
+    email: result.user.email ?? email,
+    name: result.user.name ?? name,
+  }));
+}
+
 export default async function cloudBackups(request: Request): Promise<Response> {
   schemaReady ??= pool.query(`
     create table if not exists cloud_backups (
@@ -80,6 +125,13 @@ export default async function cloudBackups(request: Request): Promise<Response> 
   await schemaReady;
 
   const url = new URL(request.url);
+  if (request.method === "POST" && url.pathname.endsWith("/auth/email/sign-up")) {
+    return emailAuth(request, "sign-up");
+  }
+
+  if (request.method === "POST" && url.pathname.endsWith("/auth/email/sign-in")) {
+    return emailAuth(request, "sign-in");
+  }
   if (request.method === "GET" && url.pathname.endsWith("/auth/start")) {
     const callbackURL = `${url.origin}/auth/callback`;
     const authResponse = await fetch(`${authBaseUrl}/sign-in/social`, {
@@ -139,13 +191,10 @@ export default async function cloudBackups(request: Request): Promise<Response> 
          returning user_id,email,display_name`, [hash(body.code)],
       );
       if (found.rowCount === 0) { await client.query("rollback"); return json({ error: "Código expirado" }, 401); }
-      const token = randomBytes(32).toString("base64url");
       const user = found.rows[0];
-      await client.query(
-        `insert into mobile_sessions(token_hash,user_id,email,display_name,expires_at)
-         values($1,$2,$3,$4,now()+interval '90 days')`,
-        [hash(token), user.user_id, user.email, user.display_name],
-      );
+      const token = randomBytes(32).toString("base64url");
+      await client.query(`insert into mobile_sessions(token_hash,user_id,email,display_name,expires_at)
+        values($1,$2,$3,$4,now()+interval '90 days')`, [hash(token), user.user_id, user.email, user.display_name]);
       await client.query("commit");
       return json({ token, user: { id: user.user_id, email: user.email, name: user.display_name } });
     } catch (error) { await client.query("rollback"); throw error; }

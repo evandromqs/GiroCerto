@@ -453,11 +453,15 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
 private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProfile, viewModel: LedgerViewModel) {
     val repo = GiroCertoApp.instance.workRepository
     val cached = viewModel.draft(date)
+    val cachedPlatformCount = cached?.let { (it.size - 2).takeIf { fields -> fields >= 0 && fields % 3 == 0 }?.div(3) } ?: 0
+    fun cachedPlatformField(group: Int, index: Int): String? = cached
+        ?.takeIf { index < cachedPlatformCount }
+        ?.getOrNull(2 + group * cachedPlatformCount + index)
     var km by rememberSaveable { mutableStateOf(cached?.get(0) ?: existing?.totalKm?.toString() ?: "") }
     var hours by rememberSaveable { mutableStateOf(cached?.get(1) ?: existing?.activeHours?.toString() ?: "") }
-    var revenueFields by rememberSaveable { mutableStateOf(ArrayList(cached?.subList(2, 8) ?: WorkPlatform.entries.map { p -> existing?.entries?.find { it.platform == p }?.revenue?.toString() ?: "0" })) }
-    var kmFields by rememberSaveable { mutableStateOf(ArrayList(cached?.subList(8, 14) ?: WorkPlatform.entries.map { p -> existing?.entries?.find { it.platform == p }?.km?.toString() ?: "0" })) }
-    var hourFields by rememberSaveable { mutableStateOf(ArrayList(cached?.subList(14, 20) ?: WorkPlatform.entries.map { p -> existing?.entries?.find { it.platform == p }?.hours?.toString() ?: "0" })) }
+    var revenueFields by rememberSaveable { mutableStateOf(ArrayList(WorkPlatform.entries.mapIndexed { i, p -> cachedPlatformField(0, i) ?: existing?.entries?.find { it.platform == p }?.revenue?.toString() ?: "0" })) }
+    var kmFields by rememberSaveable { mutableStateOf(ArrayList(WorkPlatform.entries.mapIndexed { i, p -> cachedPlatformField(1, i) ?: existing?.entries?.find { it.platform == p }?.km?.toString() ?: "0" })) }
+    var hourFields by rememberSaveable { mutableStateOf(ArrayList(WorkPlatform.entries.mapIndexed { i, p -> cachedPlatformField(2, i) ?: existing?.entries?.find { it.platform == p }?.hours?.toString() ?: "0" })) }
 
     LaunchedEffect(km, hours, revenueFields, kmFields, hourFields) {
         viewModel.cacheDraft(date, listOf(km, hours) + revenueFields + kmFields + hourFields)
@@ -568,8 +572,8 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
 
     LaunchedEffect(operation) {
         if (operation.date == date && operation.deleted) {
-            km = ""; hours = ""; revenueFields = ArrayList(List(6) { "0" })
-            kmFields = ArrayList(List(6) { "0" }); hourFields = ArrayList(List(6) { "0" })
+            km = ""; hours = ""; revenueFields = ArrayList(List(WorkPlatform.entries.size) { "0" })
+            kmFields = ArrayList(List(WorkPlatform.entries.size) { "0" }); hourFields = ArrayList(List(WorkPlatform.entries.size) { "0" })
             viewModel.acknowledgeDelete()
         }
     }
@@ -703,7 +707,7 @@ private fun WorkPlatformPicker() {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     AppText("Escolha pelo menos um. Os ganhos já registrados serão preservados. Esta seleção filtra o diário; a leitura de ofertas é configurada no Copiloto.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(8.dp))
-                    val selectablePlatforms = listOf(WorkPlatform.UBER, WorkPlatform.NINETY_NINE, WorkPlatform.IFOOD)
+                    val selectablePlatforms = listOf(WorkPlatform.UBER, WorkPlatform.NINETY_NINE, WorkPlatform.IFOOD, WorkPlatform.KEETA, WorkPlatform.QIDA)
                     selectablePlatforms.forEach { platform ->
                         Row(
                             modifier = Modifier

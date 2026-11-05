@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -42,7 +43,14 @@ fun AppEntry() {
     var permissionsDone by remember { mutableStateOf(onboardingPrefs.getBoolean("permissions_done", false)) }
 
     when {
-        auth.user == null -> LoginScreen(auth.loading, auth.error) { app.auth.startGoogleLogin(context) }
+        auth.user == null -> LoginScreen(
+            loading = auth.loading,
+            error = auth.error,
+            onGoogle = { app.auth.startGoogleLogin(context) },
+            onSignIn = app.auth::signIn,
+            onSignUp = app.auth::signUp,
+            onClearError = app.auth::clearError,
+        )
         loading -> LoadingScreen()
         profile == null || profileOwner != auth.user?.id -> com.girocerto.ui.goals.ElectricProfileScreen(onDone = {
             val owner = auth.user?.id ?: return@ElectricProfileScreen
@@ -63,17 +71,57 @@ fun AppEntry() {
 }
 
 @Composable
-private fun LoginScreen(loading: Boolean, error: String?, onLogin: () -> Unit) {
-    Box(Modifier.fillMaxSize().padding(28.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
+private fun LoginScreen(
+    loading: Boolean,
+    error: String?,
+    onGoogle: () -> Unit,
+    onSignIn: (String, String) -> Unit,
+    onSignUp: (String, String, String) -> Unit,
+    onClearError: () -> Unit,
+) {
+    var createAccount by rememberSaveable { mutableStateOf(false) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    val valid = email.contains('@') && email.substringAfter('@').contains('.') && password.length >= 8 && (!createAccount || name.trim().length >= 2)
+    Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Image(painterResource(R.drawable.ic_girocerto_brand), null, Modifier.size(112.dp))
             Text("Giro Certo", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
             Text("Seus ganhos, custos e ofertas protegidos em um só lugar.", textAlign = TextAlign.Center)
-            Button(onClick = onLogin, enabled = !loading, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp)) {
+            Text(if (createAccount) "Crie sua conta" else "Entre na sua conta", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            if (createAccount) OutlinedTextField(
+                value = name, onValueChange = { name = it.take(60); onClearError() },
+                label = { Text("Nome") }, singleLine = true, enabled = !loading, modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = email, onValueChange = { email = it.take(160); onClearError() },
+                label = { Text("E-mail") }, singleLine = true, enabled = !loading,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = password, onValueChange = { password = it.take(128); onClearError() },
+                label = { Text("Senha") }, singleLine = true, enabled = !loading,
+                visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                trailingIcon = { TextButton(onClick = { passwordVisible = !passwordVisible }) { Text(if (passwordVisible) "Ocultar" else "Mostrar") } },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+                supportingText = { Text("Mínimo de 8 caracteres") }, modifier = Modifier.fillMaxWidth()
+            )
+            Button(
+                onClick = { if (createAccount) onSignUp(name, email, password) else onSignIn(email, password) },
+                enabled = !loading && valid, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp)
+            ) { Text(if (loading) "Aguarde…" else if (createAccount) "Criar conta" else "Entrar", fontWeight = FontWeight.Bold) }
+            TextButton(onClick = { createAccount = !createAccount; onClearError() }, enabled = !loading) {
+                Text(if (createAccount) "Já tenho uma conta" else "Ainda não tenho conta")
+            }
+            HorizontalDivider()
+            Button(onClick = onGoogle, enabled = !loading, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp)) {
                 Text(if (loading) "Abrindo Google…" else "Continuar com Google", fontWeight = FontWeight.Bold)
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
-            Text("Ao continuar, sua conta identifica com segurança o backup em nuvem.", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+            Text("Sua conta é protegida pelo Neon Auth. Depois, você informa somente veículo, custos e metas necessários para avaliar as ofertas.", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
         }
     }
 }

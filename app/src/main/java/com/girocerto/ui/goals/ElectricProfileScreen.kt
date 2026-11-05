@@ -113,7 +113,7 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
     val saved by app.workRepository.profile.collectAsStateWithLifecycle()
     var editing by rememberSaveable { mutableStateOf(false) }
     var step by rememberSaveable { mutableIntStateOf(0) }
-    var name by rememberSaveable { mutableStateOf(saved?.name ?: "") }
+    var name by rememberSaveable { mutableStateOf(saved?.name ?: app.auth.state.value.user?.name.orEmpty()) }
     var vehicleTypeName by rememberSaveable { mutableStateOf((saved?.vehicleType ?: VehicleType.ELECTRIC_MOTO).name) }
     var vehicleLabel by rememberSaveable { mutableStateOf(saved?.vehicleName ?: "") }
     val vehicle = VehicleType.entries.firstOrNull { it.name == vehicleTypeName } ?: VehicleType.ELECTRIC_MOTO

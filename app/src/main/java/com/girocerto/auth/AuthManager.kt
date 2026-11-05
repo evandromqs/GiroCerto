@@ -36,19 +36,44 @@ class AuthManager(context: Context) {
         }
     }
 
+    fun signUp(name: String, email: String, password: String) = emailAuth("sign-up", name, email, password)
+
+    fun signIn(email: String, password: String) = emailAuth("sign-in", "", email, password)
+
+    fun clearError() { _state.value = _state.value.copy(error = null) }
+
+    private fun emailAuth(action: String, name: String, email: String, password: String) {
+        if (_state.value.loading) return
+        _state.value = _state.value.copy(loading = true, error = null)
+        scope.launch {
+            runCatching {
+                val body = JSONObject().put("email", email.trim()).put("password", password)
+                if (action == "sign-up") body.put("name", name.trim())
+                saveSession(JSONObject(request("POST", "auth/email/$action", body.toString())))
+            }.onFailure { error ->
+                _state.value = AuthState(error = error.message?.takeIf { it.isNotBlank() }
+                    ?: if (action == "sign-up") "Não foi possível criar sua conta." else "E-mail ou senha incorretos.")
+            }
+        }
+    }
+
     fun exchange(code: String) {
         _state.value = _state.value.copy(loading = true, error = null)
         scope.launch {
             runCatching {
                 val body = JSONObject().put("code", code).toString()
                 val response = JSONObject(request("POST", "auth/exchange", body))
-                val userJson = response.getJSONObject("user")
-                val user = AuthUser(userJson.getString("id"), userJson.optString("email"), userJson.optString("name", "Motorista"))
-                check(prefs.edit().putString("token", response.getString("token"))
-                    .putString("id", user.id).putString("email", user.email).putString("name", user.name).commit())
-                _state.value = AuthState(user = user)
+                saveSession(response)
             }.onFailure { _state.value = AuthState(error = "O login expirou. Tente novamente.") }
         }
+    }
+
+    private fun saveSession(response: JSONObject) {
+        val userJson = response.getJSONObject("user")
+        val user = AuthUser(userJson.getString("id"), userJson.optString("email"), userJson.optString("name", "Motorista"))
+        check(prefs.edit().putString("token", response.getString("token"))
+            .putString("id", user.id).putString("email", user.email).putString("name", user.name).commit())
+        _state.value = AuthState(user = user)
     }
 
     fun signOut() {

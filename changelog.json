@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.24",
+    "changes": [
+      "Cadastro e login com e-mail e senha adicionados pelo Neon Auth, mantendo a opção de continuar com Google.",
+      "Perfil obrigatório aproveita o nome da conta e coleta veículo, custos, jornada e metas usados na avaliação das ofertas.",
+      "Qida adicionado aos aplicativos acompanhados pelo Copiloto e às plataformas do diário de ganhos.",
+      "Leitura em voz agora anuncia cada oferta somente uma vez, mesmo quando o mesmo popup é reenviado por OCR e acessibilidade.",
+      "Sessão móvel de e-mail validada ponta a ponta com cadastro, entrada e restauração segura no Neon."
+    ]
+  },
+  {
     "version": "1.0.23",
     "changes": [
       "Nova entrada protegida com login Google gerenciado pelo Neon Auth.",

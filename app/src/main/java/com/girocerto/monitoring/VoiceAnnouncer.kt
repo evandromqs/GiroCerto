@@ -19,6 +19,7 @@ class VoiceAnnouncer(private val context: Context) : TextToSpeech.OnInitListener
 
     private var tts: TextToSpeech? = TextToSpeech(context.applicationContext, this)
     private var isInitialized = false
+    private val announcementGate = VoiceAnnouncementGate()
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
@@ -47,6 +48,13 @@ class VoiceAnnouncer(private val context: Context) : TextToSpeech.OnInitListener
         }
 
         if (settings?.isVoiceEnabled == false) return
+
+        val offer = analysis.offer
+        val identity = listOf(
+            offer.sourcePackage, offer.appName, offer.fare, offer.distanceKm,
+            offer.pickupDistanceKm, offer.durationMinutes, offer.pickupAddress, offer.destinationAddress
+        ).joinToString("|")
+        if (!announcementGate.accepts(identity, android.os.SystemClock.elapsedRealtime())) return
 
         // Aplica velocidade de fala configurada pelo motorista (padrão: 1.1x)
         val speechRate = settings?.speechRate ?: 1.1f
@@ -79,6 +87,7 @@ class VoiceAnnouncer(private val context: Context) : TextToSpeech.OnInitListener
             "indrive" -> "In drive"
             "ifood" -> "I fud"
             "keeta" -> "Kíta"
+            "qida" -> "Quida"
             else -> appName.ifBlank { "Nova oferta" }
         }
     }
