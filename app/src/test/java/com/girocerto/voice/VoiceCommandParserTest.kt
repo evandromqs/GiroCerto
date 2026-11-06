@@ -10,6 +10,10 @@ class VoiceCommandParserTest {
     @Test fun `parses disconnect with app`() =
         assertEquals(VoiceCommand.Disconnect(WorkApp.UBER), VoiceCommandParser.parse("Desconectar do Uber"))
 
+    @Test
+    fun `parses disconnect with keeta`() =
+        assertEquals(VoiceCommand.Disconnect(WorkApp.KEETA), VoiceCommandParser.parse("Desconectar do Keeta"))
+
     @Test fun `parses navigation apps`() {
         assertEquals(VoiceCommand.OpenNavigation(Navigator.WAZE), VoiceCommandParser.parse("Voltar para o Waze"))
         assertEquals(VoiceCommand.OpenNavigation(Navigator.GOOGLE_MAPS), VoiceCommandParser.parse("Abrir Google Maps"))

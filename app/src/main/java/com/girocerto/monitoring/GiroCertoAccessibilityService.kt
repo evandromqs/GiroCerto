@@ -627,7 +627,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
             "br.com.ifood.driver",
             // inDrive
             "sinet.startup.indriver",
-            // Keeta
+            // Keeta e rede DiDi/Meituan
             "com.sankuai.meituan.dispatch.driver",
             "com.keeta.driver",
             "com.sankuai.sailor.courier"

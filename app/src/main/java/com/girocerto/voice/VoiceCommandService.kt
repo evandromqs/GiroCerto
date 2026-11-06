@@ -99,9 +99,14 @@ class VoiceCommandService : Service(), RecognitionListener, TextToSpeech.OnInitL
             VoiceCommand.StopListening -> stopVoiceCommands()
             VoiceCommand.Cancel -> speak("Não há comando pendente")
             VoiceCommand.Confirm -> speak("Não há comando para confirmar")
+            VoiceCommand.Help -> speak(helpText())
             VoiceCommand.Unknown -> scheduleListening(400)
         }
     }
+
+    private fun helpText(): String = "Comandos de voz disponíveis: recusar ou aceitar uma oferta, " +
+        "desconectar do app de transporte, abrir Waze ou Google Maps, parar de ouvir, " +
+        "ou pedir ajuda. Quando um comando pede confirmação, diga apenas \"confirmar\" ou \"cancelar\"."
 
     private fun execute(action: PendingAction) {
         when (action) {
@@ -157,7 +162,12 @@ class VoiceCommandService : Service(), RecognitionListener, TextToSpeech.OnInitL
     override fun onError(error: Int) { listening = false; if (_running.value) scheduleListening(if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) 1_500 else 500) }
     override fun onReadyForSpeech(params: Bundle?) = Unit
     override fun onBeginningOfSpeech() = Unit
-    override fun onRmsChanged(rmsdB: Float) = Unit
+    override fun onRmsChanged(rmsdB: Float) {
+        // Detect speech onset: when the signal rises well above the noise floor,
+        // begin capture immediately instead of waiting for the next tick.
+        if (listening || pending != null || rmsdB < -50f) return
+        startListening()
+    }
     override fun onBufferReceived(buffer: ByteArray?) = Unit
     override fun onEndOfSpeech() = Unit
     override fun onPartialResults(partialResults: Bundle?) = Unit

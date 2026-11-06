@@ -7,6 +7,7 @@ sealed interface VoiceCommand {
     data object Confirm : VoiceCommand
     data object Cancel : VoiceCommand
     data object RejectOffer : VoiceCommand
+    data object Help : VoiceCommand
     data class Disconnect(val app: WorkApp?) : VoiceCommand
     data class OpenNavigation(val navigator: Navigator) : VoiceCommand
     data object StopListening : VoiceCommand
@@ -27,6 +28,7 @@ object VoiceCommandParser {
         val text = Normalizer.normalize(raw.lowercase(Locale.forLanguageTag("pt-BR")), Normalizer.Form.NFD)
             .replace(Regex("\\p{M}+"), "").replace(Regex("[^a-z0-9 ]"), " ")
             .replace(Regex("\\s+"), " ").trim()
+        if (text in setOf("ajuda", "ajudar-me", "o que posso falar", "comandos de voz")) return VoiceCommand.Help
         if (text in setOf("confirmar", "confirmo", "sim pode", "pode confirmar")) return VoiceCommand.Confirm
         if (text in setOf("cancelar", "cancela", "nao", "nao confirmar")) return VoiceCommand.Cancel
         if (text.contains("parar comandos") || text.contains("parar de ouvir")) return VoiceCommand.StopListening

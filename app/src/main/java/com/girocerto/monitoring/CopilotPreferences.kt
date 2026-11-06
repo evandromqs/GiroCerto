@@ -12,6 +12,7 @@ data class CopilotPolicy(
     val ninetyNine: Boolean = true,
     val ifood: Boolean = true,
     val inDrive: Boolean = true,
+    val keeta: Boolean = true,
     val otherApps: Boolean = false,
     val speakGreen: Boolean = true,
     val speakYellow: Boolean = true,
@@ -39,6 +40,7 @@ data class CopilotPolicy(
         packageName == "com.app99.driver" || packageName.contains("taxis99") || packageName.contains("didiglobal") -> ninetyNine
         packageName.contains("ifood") -> ifood
         packageName.contains("indriver") -> inDrive
+        packageName.contains("keeta") || packageName.contains("sankuai") || packageName.contains("meituan") -> keeta
         else -> otherApps
     }
     fun speaks(status: TrafficLightStatus): Boolean = enabled && when (status) {
@@ -61,6 +63,7 @@ class CopilotPreferences(private val context: Context) {
             ninetyNine = prefs.getBoolean("99", true),
             ifood = prefs.getBoolean("ifood", true),
             inDrive = prefs.getBoolean("indrive", false),
+            keeta = prefs.getBoolean("keeta", true),
             otherApps = prefs.getBoolean("others", false),
             speakGreen = prefs.getBoolean("green", true),
             speakYellow = prefs.getBoolean("yellow", true),
@@ -79,7 +82,8 @@ class CopilotPreferences(private val context: Context) {
         prefs.edit().putBoolean("enabled", policy.enabled).putBoolean("uber", policy.uber)
             .putBoolean("voice_commands", policy.voiceCommandsEnabled)
             .putBoolean("99", policy.ninetyNine).putBoolean("ifood", policy.ifood)
-            .putBoolean("indrive", policy.inDrive).putBoolean("others", policy.otherApps)
+            .putBoolean("indrive", policy.inDrive).putBoolean("keeta", policy.keeta)
+            .putBoolean("others", policy.otherApps)
             .putBoolean("green", policy.speakGreen)
             .putBoolean("yellow", policy.speakYellow).putBoolean("red", policy.speakRed)
             .putString("minimum_rating", policy.minimumPassengerRating.toString())
