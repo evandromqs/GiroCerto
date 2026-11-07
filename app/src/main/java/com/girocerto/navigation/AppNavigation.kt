@@ -232,7 +232,9 @@ fun AppNavigation() {
                                         tint = tint
                                     )
                                     AnimatedVisibility(
-                                        visible = selected,
+                                        // Keep every destination readable and discoverable; the selected
+                                        // destination is distinguished by the raised colored pill.
+                                        visible = true,
                                         enter = expandHorizontally(
                                             expandFrom = Alignment.Start,
                                             animationSpec = spring(
