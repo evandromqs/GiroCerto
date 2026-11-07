@@ -17,11 +17,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.girocerto.app.GiroCertoApp
 import com.girocerto.app.R
 import com.girocerto.app.theme.AppSpacing
 import com.girocerto.domain.model.ShiftRecord
 import com.girocerto.domain.model.WorkDay
+import com.girocerto.domain.repository.ShiftTrackerRepository
+import com.girocerto.domain.repository.WorkLedgerRepository
 import com.girocerto.ui.components.AppText
 import com.girocerto.ui.components.NeobrutalButton
 import com.girocerto.ui.components.NeobrutalCard
@@ -30,12 +31,12 @@ import java.time.LocalDate
 
 @Composable
 fun ShiftDialog(
+    shiftRepository: ShiftTrackerRepository,
+    workRepository: WorkLedgerRepository,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val shiftRepo = GiroCertoApp.instance.shiftRepository
-    val workRepo = GiroCertoApp.instance.workRepository
-    val currentShift by shiftRepo.currentShift.collectAsStateWithLifecycle()
+    val currentShift by shiftRepository.currentShift.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     val isActive = currentShift?.isActive == true
@@ -160,21 +161,21 @@ fun ShiftDialog(
                                     errorMessage = "O km final não pode ser menor que o inicial (${start.toInt()} km)"
                                     return@NeobrutalButton
                                 }
-                                val finished = shiftRepo.endShift(timeInput.trim(), kmValue)
+                                val finished = shiftRepository.endShift(timeInput.trim(), kmValue)
                                 if (finished != null) {
                                     val duration = finished.durationHours
                                     val totalOdometer = finished.totalOdometerKm
                                     scope.launch {
                                         // Update day record with shift hours/km if available
                                         val today = LocalDate.now()
-                                        val existing = workRepo.days.value.firstOrNull { it.date == today }
-                                        val profile = workRepo.profile.value
+                                        val existing = workRepository.days.value.firstOrNull { it.date == today }
+                                        val profile = workRepository.profile.value
                                         if (existing != null) {
                                             val updated = existing.copy(
                                                 activeHours = duration ?: existing.activeHours,
                                                 totalKm = totalOdometer ?: existing.totalKm
                                             )
-                                            workRepo.saveDay(updated)
+                                            workRepository.saveDay(updated)
                                         } else if (duration != null || totalOdometer != null) {
                                             val day = WorkDay(
                                                 date = today,
@@ -186,7 +187,7 @@ fun ShiftDialog(
                                                 grossGoal = profile?.dailyGrossGoal ?: 0.0,
                                                 weeklyRent = profile?.weeklyRent
                                             )
-                                            workRepo.saveDay(day)
+                                            workRepository.saveDay(day)
                                         }
                                     }
                                     val msg = "Turno encerrado! " +
@@ -195,7 +196,7 @@ fun ShiftDialog(
                                     Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                 }
                             } else {
-                                shiftRepo.startShift(timeInput.trim(), kmValue)
+                                shiftRepository.startShift(timeInput.trim(), kmValue)
                                 Toast.makeText(context, "Turno iniciado às $timeInput!", Toast.LENGTH_SHORT).show()
                             }
                             onDismiss()

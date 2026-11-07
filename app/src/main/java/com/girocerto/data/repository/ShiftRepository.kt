@@ -2,17 +2,18 @@ package com.girocerto.data.repository
 
 import android.content.Context
 import com.girocerto.domain.model.ShiftRecord
+import com.girocerto.domain.repository.ShiftTrackerRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 import java.time.LocalDate
 
-class ShiftRepository(context: Context) {
+class ShiftRepository(context: Context) : ShiftTrackerRepository {
     private val prefs = context.applicationContext.getSharedPreferences("work_shift_prefs", Context.MODE_PRIVATE)
 
     private val _currentShift = MutableStateFlow<ShiftRecord?>(null)
-    val currentShift: StateFlow<ShiftRecord?> = _currentShift.asStateFlow()
+    override val currentShift: StateFlow<ShiftRecord?> = _currentShift.asStateFlow()
 
     init {
         loadShift()
@@ -36,7 +37,7 @@ class ShiftRepository(context: Context) {
         }
     }
 
-    fun startShift(time: String = ShiftRecord.currentTimeString(), km: Double? = null): ShiftRecord {
+    override fun startShift(time: String, km: Double?): ShiftRecord {
         val shift = ShiftRecord(
             date = LocalDate.now(),
             startTime = time,
@@ -47,7 +48,7 @@ class ShiftRepository(context: Context) {
         return shift
     }
 
-    fun endShift(time: String = ShiftRecord.currentTimeString(), km: Double? = null): ShiftRecord? {
+    override fun endShift(time: String, km: Double?): ShiftRecord? {
         val active = _currentShift.value ?: return null
         val finished = active.copy(
             endTime = time,
@@ -58,7 +59,7 @@ class ShiftRepository(context: Context) {
         return finished
     }
 
-    fun resetShift() {
+    override fun resetShift() {
         prefs.edit().remove("active_shift").apply()
         _currentShift.value = null
     }

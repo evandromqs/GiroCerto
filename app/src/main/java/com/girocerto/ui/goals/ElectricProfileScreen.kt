@@ -129,7 +129,14 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
     var goal by rememberSaveable { mutableStateOf(saved?.weeklyNetGoal?.let(::inputValue) ?: "") }
     var error by remember { mutableStateOf<String?>(null) }
     var attempted by rememberSaveable { mutableStateOf(false) }
-    val viewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val viewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = ProfileViewModel.Factory(
+            com.girocerto.domain.usecase.SaveDriverProfile(
+                profiles = app.workRepository,
+                vehicleSettings = app.settingsRepository
+            )
+        )
+    )
     val operation by viewModel.operation.collectAsStateWithLifecycle()
     val busy = operation.busy
     var completed by rememberSaveable { mutableStateOf(0) }

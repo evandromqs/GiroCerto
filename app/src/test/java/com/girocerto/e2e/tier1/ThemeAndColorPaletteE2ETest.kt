@@ -13,17 +13,17 @@ import org.junit.Test
 
 /**
  * Tier 1: Feature Coverage for Requirement R1.
- * Royal blue (#1D4ED8) and light gray (#F5F7FB) palette,
+ * Official navy (#0B1F3A), green (#16C784) and soft gray palette,
  * global light/dark theme switching, and Roboto typography standard.
  */
 class ThemeAndColorPaletteE2ETest {
 
     @Test
     fun testNavyPrimaryColorTokenMatchesSpecification() {
-        // Requirement R1: Primary royal blue must be #1D4ED8
-        val expectedColor = Color(0xFF1D4ED8)
+        // Requirement R1: Official navy must be #0B1F3A
+        val expectedColor = Color(0xFF0B1F3A)
         assertEquals(
-            "Primary navy color must match 0xFF1D4ED8 specified in R1",
+            "Primary navy color must match 0xFF0B1F3A specified in R1",
             expectedColor,
             Navy
         )
@@ -31,10 +31,9 @@ class ThemeAndColorPaletteE2ETest {
 
     @Test
     fun testLightGrayBackgroundTokenMatchesSpecification() {
-        // Requirement R1: Light theme background must be #F5F7FB
-        val expectedLightBackground = Color(0xFFF5F7FB)
+        val expectedLightBackground = Color(0xFFF4F7F6)
         assertEquals(
-            "Light gray background token must match 0xFFF5F7FB",
+            "Light gray background token must match 0xFFF4F7F6",
             expectedLightBackground,
             com.girocerto.app.theme.NeobrutalLightGray
         )

@@ -6,6 +6,7 @@ import com.girocerto.domain.model.DailySummary
 import com.girocerto.domain.model.RideAnalysis
 import com.girocerto.domain.model.RideOffer
 import com.girocerto.domain.model.TrafficLightStatus
+import com.girocerto.domain.repository.RideHistoryRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +27,7 @@ class RideRepository(
     private val context: Context,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     deferLoading: Boolean = false
-) {
+) : RideHistoryRepository {
 
     private val historyFile: File by lazy {
         File(context.filesDir, "girocerto_rides_history.json")
@@ -36,20 +37,20 @@ class RideRepository(
     private val atomicHistory by lazy { AtomicFile(historyFile) }
 
     private val _loadError = MutableStateFlow<String?>(null)
-    val loadError = _loadError.asStateFlow()
+    override val loadError = _loadError.asStateFlow()
 
     private val _rides = MutableStateFlow<List<RideAnalysis>>(emptyList())
-    val rides: StateFlow<List<RideAnalysis>> = _rides.asStateFlow()
+    override val rides: StateFlow<List<RideAnalysis>> = _rides.asStateFlow()
 
     private val ready = CompletableDeferred<Unit>()
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val _loading = MutableStateFlow(true)
-    val loading = _loading.asStateFlow()
+    override val loading = _loading.asStateFlow()
     init {
         if (deferLoading) scope.launch { loadHistory(); _loading.value = false; ready.complete(Unit) }
         else { loadHistory(); _loading.value = false; ready.complete(Unit) }
     }
-    fun retryLoad(): Job = scope.launch { ready.await(); writeMutex.withLock {
+    override fun retryLoad(): Job = scope.launch { ready.await(); writeMutex.withLock {
         _loading.value = true; _loadError.value = null; loadHistory(); _loading.value = false
     } }
 
@@ -93,7 +94,7 @@ class RideRepository(
     }
 
     /** Publish changes only after persistence succeeds; serialize the entire transaction. */
-    suspend fun saveRide(analysis: RideAnalysis): RideAnalysis = withContext(ioDispatcher) {
+    override suspend fun saveRide(analysis: RideAnalysis): RideAnalysis = withContext(ioDispatcher) {
         ready.await()
         writeMutex.withLock {
             val highestId = _rides.value.maxOfOrNull { it.id } ?: 0L
@@ -111,7 +112,7 @@ class RideRepository(
         }
     }
 
-    suspend fun deleteRide(id: Long) = withContext(ioDispatcher) {
+    override suspend fun deleteRide(id: Long) = withContext(ioDispatcher) {
         ready.await()
         writeMutex.withLock {
             val updated = _rides.value.filterNot { it.id == id }
@@ -121,7 +122,7 @@ class RideRepository(
         }
     }
 
-    suspend fun clearHistory() = withContext(ioDispatcher) {
+    override suspend fun clearHistory() = withContext(ioDispatcher) {
         ready.await()
         writeMutex.withLock {
             persistToFile(emptyList())
@@ -130,14 +131,14 @@ class RideRepository(
         }
     }
 
-    suspend fun backup(): String = withContext(ioDispatcher) {
+    override suspend fun backup(): String = withContext(ioDispatcher) {
         ready.await()
         writeMutex.withLock {
             JSONArray().apply { _rides.value.forEach { put(toJson(it)) } }.toString()
         }
     }
 
-    suspend fun restoreBackup(text: String) = withContext(ioDispatcher) {
+    override suspend fun restoreBackup(text: String) = withContext(ioDispatcher) {
         require(text.toByteArray(Charsets.UTF_8).size <= 5_000_000)
         val array = JSONArray(text)
         val restored = (0 until array.length()).map { fromJson(array.getJSONObject(it)) }

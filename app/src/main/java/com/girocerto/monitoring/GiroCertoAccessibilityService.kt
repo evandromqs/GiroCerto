@@ -8,10 +8,7 @@ import android.text.TextUtils
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.girocerto.app.GiroCertoApp
-import com.girocerto.domain.calculator.RideCalculator
-import com.girocerto.domain.calculator.TrafficLightEvaluator
 import com.girocerto.domain.model.RideAnalysis
-import com.girocerto.domain.model.RideOffer
 import com.girocerto.overlay.OverlayController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,11 +29,25 @@ import kotlinx.coroutines.cancel
  * 4. Exibir o card flutuante e emitir alerta de voz em menos de 1 segundo.
  */
 class GiroCertoAccessibilityService : AccessibilityService() {
-
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val savedOffers = mutableMapOf<RideOffer, Long>()
     private val screenshot by lazy { OfferScreenshot(this) }
     private val windowOwners = WindowOwnerHints()
+    private val detector = AccessibilityOfferDetector()
+    private val actions by lazy { AccessibilityActionExecutor(this, windowOwners, TARGET_PACKAGES) }
+    private val analysisCoordinator by lazy {
+        OfferAnalysisCoordinator(
+            context = this,
+            scope = serviceScope,
+            screenshot = screenshot,
+            voice = { voiceAnnouncer },
+            reject = actions::reject,
+            report = ::reportReader,
+            recordFailure = ::recordFailure,
+            publishAnalysis = { _lastAnalyzedRide.value = it },
+            settingsRepository = GiroCertoApp.instance.settingsRepository,
+            rideHistoryRepository = GiroCertoApp.instance.rideRepository
+        )
+    }
     private val ocrDelegate = lazy { OfferOcrReader(this, ::reportReader, ::acceptParsedOffer, windowOwners) }
     private var voiceAnnouncer: VoiceAnnouncer? = null
 
@@ -171,28 +182,10 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     // Some floating windows expose their event source before appearing in getWindows().
     // Use only this event's own package; never retain nodes across asynchronous retries.
     private fun eventRoot(event: AccessibilityEvent, packageName: String): AccessibilityNodeInfo? {
-        return try { findEventRoot(event, packageName) } catch (error: Exception) {
+        return try { detector.eventRoot(event, packageName) } catch (error: Exception) {
             recordFailure("Origem do evento", error)
             null
         }
-    }
-
-    private fun findEventRoot(event: AccessibilityEvent, packageName: String): AccessibilityNodeInfo? {
-        var node = event.source ?: return null
-        if (node.packageName?.toString() != packageName) {
-            @Suppress("DEPRECATION") node.recycle()
-            return null
-        }
-        repeat(32) {
-            val parent = node.parent ?: return node
-            if (parent.packageName?.toString() != packageName) {
-                @Suppress("DEPRECATION") parent.recycle()
-                return node
-            }
-            @Suppress("DEPRECATION") node.recycle()
-            node = parent
-        }
-        return node
     }
 
     private fun readOfferWindow(packageName: String, windowId: Int, sourceRoot: AccessibilityNodeInfo? = null): Boolean {
@@ -225,8 +218,8 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                 return false
             }
             for (root in candidates) {
-                val texts = mutableListOf<String>()
-                if (!collectAllTexts(root, texts, ReadBudget())) {
+                val texts = detector.collectTexts(root)
+                if (texts == null) {
                     reportReader("Janela extensa: leitura parcial descartada; tentando OCR")
                     continue
                 }
@@ -288,294 +281,19 @@ class GiroCertoAccessibilityService : AccessibilityService() {
     }
 
     private fun processOffer(result: OfferReaderResult, packageName: String) {
-        val fare = result.fare ?: return
-        val distanceKm = result.distanceKm ?: return
-        val durationMinutes = CopilotPreferences(this).read().adjustedDuration(result.durationMinutes ?: 0, packageName)
-        val pickupDistance = result.pickupDistanceKm ?: 0.0
-
-        val offer = RideOffer(
-            fare = fare,
-            distanceKm = distanceKm,
-            durationMinutes = durationMinutes,
-            pickupDistanceKm = pickupDistance,
-            appName = result.appName,
-            destinationAddress = result.destination ?: "",
-            pickupAddress = result.pickupAddress ?: "",
-            passengerRating = result.passengerRating,
-            sourcePackage = packageName,
-            addedMinutes = durationMinutes - (result.durationMinutes ?: 0)
-        )
-
-        serviceScope.launch {
-            try {
-                val app = GiroCertoApp.instance
-                val settings = app.settingsRepository.settings.value
-                val policy = CopilotPreferences(this@GiroCertoAccessibilityService).read()
-                if (!policy.monitors(packageName)) return@launch
-
-                // 1. Calcula a rentabilidade e semáforo através das fórmulas financeiras puras
-                val baseAnalysis = RideCalculator.calculate(offer, settings)
-                val calculated = if (durationMinutes > (result.durationMinutes ?: 0))
-                    baseAnalysis.copy(decisionReason = baseAnalysis.decisionReason + " • Tempo inclui margem de 5 min.") else baseAnalysis
-                val finalAnalysis = if (policy.isBelowPreferredRating(offer.passengerRating)) {
-                    calculated.copy(decisionReason = calculated.decisionReason + " • Nota do passageiro abaixo da sua preferência. Você decide.")
-                } else calculated
-
-                _lastAnalyzedRide.value = finalAnalysis
-                if (policy.captureOfferScreenshot) screenshot.capture(offer, packageName)
-
-                // 2. Exibe o card flutuante sobre a tela do aplicativo de transporte
-                val overlayStatus = if (OverlayController.hidden(this@GiroCertoAccessibilityService)) {
-                    "janela ocultada; mostre novamente na tela Copiloto"
-                } else if (!OverlayController.canDrawOverlays(this@GiroCertoAccessibilityService)) {
-                    "falta permissão de sobreposição"
-                } else if (OverlayController.showOverlay(this@GiroCertoAccessibilityService, finalAnalysis)) {
-                    "janela solicitada"
-                } else {
-                    "Android recusou iniciar a janela flutuante"
-                }
-
-                // 3. Anúncio por voz Text-To-Speech (se habilitado)
-                if (policy.speaks(finalAnalysis.trafficLight)) voiceAnnouncer?.speakAnalysis(finalAnalysis)
-                if (policy.notifyOffers) OfferNotifications.publish(this@GiroCertoAccessibilityService, finalAnalysis)
-                if (policy.autoRejectLoss && finalAnalysis.trafficLight == com.girocerto.domain.model.TrafficLightStatus.RED) {
-                    serviceScope.launch {
-                        kotlinx.coroutines.delay(800)
-                        val rejected = clickRejectCurrentOffer(packageName)
-                        if (rejected) {
-                            reportReader("${result.appName}: oferta com prejuízo recusada automaticamente")
-                        }
-                    }
-                }
-                if (policy.autoSave) {
-                    val now = android.os.SystemClock.elapsedRealtime()
-                    savedOffers.entries.removeAll { now - it.value >= 120_000L }
-                    if (!savedOffers.containsKey(offer)) {
-                        // Reserve before suspension so concurrent accessibility events cannot duplicate it.
-                        savedOffers[offer] = now
-                        try { app.rideRepository.saveRide(finalAnalysis) }
-                        catch (error: java.io.IOException) {
-                            savedOffers.remove(offer)
-                            android.widget.Toast.makeText(this@GiroCertoAccessibilityService, "Não foi possível salvar a oferta.", android.widget.Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-
-                reportReader("${result.appName}: ganhos calculados • $overlayStatus")
-            } catch (error: Exception) {
-                recordFailure("Exibição da análise", error)
-                reportReader("Não foi possível exibir esta análise; aguardando nova leitura")
-            }
-        }
-    }
-
-    private class ReadBudget {
-        var nodes = 0
-        val started = android.os.SystemClock.uptimeMillis()
-        fun permits(depth: Int) = ++nodes <= 1024 && depth <= 50 && android.os.SystemClock.uptimeMillis() - started < 300
-    }
-    private fun collectAllTexts(node: AccessibilityNodeInfo, texts: MutableList<String>, budget: ReadBudget, depth: Int = 0): Boolean {
-        if (!budget.permits(depth)) return false
-        val children = mutableListOf<String>()
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            try { if (!collectAllTexts(child, children, budget, depth + 1)) return false }
-            finally { @Suppress("DEPRECATION") child.recycle() }
-        }
-        val childText = children.joinToString(" ")
-        val own = listOfNotNull(node.text?.toString(), node.contentDescription?.toString()).map { it.trim() }.filter { it.isNotBlank() }.distinct()
-        texts.addAll(own.filter { value ->
-            // Do not discard a parent's exclusive fare merely because a child says Aceitar.
-            val tokens = Regex("[\\p{L}\\p{N}$.,]+").findAll(value).map { it.value }.toList()
-            val available = Regex("[\\p{L}\\p{N}$.,]+").findAll(childText).map { it.value }.toList().toMutableList()
-            val fullyRepresented = tokens.isNotEmpty() && tokens.all { available.remove(it) }
-            !fullyRepresented
-        }.map { it.take(500) })
-        texts.addAll(children)
-        return true
+        analysisCoordinator.process(result, packageName)
     }
 
     fun clickAcceptCurrentOffer(targetPackage: String = ""): Boolean {
-        // 1. Tenta janela ativa
-        rootInActiveWindow?.let { root ->
-            try {
-                val pkg = root.packageName?.toString() ?: ""
-                if (targetPackage.isBlank() || pkg == targetPackage || pkg in TARGET_PACKAGES) {
-                    if (findAndClickAcceptNode(root)) return true
-                }
-            } finally {
-                @Suppress("DEPRECATION") root.recycle()
-            }
-        }
-
-        // 2. Tenta janelas visíveis ordenadas com prioridade no pacote alvo
-        val allWindows = try { windows.sortedByDescending { it.layer } } catch (_: Exception) { emptyList() }
-        val prioritized = if (targetPackage.isNotBlank()) {
-            allWindows.sortedByDescending { w ->
-                val root = w.root
-                val pkg = windowOwners.owner(w.id, root?.packageName?.toString(), android.os.SystemClock.elapsedRealtime())
-                @Suppress("DEPRECATION") root?.recycle()
-                pkg == targetPackage
-            }
-        } else allWindows
-
-        for (w in prioritized) {
-            val root = w.root ?: continue
-            try {
-                if (findAndClickAcceptNode(root)) return true
-            } finally {
-                @Suppress("DEPRECATION") root.recycle()
-            }
-        }
-
-        // 3. Fallback final na janela ativa sem filtro restritivo de pacote
-        rootInActiveWindow?.let { root ->
-            try {
-                if (findAndClickAcceptNode(root)) return true
-            } finally {
-                @Suppress("DEPRECATION") root.recycle()
-            }
-        }
-        return false
-    }
-
-    private fun findAndClickAcceptNode(node: AccessibilityNodeInfo): Boolean {
-        val text = listOfNotNull(node.text?.toString(), node.contentDescription?.toString()).joinToString(" ")
-        val viewId = node.viewIdResourceName?.lowercase() ?: ""
-        val matchesAccept = (text.isNotBlank() && Regex("(?i)\\b(aceitar|accept)\\b").containsMatchIn(text)) ||
-            viewId.contains("accept") || viewId.contains("aceitar")
-
-        if (matchesAccept) {
-            // Tenta clicar pelo nó clicável ancestral ou direto
-            var target: AccessibilityNodeInfo? = node
-            while (target != null && !target.isClickable) {
-                target = target.parent
-            }
-            if (target != null && target.isClickable) {
-                if (target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
-            }
-            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
-
-            // Gesto de toque físico nas coordenadas centrais do botão
-            val bounds = android.graphics.Rect()
-            node.getBoundsInScreen(bounds)
-            if (bounds.width() > 0 && bounds.height() > 0) {
-                if (dispatchTap(bounds.centerX().toFloat(), bounds.centerY().toFloat())) return true
-            }
-        }
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            try {
-                if (findAndClickAcceptNode(child)) return true
-            } finally {
-                @Suppress("DEPRECATION") child.recycle()
-            }
-        }
-        return false
+        return actions.accept(targetPackage)
     }
 
     fun clickRejectCurrentOffer(targetPackage: String = ""): Boolean {
-        rootInActiveWindow?.let { root ->
-            try {
-                val pkg = root.packageName?.toString() ?: ""
-                if (targetPackage.isBlank() || pkg == targetPackage || pkg in TARGET_PACKAGES) {
-                    if (findAndClickRejectNode(root)) return true
-                }
-            } finally {
-                @Suppress("DEPRECATION") root.recycle()
-            }
-        }
-        val allWindows = try { windows.sortedByDescending { it.layer } } catch (_: Exception) { emptyList() }
-        for (w in allWindows) {
-            val root = w.root ?: continue
-            try {
-                if (findAndClickRejectNode(root)) return true
-            } finally {
-                @Suppress("DEPRECATION") root.recycle()
-            }
-        }
-        return false
-    }
-
-    private fun findAndClickRejectNode(node: AccessibilityNodeInfo): Boolean {
-        val text = listOfNotNull(node.text?.toString(), node.contentDescription?.toString()).joinToString(" ")
-        val viewId = node.viewIdResourceName?.lowercase() ?: ""
-        val isRejectText = text.isNotBlank() && Regex("(?i)\\b(recusar|rejeitar|descartar|ignorar|fechar|decline|reject|dismiss)\\b").containsMatchIn(text)
-        val isRejectId = viewId.contains("close") || viewId.contains("reject") || viewId.contains("decline") || viewId.contains("dismiss")
-        if (isRejectText || isRejectId) {
-            var target: AccessibilityNodeInfo? = node
-            while (target != null && !target.isClickable) {
-                target = target.parent
-            }
-            if (target != null && target.isClickable) {
-                if (target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
-            }
-            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
-            val bounds = android.graphics.Rect()
-            node.getBoundsInScreen(bounds)
-            if (bounds.width() > 0 && bounds.height() > 0) {
-                if (dispatchTap(bounds.centerX().toFloat(), bounds.centerY().toFloat())) return true
-            }
-        }
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            try {
-                if (findAndClickRejectNode(child)) return true
-            } finally {
-                @Suppress("DEPRECATION") child.recycle()
-            }
-        }
-        return false
+        return actions.reject(targetPackage)
     }
 
     fun clickDisconnectCurrentApp(targetPackage: String = ""): Boolean {
-        val roots = mutableListOf<AccessibilityNodeInfo>()
-        rootInActiveWindow?.let(roots::add)
-        try {
-            windows.sortedByDescending { it.layer }.forEach { window ->
-                val root = window.root ?: return@forEach
-                val pkg = root.packageName?.toString().orEmpty()
-                if (targetPackage.isBlank() || pkg == targetPackage) roots.add(root)
-                else { @Suppress("DEPRECATION") root.recycle() }
-            }
-            for (root in roots) if (findAndClickDisconnectNode(root)) return true
-        } finally {
-            roots.forEach { @Suppress("DEPRECATION") it.recycle() }
-        }
-        return false
-    }
-
-    private fun findAndClickDisconnectNode(node: AccessibilityNodeInfo): Boolean {
-        val text = listOfNotNull(node.text?.toString(), node.contentDescription?.toString())
-            .joinToString(" ").trim()
-        val viewId = node.viewIdResourceName?.lowercase().orEmpty()
-        val matches = Regex("(?i)^(ficar offline|desconectar|parar de receber( corridas| ofertas)?|go offline|stop requests)$")
-            .matches(text) || viewId.contains("go_offline") || viewId.contains("offline_button")
-        if (matches) {
-            var target: AccessibilityNodeInfo? = node
-            while (target != null && !target.isClickable) target = target.parent
-            if (target?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true) return true
-            if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
-            val bounds = android.graphics.Rect()
-            node.getBoundsInScreen(bounds)
-            if (bounds.width() > 0 && bounds.height() > 0 && dispatchTap(bounds.centerX().toFloat(), bounds.centerY().toFloat())) return true
-        }
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            try { if (findAndClickDisconnectNode(child)) return true }
-            finally { @Suppress("DEPRECATION") child.recycle() }
-        }
-        return false
-    }
-
-    private fun dispatchTap(x: Float, y: Float): Boolean {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            val path = android.graphics.Path().apply { moveTo(x, y) }
-            val stroke = android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 80)
-            val gesture = android.accessibilityservice.GestureDescription.Builder().addStroke(stroke).build()
-            return dispatchGesture(gesture, null, null)
-        }
-        return false
+        return actions.disconnect(targetPackage)
     }
 
     override fun onInterrupt() {

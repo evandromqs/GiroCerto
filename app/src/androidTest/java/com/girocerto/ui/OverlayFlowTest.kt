@@ -120,8 +120,25 @@ class OverlayFlowTest {
         awaitBounds("Abrir iFood")
         val panel = awaitBounds("Análise da oferta")
         assertTrue(panel.height() <= compose.activity.resources.displayMetrics.heightPixels * .50 + 2)
-        // Unknown package handling leaves the panel usable (no platform is installed in CI).
-        tap(awaitBounds("Abrir iFood"))
+        // Unknown package handling must not depend on which driver apps happen to
+        // be installed on the physical test device.
+        compose.runOnIdle {
+            val unknown = com.girocerto.domain.model.RideOffer(
+                20.0,
+                5.0,
+                15,
+                appName = "App inexistente",
+                sourcePackage = "com.girocerto.test.notinstalled"
+            )
+            OverlayController.showOverlay(
+                compose.activity,
+                com.girocerto.domain.calculator.RideCalculator.calculate(
+                    unknown,
+                    com.girocerto.domain.model.VehicleSettings()
+                )
+            )
+        }
+        tap(awaitBounds("Abrir App inexistente"))
         awaitBounds("Recolher painel")
         val dir = InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
         if (dir != null) java.io.File(dir, "offer-three-platforms.png").outputStream().use {

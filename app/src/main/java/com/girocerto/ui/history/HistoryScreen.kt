@@ -78,9 +78,11 @@ fun HistoryScreen(
     onNavigateToCopilot: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val rideRepo = GiroCertoApp.instance.rideRepository
-    val rides by rideRepo.rides.collectAsStateWithLifecycle()
-    val loadError by rideRepo.loadError.collectAsStateWithLifecycle()
+    val viewModel: HistoryViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = HistoryViewModel.Factory(GiroCertoApp.instance.rideRepository)
+    )
+    val rides by viewModel.rides.collectAsStateWithLifecycle()
+    val loadError by viewModel.loadError.collectAsStateWithLifecycle()
     var platformFilter by rememberSaveable { mutableStateOf("Todos") }
     var periodFilter by rememberSaveable { mutableStateOf("Todo período") }
     val platforms by produceState(listOf("Todos"), rides) { value = withContext(Dispatchers.Default) { listOf("Todos") + rides.map { it.offer.appName }.distinct().sorted() } }
@@ -92,11 +94,11 @@ fun HistoryScreen(
         else -> 0L
     }
     val filteredRides by produceState(emptyList<RideAnalysis>(), rides, platformFilter, periodStart) {
-        value = withContext(Dispatchers.Default) { rides.filter {
-            (platformFilter == "Todos" || it.offer.appName == platformFilter) && it.timestamp >= periodStart
-        } }
+        value = withContext(Dispatchers.Default) {
+            HistoryFilter.apply(rides, platformFilter.takeUnless { it == "Todos" }, periodStart)
+        }
     }
-    val loading by rideRepo.loading.collectAsStateWithLifecycle()
+    val loading by viewModel.loading.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -121,7 +123,7 @@ fun HistoryScreen(
         loadError?.let { message ->
             AppText(message, modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.error)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                TextButton(onClick = { rideRepo.retryLoad() }) {
+                TextButton(onClick = viewModel::retryLoad) {
                     Icon(
                         painter = androidx.compose.ui.res.painterResource(com.girocerto.app.R.drawable.ic_refresh),
                         contentDescription = null,
@@ -244,7 +246,7 @@ fun HistoryScreen(
             confirmText = "Excluir",
             onConfirm = {
                 scope.launch {
-                    try { rideRepo.deleteRide(ride.id) } catch (error: java.io.IOException) {
+                    try { viewModel.deleteRide(ride.id) } catch (error: java.io.IOException) {
                         snackbarHostState.showSnackbar("Não foi possível alterar o histórico. Tente novamente.")
                         return@launch
                     }
@@ -264,7 +266,7 @@ fun HistoryScreen(
             confirmText = "Limpar Tudo",
             onConfirm = {
                 scope.launch {
-                    try { rideRepo.clearHistory() } catch (error: java.io.IOException) {
+                    try { viewModel.clearHistory() } catch (error: java.io.IOException) {
                         snackbarHostState.showSnackbar("Não foi possível alterar o histórico. Tente novamente.")
                         return@launch
                     }

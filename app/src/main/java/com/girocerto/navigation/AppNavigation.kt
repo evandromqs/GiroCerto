@@ -83,6 +83,7 @@ import com.girocerto.ui.history.HistoryScreen
 @Composable
 fun AppNavigation() {
     val context = LocalContext.current
+    val app = context.applicationContext as com.girocerto.app.GiroCertoApp
     var currentScreen by rememberSaveable { mutableStateOf(Screen.HOME) }
     var navigationHistory by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
     var todayRequest by rememberSaveable { mutableStateOf(0) }
@@ -316,13 +317,19 @@ fun AppNavigation() {
             stateHolder.SaveableStateProvider(screen.name) {
             when (screen) {
                 Screen.HOME -> com.girocerto.ui.home.WorkDashboard(
+                    workRepository = app.workRepository,
+                    shiftRepository = app.shiftRepository,
                     onRecord = { todayRequest++; navigate(Screen.DIARY) },
                     onGoals = { navigate(Screen.GOALS) },
                     onCopilot = { navigate(Screen.COPILOT) },
                     onOffers = { navigate(Screen.HISTORY) },
                     onShift = { showShiftDialog = true }
                 )
-                Screen.DIARY -> com.girocerto.ui.home.WorkDiaryScreen(openTodayRequest = todayRequest, onProfile = { navigate(Screen.GOALS) })
+                Screen.DIARY -> com.girocerto.ui.home.WorkDiaryScreen(
+                    workRepository = app.workRepository,
+                    openTodayRequest = todayRequest,
+                    onProfile = { navigate(Screen.GOALS) }
+                )
                 Screen.HISTORY -> HistoryScreen(
                     onShowOverlay = { handleShowOverlay(it) },
                     onNavigateToCopilot = { navigate(Screen.COPILOT) }
@@ -348,7 +355,11 @@ fun AppNavigation() {
 
     // Modal educativo e transparente para solicitar permissão de sobreposição
     if (showShiftDialog) {
-        com.girocerto.ui.home.ShiftDialog(onDismiss = { showShiftDialog = false })
+        com.girocerto.ui.home.ShiftDialog(
+            shiftRepository = app.shiftRepository,
+            workRepository = app.workRepository,
+            onDismiss = { showShiftDialog = false }
+        )
     }
 
     if (showPermissionRationale) {

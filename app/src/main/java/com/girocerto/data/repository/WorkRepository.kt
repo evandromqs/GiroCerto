@@ -2,6 +2,8 @@ package com.girocerto.data.repository
 
 import android.content.Context
 import com.girocerto.domain.model.*
+import com.girocerto.domain.repository.DriverProfileRepository
+import com.girocerto.domain.repository.WorkLedgerRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -11,7 +13,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
 
-class WorkRepository(context: Context, deferLoading: Boolean = false) {
+class WorkRepository(context: Context, deferLoading: Boolean = false) : WorkLedgerRepository {
     private val appContext = context.applicationContext
     private val prefs by lazy { context.getSharedPreferences("work_ledger_v1", Context.MODE_PRIVATE) }
     private val mutex = Mutex()
@@ -19,22 +21,22 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val damaged = mutableSetOf<String>()
     private val _loading = MutableStateFlow(true)
-    val loading = _loading.asStateFlow()
+    override val loading = _loading.asStateFlow()
     private val _loadError = MutableStateFlow<String?>(null)
-    val loadError = _loadError.asStateFlow()
+    override val loadError = _loadError.asStateFlow()
     private val _selectedPlatforms = MutableStateFlow(setOf(WorkPlatform.UBER, WorkPlatform.NINETY_NINE, WorkPlatform.IFOOD))
-    val selectedPlatforms = _selectedPlatforms.asStateFlow()
+    override val selectedPlatforms = _selectedPlatforms.asStateFlow()
     private val _restoreRevision = MutableStateFlow(0L)
-    val restoreRevision = _restoreRevision.asStateFlow()
+    override val restoreRevision = _restoreRevision.asStateFlow()
     private val _profile = MutableStateFlow<ElectricProfile?>(null)
-    val profile = _profile.asStateFlow()
+    override val profile = _profile.asStateFlow()
     private val _days = MutableStateFlow<List<WorkDay>>(emptyList())
-    val days = _days.asStateFlow()
+    override val days = _days.asStateFlow()
 
     init {
         if (deferLoading) scope.launch { load() } else load()
     }
-    suspend fun awaitLoaded() { ready.await() }
+    override suspend fun awaitLoaded() { ready.await() }
     private fun load() {
         try {
             damaged.clear()
@@ -61,9 +63,9 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
         catch (_: Exception) { damaged.add(key); null }
     }
     private fun writable(key: String) { check("*" !in damaged && key !in damaged) { "Registro protegido para recuperação. Exporte o backup original." } }
-    fun retryLoad() { scope.launch { ready.await(); mutex.withLock { _loading.value = true; load() } } }
+    override fun retryLoad() { scope.launch { ready.await(); mutex.withLock { _loading.value = true; load() } } }
 
-    suspend fun recordAcceptedRide(platform: WorkPlatform, fare: Double, distanceKm: Double) = withContext(Dispatchers.IO) {
+    override suspend fun recordAcceptedRide(platform: WorkPlatform, fare: Double, distanceKm: Double) = withContext(Dispatchers.IO) {
         ready.await(); mutex.withLock {
             val today = LocalDate.now()
             val existing = _days.value.firstOrNull { it.date == today }
@@ -98,38 +100,38 @@ class WorkRepository(context: Context, deferLoading: Boolean = false) {
         }
     }
 
-    suspend fun saveSelectedPlatforms(platforms: Set<WorkPlatform>) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
+    override suspend fun saveSelectedPlatforms(platforms: Set<WorkPlatform>) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
         require(platforms.isNotEmpty()); writable("selected_platforms")
         check(prefs.edit().putStringSet("selected_platforms", platforms.map { it.name }.toSet()).commit())
         _selectedPlatforms.value = platforms.toSet()
         queueCloudBackup()
     } }
-    suspend fun saveProfile(value: ElectricProfile) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
-        require(value.valid()); writable("profile")
-        check(prefs.edit().putString("profile", encodeProfile(value).toString()).commit())
-        _profile.value = value
+    override suspend fun saveProfile(profile: ElectricProfile) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
+        require(profile.valid()); writable("profile")
+        check(prefs.edit().putString("profile", encodeProfile(profile).toString()).commit())
+        _profile.value = profile
         queueCloudBackup()
     } }
-    suspend fun saveDay(value: WorkDay) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
-        require(value.valid()); val key = "day:${value.date}"; writable(key)
-        check(prefs.edit().putString(key, encodeDay(value).toString()).commit())
-        _days.value = (_days.value.filterNot { it.date == value.date } + value).sortedByDescending { it.date }
+    override suspend fun saveDay(day: WorkDay) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
+        require(day.valid()); val key = "day:${day.date}"; writable(key)
+        check(prefs.edit().putString(key, encodeDay(day).toString()).commit())
+        _days.value = (_days.value.filterNot { it.date == day.date } + day).sortedByDescending { it.date }
         queueCloudBackup()
     } }
-    suspend fun deleteDay(date: LocalDate) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
+    override suspend fun deleteDay(date: LocalDate) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
         writable("day:$date")
         check(prefs.edit().remove("day:$date").commit())
         _days.value = _days.value.filterNot { it.date == date }
         queueCloudBackup()
     } }
-    suspend fun backup(): String = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
+    override suspend fun backup(): String = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
         val records = JSONObject()
         prefs.all.filterKeys { it == "profile" || it.startsWith("day:") }.forEach { (k,v) -> records.put(k,v) }
         JSONObject().put("format", "girocerto-ledger").put("version", 1)
             .put("platforms", JSONArray(_selectedPlatforms.value.map { it.name })).put("records", records).toString(2)
     } }
     /** Fully validate before committing. Existing dates are replaced only after UI confirmation. */
-    suspend fun restoreBackup(text: String) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
+    override suspend fun restoreBackup(text: String) = withContext(Dispatchers.IO) { ready.await(); mutex.withLock {
         require(text.length <= 5_000_000)
         val json = JSONObject(text)
         require(json.getString("format") == "girocerto-ledger" && json.getInt("version") == 1)

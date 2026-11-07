@@ -19,9 +19,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.girocerto.app.GiroCertoApp
 import com.girocerto.app.theme.AppSpacing
 import com.girocerto.domain.model.*
+import com.girocerto.domain.repository.ShiftTrackerRepository
+import com.girocerto.domain.repository.WorkLedgerRepository
 import com.girocerto.monitoring.GiroCertoAccessibilityService
 import com.girocerto.navigation.Screen
 import com.girocerto.ui.components.AppText
@@ -42,8 +43,16 @@ import java.time.format.DateTimeFormatter
 private val dayFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
 @Composable
-fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Unit, onOffers: () -> Unit, onShift: () -> Unit = {}) {
-    val repo = GiroCertoApp.instance.workRepository
+fun WorkDashboard(
+    workRepository: WorkLedgerRepository,
+    shiftRepository: ShiftTrackerRepository,
+    onRecord: () -> Unit,
+    onGoals: () -> Unit,
+    onCopilot: () -> Unit,
+    onOffers: () -> Unit,
+    onShift: () -> Unit = {}
+) {
+    val repo = workRepository
     val profile by repo.profile.collectAsStateWithLifecycle()
     val days by repo.days.collectAsStateWithLifecycle()
     val running by GiroCertoAccessibilityService.isServiceRunning.collectAsStateWithLifecycle()
@@ -79,7 +88,7 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
 
         val context = LocalContext.current
         val policy = com.girocerto.monitoring.CopilotPreferences(context).read()
-        val currentShift by GiroCertoApp.instance.shiftRepository.currentShift.collectAsStateWithLifecycle()
+        val currentShift by shiftRepository.currentShift.collectAsStateWithLifecycle()
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -304,13 +313,24 @@ fun WorkDashboard(onRecord: () -> Unit, onGoals: () -> Unit, onCopilot: () -> Un
 }
 
 @Composable
-fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
-    val repo = GiroCertoApp.instance.workRepository
+fun WorkDiaryScreen(
+    workRepository: WorkLedgerRepository,
+    openTodayRequest: Int = 0,
+    onProfile: () -> Unit
+) {
+    val repo = workRepository
     val profile by repo.profile.collectAsStateWithLifecycle()
     val days by repo.days.collectAsStateWithLifecycle()
     var selectedDate by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
     var showCalendar by rememberSaveable { mutableStateOf(false) }
-    val viewModel: LedgerViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val viewModel: LedgerViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = LedgerViewModel.Factory(
+            repository = repo,
+            draftStore = com.girocerto.data.repository.LedgerDraftStore(
+                androidx.compose.ui.platform.LocalContext.current
+            )
+        )
+    )
     val loading by repo.loading.collectAsStateWithLifecycle()
     val loadError by repo.loadError.collectAsStateWithLifecycle()
     val revision by repo.restoreRevision.collectAsStateWithLifecycle()
@@ -377,7 +397,7 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
                         onDismiss = { showCalendar = false }
                     )
                 }
-                WorkPlatformPicker()
+                WorkPlatformPicker(repo)
                 loadError?.let {
                     AppText(it, color = MaterialTheme.colorScheme.error)
                     TextButton(
@@ -413,7 +433,7 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
                     )
                 } else {
                     dayDrafts.SaveableStateProvider(selectedDate) {
-                        DayEditor(date, days.firstOrNull { it.date == date }, profile!!, viewModel)
+                        DayEditor(date, days.firstOrNull { it.date == date }, profile!!, viewModel, repo)
                     }
                 }
                 AppText(
@@ -450,8 +470,13 @@ fun WorkDiaryScreen(openTodayRequest: Int = 0, onProfile: () -> Unit) {
 }
 
 @Composable
-private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProfile, viewModel: LedgerViewModel) {
-    val repo = GiroCertoApp.instance.workRepository
+private fun DayEditor(
+    date: LocalDate,
+    existing: WorkDay?,
+    profile: ElectricProfile,
+    viewModel: LedgerViewModel,
+    repo: WorkLedgerRepository
+) {
     val cached = viewModel.draft(date)
     val cachedPlatformCount = cached?.let { (it.size - 2).takeIf { fields -> fields >= 0 && fields % 3 == 0 }?.div(3) } ?: 0
     fun cachedPlatformField(group: Int, index: Int): String? = cached
@@ -662,8 +687,7 @@ private fun DayEditor(date: LocalDate, existing: WorkDay?, profile: ElectricProf
 }
 
 @Composable
-private fun WorkPlatformPicker() {
-    val repo = GiroCertoApp.instance.workRepository
+private fun WorkPlatformPicker(repo: WorkLedgerRepository) {
     val selected by repo.selectedPlatforms.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf(false) }

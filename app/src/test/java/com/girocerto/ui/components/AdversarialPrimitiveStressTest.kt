@@ -361,13 +361,13 @@ class AdversarialPrimitiveStressTest {
         assertEquals("Escuro", ThemeMode.DARK.label)
 
         // Palette core tokens
-        assertEquals(Color(0xFF1D4ED8), NeobrutalDarkBlue)
-        assertEquals(Color(0xFFF5F7FB), NeobrutalLightGray)
+        assertEquals(Color(0xFF0B1F3A), NeobrutalDarkBlue)
+        assertEquals(Color(0xFFF4F7F6), NeobrutalLightGray)
         assertEquals(Color(0xFF000000), NeobrutalBlack)
         assertEquals(Color(0xFFFFFFFF), NeobrutalWhite)
-        assertEquals(Color(0xFF0B1120), NeobrutalDarkBackground)
-        assertEquals(Color(0xFF121B2C), NeobrutalDarkSurface)
-        assertEquals(Color(0xFFEEF2F7), NeobrutalLightBlueTint)
+        assertEquals(Color(0xFF0B1F3A), NeobrutalDarkBackground)
+        assertEquals(Color(0xFF102A46), NeobrutalDarkSurface)
+        assertEquals(Color(0xFFE8F8F2), NeobrutalLightBlueTint)
 
         // Brand alias
         assertEquals(NeobrutalDarkBlue, Navy)

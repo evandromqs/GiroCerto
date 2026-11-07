@@ -2,10 +2,8 @@ package com.girocerto.overlay
 
 import android.app.Service
 import android.util.Log
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
@@ -23,7 +21,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.girocerto.app.GiroCertoApp
 import com.girocerto.app.MainActivity
-import com.girocerto.domain.calculator.RideCalculator
+import com.girocerto.domain.usecase.AnalyzeRideOffer
 import com.girocerto.domain.model.RideAnalysis
 import com.girocerto.domain.model.RideOffer
 import com.girocerto.domain.model.TrafficLightStatus
@@ -34,7 +32,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancel
 import com.girocerto.monitoring.CopilotPreferences
 import java.util.Locale
-import kotlin.math.abs
 
 /**
  * Serviço de Janela Flutuante (Overlay) do Giro Certo.
@@ -52,7 +49,7 @@ class RideOverlayService : Service() {
         QUICK_MENU
     }
 
-    private var windowManager: WindowManager? = null
+    private lateinit var windowHost: OverlayWindowHost
     private var currentView: View? = null
     private var currentMode: Mode = Mode.BUBBLE
     private var trashTarget: FrameLayout? = null
@@ -68,6 +65,13 @@ class RideOverlayService : Service() {
     private val autoDismissHandler = Handler(Looper.getMainLooper())
     private var currentAnalysis: RideAnalysis? = null
     private val recentOffers = RecentOffers()
+    private val analyzeRideOffer = AnalyzeRideOffer()
+    private val acceptedRideRecorder by lazy {
+        AcceptedRideRecorder(
+            GiroCertoApp.instance.rideRepository,
+            GiroCertoApp.instance.workRepository
+        )
+    }
     private val expiryTick = object : Runnable {
         override fun run() {
             val entries = recentOffers.active(android.os.SystemClock.elapsedRealtime())
@@ -90,7 +94,7 @@ class RideOverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        windowHost = OverlayWindowHost(this)
         val corner = CopilotPreferences(this).read().restingCorner
         dockRight = corner == OverlayCorner.TOP_RIGHT || corner == OverlayCorner.BOTTOM_RIGHT
         posX = if (corner == OverlayCorner.TOP_RIGHT || corner == OverlayCorner.BOTTOM_RIGHT)
@@ -134,7 +138,9 @@ class RideOverlayService : Service() {
                     addedMinutes = intent.getIntExtra("added_minutes", 0)
                 )
                 val settings = GiroCertoApp.instance.settingsRepository.settings.value
-                currentAnalysis = RideCalculator.calculate(offer, settings).copy(decisionReason = reason)
+                currentAnalysis = analyzeRideOffer(offer, settings).let { analysis ->
+                    if (reason.isBlank()) analysis else analysis.copy(decisionReason = reason)
+                }
 
                 if (recentOffers.add(checkNotNull(currentAnalysis), android.os.SystemClock.elapsedRealtime(), if (settings.cardDurationSeconds == 30) 30_000L else 15_000L)) {
                     showOfferCardMode()
@@ -175,7 +181,7 @@ class RideOverlayService : Service() {
         params = layoutParams
 
         try {
-            checkNotNull(windowManager).addView(bubble, layoutParams)
+            windowHost.attach(bubble, layoutParams)
             OverlayController.setOverlayActive(true)
             Log.i("GiroOverlay", "Window attached: " + currentMode.name)
         } catch (error: Exception) {
@@ -186,83 +192,38 @@ class RideOverlayService : Service() {
     }
 
     private fun createBubbleView(): View {
-        val bubble = FrameLayout(this).apply {
-            contentDescription = "Giro Certo. Toque para abrir; arraste até a lixeira para ocultar."
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.parseColor("#2563EB"), Color.parseColor("#1D4ED8"), Color.parseColor("#1E40AF"))).apply {
-                shape = GradientDrawable.OVAL
-                setStroke(dpToPx(2), palette("#C9D5E6"))
+        return BubbleViewFactory(this, ::dpToPx, object : BubbleViewFactory.Callbacks {
+            override fun onClick() {
+                currentAnalysis = recentOffers.active(android.os.SystemClock.elapsedRealtime()).firstOrNull()?.analysis
+                if (currentAnalysis != null) showOfferCardMode() else showQuickMenuMode()
             }
-            elevation = dpToPx(10).toFloat()
-        }
-        bubble.addView(android.widget.ImageView(this).apply {
-            setImageResource(com.girocerto.app.R.drawable.ic_girocerto_brand)
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, FrameLayout.LayoutParams((dpToPx(96) * .72f).toInt(), (dpToPx(96) * .72f).toInt(), Gravity.CENTER))
-        bubble.setOnClickListener {
-            currentAnalysis = recentOffers.active(android.os.SystemClock.elapsedRealtime()).firstOrNull()?.analysis
-            currentAnalysis?.let { analysis ->
-                showOfferCardMode()
-            } ?: showQuickMenuMode()
-        }
-        bubble.setOnTouchListener(object : View.OnTouchListener {
-            private var initialX = 0
-            private var initialY = 0
-            private var touchX = 0f
-            private var touchY = 0f
-            private var dragging = false
-            private val slop = android.view.ViewConfiguration.get(this@RideOverlayService).scaledTouchSlop
-            override fun onTouch(view: View, event: MotionEvent): Boolean {
-                val layout = params ?: return false
-                when (event.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> {
-                        initialX = layout.x; initialY = layout.y
-                        touchX = event.rawX; touchY = event.rawY; dragging = false
-                        return true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        val dx = event.rawX - touchX
-                        val dy = event.rawY - touchY
-                        if (!dragging && (abs(dx) > slop || abs(dy) > slop)) {
-                            dragging = true; showTrashTarget()
-                        }
-                        if (dragging) {
-                            layout.x = (initialX + dx.toInt()).coerceIn(0, (resources.displayMetrics.widthPixels - view.width).coerceAtLeast(0))
-                            layout.y = (initialY + dy.toInt()).coerceIn(0, (resources.displayMetrics.heightPixels - view.height).coerceAtLeast(0))
-                            runCatching { windowManager?.updateViewLayout(view, layout) }
-                            updateTrashHover(isOverTrash(view))
-                            view.alpha = if (trashHovered) .65f else 1f
-                        }
-                        return true
-                    }
-                    MotionEvent.ACTION_UP -> {
-                        val remove = dragging && isOverTrash(view)
-                        hideTrashTarget(); view.alpha = 1f
-                        if (remove) {
-                            posX = initialX; posY = initialY
-                            OverlayController.hideByUser(this@RideOverlayService)
-                            Toast.makeText(this@RideOverlayService, "Janela ocultada. Para voltar, abra Copiloto.", Toast.LENGTH_SHORT).show()
-                        } else if (dragging) {
-                            val edge = dpToPx(12)
-                            dockRight = layout.x + view.width / 2 >= resources.displayMetrics.widthPixels / 2
-                            layout.x = if (!dockRight) edge
-                                else (resources.displayMetrics.widthPixels - view.width - edge).coerceAtLeast(0)
-                            posX = layout.x; posY = layout.y
-                            runCatching { windowManager?.updateViewLayout(view, layout) }
-                        } else view.performClick()
-                        return true
-                    }
-                    MotionEvent.ACTION_CANCEL -> {
-                        hideTrashTarget(); view.alpha = 1f
-                        layout.x = initialX; layout.y = initialY
-                        runCatching { windowManager?.updateViewLayout(view, layout) }
-                        return true
-                    }
+            override fun layoutParams() = params
+            override fun onDragStarted() = showTrashTarget()
+            override fun onDrag(view: View, layout: WindowManager.LayoutParams) {
+                layout.x = layout.x.coerceIn(0, (resources.displayMetrics.widthPixels - view.width).coerceAtLeast(0))
+                layout.y = layout.y.coerceIn(0, (resources.displayMetrics.heightPixels - view.height).coerceAtLeast(0))
+                runCatching { windowHost.update(view, layout) }
+                updateTrashHover(isOverTrash(view)); view.alpha = if (trashHovered) .65f else 1f
+            }
+            override fun onDrop(view: View, layout: WindowManager.LayoutParams, initialX: Int, initialY: Int) {
+                val remove = isOverTrash(view); hideTrashTarget(); view.alpha = 1f
+                if (remove) {
+                    posX = initialX; posY = initialY
+                    OverlayController.hideByUser(this@RideOverlayService)
+                    Toast.makeText(this@RideOverlayService, "Janela ocultada. Para voltar, abra Copiloto.", Toast.LENGTH_SHORT).show()
+                } else {
+                    val edge = dpToPx(12)
+                    dockRight = layout.x + view.width / 2 >= resources.displayMetrics.widthPixels / 2
+                    layout.x = if (!dockRight) edge else (resources.displayMetrics.widthPixels - view.width - edge).coerceAtLeast(0)
+                    posX = layout.x; posY = layout.y
+                    runCatching { windowHost.update(view, layout) }
                 }
-                return false
             }
-        })
-        return bubble
+            override fun onDragCancelled(view: View, layout: WindowManager.LayoutParams, initialX: Int, initialY: Int) {
+                hideTrashTarget(); view.alpha = 1f; layout.x = initialX; layout.y = initialY
+                runCatching { windowHost.update(view, layout) }
+            }
+        }).create()
     }
 
     private fun showTrashTarget() {
@@ -289,15 +250,14 @@ class RideOverlayService : Service() {
             setTextColor(Color.WHITE)
             background = GradientDrawable().apply { setColor(palette("#102746")); cornerRadius = dpToPx(8).toFloat() }
         }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dpToPx(32), Gravity.BOTTOM))
-        val bottomInset = if (Build.VERSION.SDK_INT >= 30) windowManager?.currentWindowMetrics?.windowInsets
-            ?.getInsetsIgnoringVisibility(android.view.WindowInsets.Type.navigationBars())?.bottom ?: 0 else dpToPx(24)
+        val bottomInset = windowHost.navigationBarInset(dpToPx(24))
         val layout = getWindowLayoutParams(dpToPx(144), dpToPx(112), 0, 0).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             x = 0; y = bottomInset + dpToPx(16)
             // Keep this short-lived target discoverable by accessibility during the drag.
             // The pointer remains captured by the bubble until ACTION_UP.
         }
-        try { windowManager?.addView(target, layout); trashTarget = target }
+        try { windowHost.attach(target, layout); trashTarget = target }
         catch (_: Exception) { trashTarget = null }
     }
 
@@ -320,7 +280,7 @@ class RideOverlayService : Service() {
     }
 
     private fun hideTrashTarget() {
-        trashTarget?.let { runCatching { windowManager?.removeView(it) } }
+        trashTarget?.let { runCatching { windowHost.remove(it) } }
         trashTarget = null; trashHovered = false
     }
 
@@ -369,7 +329,7 @@ class RideOverlayService : Service() {
         params = layoutParams
 
         try {
-            checkNotNull(windowManager).addView(card, layoutParams)
+            windowHost.attach(card, layoutParams)
             OverlayController.setOverlayActive(true)
             Log.i("GiroOverlay", "Window attached: " + currentMode.name)
         } catch (error: Exception) {
@@ -588,7 +548,7 @@ class RideOverlayService : Service() {
         params = layoutParams
 
         try {
-            checkNotNull(windowManager).addView(card, layoutParams)
+            windowHost.attach(card, layoutParams)
             OverlayController.setOverlayActive(true)
             Log.i("GiroOverlay", "Window attached: " + currentMode.name)
         } catch (error: Exception) {
@@ -604,9 +564,9 @@ class RideOverlayService : Service() {
     }
 
     private fun panelTop(): Int {
-        val inset = if (Build.VERSION.SDK_INT >= 30) windowManager?.currentWindowMetrics?.windowInsets
-            ?.getInsetsIgnoringVisibility(android.view.WindowInsets.Type.statusBars() or android.view.WindowInsets.Type.displayCutout())?.top ?: 0
-        else resources.getIdentifier("status_bar_height", "dimen", "android").let { if (it > 0) resources.getDimensionPixelSize(it) else dpToPx(24) }
+        val fallback = resources.getIdentifier("status_bar_height", "dimen", "android")
+            .let { if (it > 0) resources.getDimensionPixelSize(it) else dpToPx(24) }
+        val inset = windowHost.topSystemInset(fallback)
         return inset + dpToPx(8)
     }
 
@@ -807,9 +767,7 @@ class RideOverlayService : Service() {
         autoDismissHandler.postDelayed(clickRunnable, 250)
         // 3. Salva a corrida no histórico e registra no fechamento diário
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            com.girocerto.app.GiroCertoApp.instance.rideRepository.saveRide(analysis)
-            val platform = com.girocerto.domain.model.WorkPlatform.fromAppName(offer.appName)
-            com.girocerto.app.GiroCertoApp.instance.workRepository.recordAcceptedRide(platform, offer.fare, analysis.totalDistanceKm)
+            acceptedRideRecorder.record(analysis)
         }
         Toast.makeText(this, "Aceitando corrida...", Toast.LENGTH_SHORT).show()
         switchToBubble()
@@ -891,7 +849,7 @@ class RideOverlayService : Service() {
                             currentView?.let { root ->
                                 currentParams.x = currentParams.x.coerceIn(0, (resources.displayMetrics.widthPixels - root.width).coerceAtLeast(0))
                                 currentParams.y = currentParams.y.coerceIn(0, (resources.displayMetrics.heightPixels - root.height).coerceAtLeast(0))
-                                windowManager?.updateViewLayout(root, currentParams)
+                                windowHost.update(root, currentParams)
                             }
                         } catch (_: Exception) {}
                         return true
@@ -903,32 +861,14 @@ class RideOverlayService : Service() {
     }
 
     private fun getWindowLayoutParams(width: Int, height: Int, x: Int, y: Int): WindowManager.LayoutParams {
-        val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
-        return WindowManager.LayoutParams(
-            width,
-            height,
-            layoutType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            this.x = x.coerceIn(0, (resources.displayMetrics.widthPixels - width.coerceAtLeast(bubbleSize())).coerceAtLeast(0))
-            this.y = y.coerceIn(0, (resources.displayMetrics.heightPixels - dpToPx(180)).coerceAtLeast(0))
-        }
+        return windowHost.layoutParams(width, height, x, y, bubbleSize(), dpToPx(180))
     }
 
     private fun removeCurrentViewOnly() {
         hideTrashTarget()
         if (currentView != null) {
             try {
-                windowManager?.removeView(currentView)
+                currentView?.let(windowHost::remove)
             } catch (_: Exception) {}
             currentView = null
         }

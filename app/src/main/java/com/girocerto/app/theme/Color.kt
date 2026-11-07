@@ -6,24 +6,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
 // ============================================================================
-// Single brand color. Light and dark modes use the same hue family; the dark
-// tone is a lighter step so it keeps contrast on dark surfaces.
+// Official Giro Certo palette: navy for trust/control, green for positive
+// action and white for maximum legibility in a moving vehicle.
 // ============================================================================
-val BrandBlue = Color(0xFF1D4ED8)
-val BrandBlueDark = Color(0xFF7BA7FF)
-val BrandBluePressed = Color(0xFF1E40AF)
+val BrandNavy = Color(0xFF0B1F3A)
+val BrandGreen = Color(0xFF16C784)
+val BrandGreenPressed = Color(0xFF0FA66E)
+
+// Compatibility aliases while call sites migrate to semantic names.
+val BrandBlue = BrandGreen
+val BrandBlueDark = Color(0xFF5EE6B2)
+val BrandBluePressed = BrandGreenPressed
 
 // Legacy token names kept for call-site compatibility.
-val NeobrutalDarkBlue = BrandBlue
-val NeobrutalLightGray = Color(0xFFF5F7FB)
+val NeobrutalDarkBlue = BrandNavy
+val NeobrutalLightGray = Color(0xFFF4F7F6)
 val NeobrutalBlack = Color(0xFF000000)
 val NeobrutalWhite = Color(0xFFFFFFFF)
-val NeobrutalDarkBackground = Color(0xFF0B1120)
-val NeobrutalDarkSurface = Color(0xFF121B2C)
-val NeobrutalLightBlueTint = Color(0xFFEEF2F7)
+val NeobrutalDarkBackground = BrandNavy
+val NeobrutalDarkSurface = Color(0xFF102A46)
+val NeobrutalLightBlueTint = Color(0xFFE8F8F2)
 
 // Brand alias
-val Navy = BrandBlue
+val Navy = BrandNavy
 
 // ============================================================================
 // Semantic Compatibility Tokens

@@ -8,6 +8,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import com.girocerto.app.GiroCertoApp
 import com.girocerto.app.theme.*
+import com.girocerto.data.repository.LedgerDraftStore
 import com.girocerto.domain.model.ElectricProfile
 import com.girocerto.ui.home.WorkDiaryScreen
 import com.girocerto.ui.settings.SimpleSettingsScreen
@@ -42,7 +43,13 @@ class ReleaseUiTest {
 
     @Test fun switchingDatesPreservesUnsavedEarnings() {
         runBlocking { GiroCertoApp.instance.workRepository.saveProfile(ElectricProfile("Teste", 200.0, .5, .1, 5, 8.0, 100.0, 500.0)) }
-        compose.setContent { GiroCertoTheme { androidx.compose.material3.Surface { WorkDiaryScreen {} } } }
+        compose.setContent {
+            GiroCertoTheme {
+                androidx.compose.material3.Surface {
+                    WorkDiaryScreen(GiroCertoApp.instance.workRepository) {}
+                }
+            }
+        }
         compose.onNodeWithText("Uber • recebido (R$)").performScrollTo().performTextReplacement("123,45")
         val today = LocalDate.now()
         selectDate(today.minusDays(1))
@@ -65,7 +72,10 @@ class ReleaseUiTest {
         lateinit var model: com.girocerto.ui.home.LedgerViewModel
         val store = androidx.lifecycle.ViewModelStore()
         compose.runOnIdle {
-            model = com.girocerto.ui.home.LedgerViewModel(GiroCertoApp.instance)
+            model = com.girocerto.ui.home.LedgerViewModel(
+                repository = GiroCertoApp.instance.workRepository,
+                draftStore = LedgerDraftStore(context)
+            )
             store.put("test", model)
         }
         compose.waitUntil(5_000) { model.draftsLoaded }

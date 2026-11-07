@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.girocerto.domain.model.FuelType
 import com.girocerto.domain.model.VehicleSettings
+import com.girocerto.domain.repository.VehicleSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,13 +12,13 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Repositório responsável por armazenar e fornecer as configurações do veículo e metas do motorista.
  */
-class SettingsRepository(context: Context) {
+class SettingsRepository(context: Context) : VehicleSettingsRepository {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _settings = MutableStateFlow(loadSettings())
-    val settings: StateFlow<VehicleSettings> = _settings.asStateFlow()
+    override val settings: StateFlow<VehicleSettings> = _settings.asStateFlow()
 
     private fun loadSettings(): VehicleSettings {
         val fuelTypeName = prefs.getString(KEY_FUEL_TYPE, FuelType.GASOLINA.name) ?: FuelType.GASOLINA.name
@@ -46,23 +47,23 @@ class SettingsRepository(context: Context) {
     /**
      * Atualiza e persiste as novas configurações do motorista.
      */
-    fun updateSettings(newSettings: VehicleSettings) {
+    override fun updateSettings(settings: VehicleSettings) {
         prefs.edit()
-            .putString(KEY_FUEL_TYPE, newSettings.fuelType.name)
-            .putString(KEY_FUEL_PRICE, newSettings.fuelPricePerLiter.toString())
-            .putString(KEY_FUEL_CONSUMPTION, newSettings.fuelConsumptionKmL.toString())
-            .putString(KEY_ADDITIONAL_COST, newSettings.additionalCostPerKm.toString())
-            .putString(KEY_MIN_TARGET_KM, newSettings.minTargetPerKm.toString())
-            .putString(KEY_MIN_TARGET_HOUR, newSettings.minTargetPerHour.toString())
-            .putString(KEY_FIXED_COST, newSettings.fixedCostPerRide.toString())
-            .putString(KEY_DAILY_FIXED_COST, newSettings.dailyFixedCost.toString())
-            .putBoolean(KEY_VOICE_ENABLED, newSettings.isVoiceEnabled)
-            .putFloat(KEY_SPEECH_RATE, newSettings.speechRate)
-            .putInt(KEY_CARD_DURATION, newSettings.cardDurationSeconds)
-            .putBoolean(KEY_FLOATING_BUBBLE, newSettings.isFloatingBubbleEnabled)
+            .putString(KEY_FUEL_TYPE, settings.fuelType.name)
+            .putString(KEY_FUEL_PRICE, settings.fuelPricePerLiter.toString())
+            .putString(KEY_FUEL_CONSUMPTION, settings.fuelConsumptionKmL.toString())
+            .putString(KEY_ADDITIONAL_COST, settings.additionalCostPerKm.toString())
+            .putString(KEY_MIN_TARGET_KM, settings.minTargetPerKm.toString())
+            .putString(KEY_MIN_TARGET_HOUR, settings.minTargetPerHour.toString())
+            .putString(KEY_FIXED_COST, settings.fixedCostPerRide.toString())
+            .putString(KEY_DAILY_FIXED_COST, settings.dailyFixedCost.toString())
+            .putBoolean(KEY_VOICE_ENABLED, settings.isVoiceEnabled)
+            .putFloat(KEY_SPEECH_RATE, settings.speechRate)
+            .putInt(KEY_CARD_DURATION, settings.cardDurationSeconds)
+            .putBoolean(KEY_FLOATING_BUBBLE, settings.isFloatingBubbleEnabled)
             .apply()
 
-        _settings.value = newSettings
+        _settings.value = settings
     }
 
     // Decode old Float preferences through their decimal text to avoid precision artifacts.

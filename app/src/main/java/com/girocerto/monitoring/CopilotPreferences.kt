@@ -2,6 +2,7 @@ package com.girocerto.monitoring
 
 import android.content.Context
 import com.girocerto.domain.model.TrafficLightStatus
+import com.girocerto.domain.usecase.OfferEvaluationPolicy
 
 import com.girocerto.overlay.OverlayCorner
 
@@ -32,8 +33,7 @@ data class CopilotPolicy(
         return if (addFiveMinutes && supported && minutes > 0) minutes + 5 else minutes
     }
     fun isBelowPreferredRating(rating: Double?): Boolean =
-        minimumPassengerRating > 0.0 && rating != null && rating.isFinite() &&
-            rating in 0.0..5.0 && rating < minimumPassengerRating
+        OfferEvaluationPolicy(minimumPassengerRating).isBelowPreferredRating(rating)
 
     fun monitors(packageName: String): Boolean = enabled && when {
         packageName.contains("uber") -> uber

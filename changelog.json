@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.0.26",
+    "changes": [
+      "Nova identidade oficial em azul-marinho, verde e branco aplicada ao aplicativo.",
+      "Ícone GC com velocímetro redesenhado, transparência real e suporte otimizado a launchers adaptativos.",
+      "Bolha flutuante profissional com aro verde, indicador de copiloto ativo e resposta visual ao toque.",
+      "Arquitetura Kotlin reorganizada com motor único de ofertas, injeção de dependências e serviços de acessibilidade separados.",
+      "Simulador debug valida Uber, 99, iFood e Keeta do texto do popup até a decisão financeira.",
+      "Histórico, diário, OCR e overlay revisados com testes unitários e instrumentados no Android real."
+    ]
+  },
+  {
     "version": "1.0.25",
     "changes": [
       "Qida removido das plataformas, mantendo somente aplicativos de trabalho confirmados, incluindo Keeta.",

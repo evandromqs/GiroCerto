@@ -1,13 +1,12 @@
 package com.girocerto.ui.home
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.girocerto.app.GiroCertoApp
+import com.girocerto.data.repository.LedgerDraftStore
 import com.girocerto.domain.model.*
+import com.girocerto.domain.repository.WorkLedgerRepository
 import kotlinx.coroutines.*
-import org.json.JSONArray
-import org.json.JSONObject
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -24,10 +23,11 @@ data class LedgerOperation(val busy: Boolean = false, val date: LocalDate? = nul
     val message: String? = null, val deleted: Boolean = false)
 
 /** Writes belong to the screen owner, rather than a transient composable. */
-class LedgerViewModel(application: Application) : AndroidViewModel(application) {
-    val repository = (application as GiroCertoApp).workRepository
+class LedgerViewModel(
+    val repository: WorkLedgerRepository,
+    private val draftStore: LedgerDraftStore
+) : ViewModel() {
     private var draftRevision = repository.restoreRevision.value
-    private val draftPrefs by lazy { application.getSharedPreferences("ledger_drafts_v1", 0) }
     private val draftMutex = Mutex()
     private val drafts = mutableStateMapOf<String, List<String>>()
     var draftsLoaded by mutableStateOf(false)
@@ -35,18 +35,13 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
     init { viewModelScope.launch {
         repository.awaitLoaded()
         draftRevision = repository.restoreRevision.value
-        val loaded = withContext(Dispatchers.IO) {
-            if (draftPrefs.getLong("revision", 0L) != draftRevision) check(draftPrefs.edit().clear().putLong("revision", draftRevision).commit())
-            draftPrefs.all.mapNotNull { (key, value) ->
-            runCatching { val a = JSONArray(value as String); require(a.length() == 20)
-                key to (0 until a.length()).map { a.getString(it).take(18) } }.getOrNull()
-        }.toMap() }
+        val loaded = draftStore.load(draftRevision)
         if (draftRevision == repository.restoreRevision.value) drafts.putAll(loaded)
         draftsLoaded = true
         repository.restoreRevision.collect { revision ->
             if (revision != draftRevision) {
                 draftsLoaded = false; drafts.clear(); draftRevision = revision
-                draftMutex.withLock { withContext(Dispatchers.IO) { draftPrefs.edit().clear().putLong("revision", revision).commit() } }
+                draftMutex.withLock { draftStore.clear(revision) }
                 draftsLoaded = true
             }
         }
@@ -56,9 +51,9 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         if (fields == drafts[date.toString()]) return
         drafts[date.toString()] = fields.toList()
         val revision = repository.restoreRevision.value
-        viewModelScope.launch { draftMutex.withLock { withContext(Dispatchers.IO) {
-            if (revision == repository.restoreRevision.value) draftPrefs.edit().putLong("revision", revision).putString(date.toString(), JSONArray(fields).toString()).commit()
-        } } }
+        viewModelScope.launch { draftMutex.withLock {
+            if (revision == repository.restoreRevision.value) draftStore.save(revision, date, fields)
+        } }
     }
     fun acknowledgeDelete() { _operation.value = _operation.value.copy(deleted = false) }
     private val _operation = MutableStateFlow(LedgerOperation())
@@ -75,6 +70,17 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
                     message = if (deleting) "Fechamento excluído." else "Dia salvo. Seus ganhos não foram duplicados.")
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) { _operation.value = LedgerOperation(date = date, message = "Não foi possível salvar. Confira os avisos de recuperação e tente novamente.") }
+        }
+    }
+
+    class Factory(
+        private val repository: WorkLedgerRepository,
+        private val draftStore: LedgerDraftStore
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            require(modelClass.isAssignableFrom(LedgerViewModel::class.java))
+            return LedgerViewModel(repository, draftStore) as T
         }
     }
 }
