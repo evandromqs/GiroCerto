@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.0.27",
+    "changes": [
+      "Novo cartão flutuante com leitura rápida, contraste elevado e ações maiores",
+      "Navegação horizontal animada e gesto de deslizar entre as páginas principais",
+      "Cartões e botões com profundidade tátil, resposta ao toque e melhor legibilidade"
+    ]
+  },
+  {
     "version": "1.0.26",
     "changes": [
       "Nova identidade oficial em azul-marinho, verde e branco aplicada ao aplicativo.",

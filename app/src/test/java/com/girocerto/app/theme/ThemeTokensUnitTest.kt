@@ -64,15 +64,15 @@ class ThemeTokensUnitTest {
         assertEquals(1.dp, AppSpacing.BorderThick)
         assertEquals(1.dp, AppSpacing.BorderAction)
         assertEquals(1.dp, AppSpacing.BorderThin)
-        assertEquals(0.0.dp, AppSpacing.ShadowOffset)
-        assertEquals(0.0.dp, AppSpacing.ShadowOffsetSmall)
+        assertEquals(3.0.dp, AppSpacing.ShadowOffset)
+        assertEquals(1.0.dp, AppSpacing.ShadowOffsetSmall)
         assertEquals(48.0.dp, AppSpacing.MinTouchTarget)
         assertEquals(8.0.dp, AppSpacing.ModalActionSpacing)
         assertEquals(280.0.dp, AppSpacing.ModalWidthCompact)
 
         // Standardized rounded corners
-        assertEquals(16.0.dp, AppSpacing.CornerCard)
-        assertEquals(12.0.dp, AppSpacing.CornerButton)
+        assertEquals(20.0.dp, AppSpacing.CornerCard)
+        assertEquals(16.0.dp, AppSpacing.CornerButton)
         assertEquals(8.0.dp, AppSpacing.CornerSmall)
         assertEquals(0.0.dp, AppSpacing.CornerNone)
 

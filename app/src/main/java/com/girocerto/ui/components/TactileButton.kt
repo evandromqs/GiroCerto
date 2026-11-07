@@ -5,9 +5,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
@@ -35,19 +45,28 @@ fun NeobrutalButton(
     leadingIcon: (@Composable () -> Unit)? = null,
     enabled: Boolean = true
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        if (pressed) .975f else 1f,
+        spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
+        label = "button_press",
+    )
     Surface(
         onClick = onClick,
-        modifier = modifier.alpha(if (enabled) 1f else 0.5f),
+        modifier = modifier.alpha(if (enabled) 1f else 0.5f).graphicsLayer { scaleX = scale; scaleY = scale },
         enabled = enabled,
+        interactionSource = interactionSource,
         shape = shape,
         color = backgroundColor,
         contentColor = contentColor,
         border = BorderStroke(borderWidth, borderColor),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp
+        tonalElevation = 2.dp,
+        shadowElevation = if (pressed) 2.dp else 7.dp
     ) {
         Row(
             modifier = Modifier
+                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .11f), Color.Transparent)))
                 .heightIn(min = AppSpacing.MinTouchTarget)
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.Center,
@@ -86,16 +105,20 @@ fun TactileButton(
     contentPadding: PaddingValues = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
     content: @Composable RowScope.() -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) .975f else 1f, label = "tactile_press")
     Surface(
         onClick = onClick,
-        modifier = modifier.alpha(if (enabled) 1f else 0.5f),
+        modifier = modifier.alpha(if (enabled) 1f else 0.5f).graphicsLayer { scaleX = scale; scaleY = scale },
         enabled = enabled,
+        interactionSource = interactionSource,
         shape = shape,
         color = if (enabled) colors.containerColor else colors.disabledContainerColor,
         contentColor = if (enabled) colors.contentColor else colors.disabledContentColor,
         border = border,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp
+        tonalElevation = 2.dp,
+        shadowElevation = if (pressed) 2.dp else 7.dp
     ) {
         Row(
             modifier = Modifier

@@ -40,9 +40,9 @@ class AdversarialPrimitiveStressTest {
     @Test
     fun testStandardizedCornerRadiusExactSpecification() {
         // Orchestrator & User prompt specification:
-        // CornerCard = 16.dp, CornerButton = 12.dp, CornerSmall = 8.dp
-        assertEquals("CornerCard must be strictly 16.dp", 16.dp, AppSpacing.CornerCard)
-        assertEquals("CornerButton must be strictly 12.dp", 12.dp, AppSpacing.CornerButton)
+        // CornerCard = 20.dp, CornerButton = 16.dp, CornerSmall = 8.dp
+        assertEquals("CornerCard must be strictly 20.dp", 20.dp, AppSpacing.CornerCard)
+        assertEquals("CornerButton must be strictly 16.dp", 16.dp, AppSpacing.CornerButton)
         assertEquals("CornerSmall must be strictly 8.dp", 8.dp, AppSpacing.CornerSmall)
 
         // Verify shape instances
@@ -54,14 +54,14 @@ class AdversarialPrimitiveStressTest {
         assertNotNull(buttonShape)
         assertNotNull(smallShape)
 
-        // Verify all corner values stay within the mandated 8dp..16dp range
-        assertTrue(AppSpacing.CornerSmall.value in 8.0f..16.0f)
-        assertTrue(AppSpacing.CornerButton.value in 8.0f..16.0f)
-        assertTrue(AppSpacing.CornerCard.value in 8.0f..16.0f)
+        // Verify all corner values stay within the tactile 8dp..20dp range
+        assertTrue(AppSpacing.CornerSmall.value in 8.0f..20.0f)
+        assertTrue(AppSpacing.CornerButton.value in 8.0f..20.0f)
+        assertTrue(AppSpacing.CornerCard.value in 8.0f..20.0f)
 
         // Strict ordering check
-        assertTrue("CornerSmall (8dp) < CornerButton (12dp)", AppSpacing.CornerSmall.value < AppSpacing.CornerButton.value)
-        assertTrue("CornerButton (12dp) < CornerCard (16dp)", AppSpacing.CornerButton.value < AppSpacing.CornerCard.value)
+        assertTrue("CornerSmall (8dp) < CornerButton (16dp)", AppSpacing.CornerSmall.value < AppSpacing.CornerButton.value)
+        assertTrue("CornerButton (16dp) < CornerCard (20dp)", AppSpacing.CornerButton.value < AppSpacing.CornerCard.value)
     }
 
     // ========================================================================
@@ -382,8 +382,8 @@ class AdversarialPrimitiveStressTest {
         assertEquals(1.dp, AppSpacing.BorderThick)
         assertEquals(1.dp, AppSpacing.BorderAction)
         assertEquals(1.dp, AppSpacing.BorderThin)
-        assertEquals(0.0.dp, AppSpacing.ShadowOffset)
-        assertEquals(0.0.dp, AppSpacing.ShadowOffsetSmall)
+        assertEquals(3.0.dp, AppSpacing.ShadowOffset)
+        assertEquals(1.0.dp, AppSpacing.ShadowOffsetSmall)
         assertEquals(48.0.dp, AppSpacing.MinTouchTarget)
     }
 }

@@ -32,14 +32,14 @@ private val DarkScheme = darkColorScheme(
     onSurface = Color(0xFFF4F7FD),
     surfaceVariant = Color(0xFF173651),
     onSurfaceVariant = Color(0xFFB7C9D8),
-    outline = Color(0xFF36536C),
-    outlineVariant = Color(0xFF25445E),
+    outline = Color(0xFF4B6A84),
+    outlineVariant = Color(0xFF31536D),
     error = Color(0xFFFFB3BE),
     onError = Color(0xFF3A0710),
     errorContainer = Color(0xFF5A1520),
     onErrorContainer = Color(0xFFFFD9DE),
     surfaceContainer = NeobrutalDarkSurface,
-    surfaceContainerHigh = Color(0xFF173651)
+    surfaceContainerHigh = Color(0xFF1B3C59)
 )
 
 // ============================================================================
@@ -63,9 +63,9 @@ private val LightScheme = lightColorScheme(
     surface = NeobrutalWhite,
     onSurface = BrandNavy,
     surfaceVariant = NeobrutalLightBlueTint,
-    onSurfaceVariant = Color(0xFF526477),
-    outline = Color(0xFFC9D8D3),
-    outlineVariant = Color(0xFFDDE9E5),
+    onSurfaceVariant = Color(0xFF43566A),
+    outline = Color(0xFFB7CAC4),
+    outlineVariant = Color(0xFFD2E2DD),
     error = Color(0xFFB42336),
     onError = NeobrutalWhite,
     errorContainer = Color(0xFFFBE7EA),

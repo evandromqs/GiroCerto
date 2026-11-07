@@ -13,6 +13,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -42,11 +43,20 @@ fun NeobrutalCard(
     ) {
         Surface(
             shape = shape,
-            shadowElevation = shadowOffset * 2,
+            shadowElevation = 8.dp,
             color = backgroundColor,
             border = if (borderWidth > 0.dp) BorderStroke(borderWidth, borderColor) else null
         ) {
-            Column(modifier = Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = .09f), Color.Transparent, Color.Black.copy(alpha = .025f)))) , content = content)
+            Column(
+                modifier = Modifier.background(
+                    Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = .13f),
+                        .22f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = .055f),
+                    )
+                ),
+                content = content,
+            )
         }
     }
 }

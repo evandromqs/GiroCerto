@@ -30,6 +30,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import kotlin.math.abs
 
 import android.content.Context
 import com.girocerto.ui.copilot.CopilotScreen
@@ -146,6 +149,7 @@ fun AppNavigation() {
     }
     BackHandler(currentScreen != Screen.HOME) { goBack() }
     val rootTabs = listOf(Screen.HOME, Screen.DIARY, Screen.GOALS, Screen.SETTINGS)
+    var swipeDistance by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     Scaffold(
         bottomBar = {
             if (currentScreen in rootTabs) {
@@ -177,13 +181,13 @@ fun AppNavigation() {
                                 val selected = currentScreen == screen ||
                                     (screen == Screen.SETTINGS && currentScreen == Screen.ADVANCED)
                                 val tint by animateColorAsState(
-                                    targetValue = if (selected) MaterialTheme.colorScheme.primary
+                                    targetValue = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
                                     animationSpec = tween(180),
                                     label = "tab_tint"
                                 )
                                 val container by animateColorAsState(
-                                    targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer
                                     else Color.Transparent,
                                     animationSpec = tween(180),
                                     label = "tab_container"
@@ -228,7 +232,7 @@ fun AppNavigation() {
                                         tint = tint
                                     )
                                     AnimatedVisibility(
-                                        visible = !selected,
+                                        visible = selected,
                                         enter = expandHorizontally(
                                             expandFrom = Alignment.Start,
                                             animationSpec = spring(
@@ -292,26 +296,43 @@ fun AppNavigation() {
                 }
             }
             AnimatedContent(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .pointerInput(currentScreen) {
+                        if (currentScreen in rootTabs) {
+                            detectHorizontalDragGestures(
+                                onDragStart = { swipeDistance = 0f },
+                                onDragCancel = { swipeDistance = 0f },
+                                onDragEnd = {
+                                    val index = rootTabs.indexOf(currentScreen)
+                                    if (abs(swipeDistance) > 90f) {
+                                        val next = if (swipeDistance < 0) index + 1 else index - 1
+                                        rootTabs.getOrNull(next)?.let {
+                                            navigationHistory = arrayListOf()
+                                            currentScreen = it
+                                        }
+                                    }
+                                    swipeDistance = 0f
+                                },
+                            ) { change, amount ->
+                                change.consume()
+                                swipeDistance += amount
+                            }
+                        }
+                    },
                 targetState = currentScreen,
                 label = "Troca de tela",
                 transitionSpec = {
                     val forward = targetState.position >= initialState.position
                     val direction = if (forward) 1 else -1
-                    (fadeIn(animationSpec = tween(180, easing = FastOutSlowInEasing)) +
+                    (fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
                         slideInHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        ) { fullWidth -> fullWidth * direction / 10 }) togetherWith
-                        (fadeOut(animationSpec = tween(140, easing = FastOutSlowInEasing)) +
+                            animationSpec = tween(330, easing = FastOutSlowInEasing)
+                        ) { fullWidth -> fullWidth * direction }) togetherWith
+                        (fadeOut(animationSpec = tween(170, easing = FastOutSlowInEasing)) +
                         slideOutHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium
-                            )
-                        ) { fullWidth -> -fullWidth * direction / 16 })
+                            animationSpec = tween(280, easing = FastOutSlowInEasing)
+                        ) { fullWidth -> -fullWidth * direction / 3 })
                 }
             ) { screen ->
             stateHolder.SaveableStateProvider(screen.name) {

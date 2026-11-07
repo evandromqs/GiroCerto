@@ -574,8 +574,17 @@ class RideOverlayService : Service() {
 
     private fun panelSurface() = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
         intArrayOf(palette("#243535"), palette("#101818"))).apply {
+        cornerRadius = dpToPx(24).toFloat()
+        setStroke(dpToPx(1), Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#4B6A84" else "#B7CAC4"))
+    }
+
+    private fun offerSurface() = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+        intArrayOf(
+            Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this)) "#183B58" else "#FFFFFF"),
+            Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this)) "#102A46" else "#F0F7F4"),
+        )).apply {
         cornerRadius = dpToPx(20).toFloat()
-        setStroke(dpToPx(1), palette("#4B5563"))
+        setStroke(dpToPx(1), Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#4B6A84" else "#B7CAC4"))
     }
 
     private fun label(value: String, size: Float = 12f) = TextView(this).apply {
@@ -589,8 +598,8 @@ class RideOverlayService : Service() {
         imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
         setPadding(dpToPx(13), dpToPx(13), dpToPx(13), dpToPx(13))
         background = android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x40FFFFFF),
-            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.parseColor("#2563EB"), Color.parseColor("#1D4ED8"))).apply {
-                cornerRadius = dpToPx(14).toFloat(); setStroke(dpToPx(1), Color.parseColor("#60A5FA"))
+            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.parseColor("#16C784"), Color.parseColor("#0FA66E"))).apply {
+                cornerRadius = dpToPx(14).toFloat(); setStroke(dpToPx(1), Color.parseColor("#78E8BE"))
             }, null)
         elevation = dpToPx(2).toFloat()
         setOnClickListener { click() }
@@ -603,15 +612,15 @@ class RideOverlayService : Service() {
             }
         }.apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(8))
+            setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(12))
             contentDescription = "Análise da oferta"
-            background = panelSurface(); elevation = dpToPx(8).toFloat()
+            background = panelSurface(); elevation = dpToPx(14).toFloat()
         }
         val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         header.addView(android.widget.ImageView(this).apply {
             setImageResource(com.girocerto.app.R.drawable.ic_launcher_monochrome)
             imageTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(
-                if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#93B4FF" else "#1D4ED8"))
+                "#16C784"))
             contentDescription = "Giro Certo"
         }, LinearLayout.LayoutParams(dpToPx(24), dpToPx(24)).apply { rightMargin = dpToPx(8) })
         header.addView(label("Giro Certo", 16f), LinearLayout.LayoutParams(0, -2, 1f))
@@ -661,8 +670,9 @@ class RideOverlayService : Service() {
         }
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = panelSurface()
-            setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10))
+            background = offerSurface()
+            elevation = dpToPx(5).toFloat()
+            setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12))
         }
         val heading = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         val icon = when {
@@ -674,7 +684,7 @@ class RideOverlayService : Service() {
         heading.addView(android.widget.ImageView(this).apply {
             setImageResource(icon); contentDescription = "Aplicativo detectado: ${offer.appName}"
         }, LinearLayout.LayoutParams(dpToPx(24), dpToPx(24)).apply { rightMargin = dpToPx(8) })
-        heading.addView(label(String.format(Locale.GERMANY, "R$ %.2f", offer.fare), 18f).apply { paint.isFakeBoldText = true },
+        heading.addView(label(String.format(Locale.GERMANY, "R$ %.2f", offer.fare), 22f).apply { paint.isFakeBoldText = true },
             LinearLayout.LayoutParams(0, -2, 1f))
         heading.addView(label(decision, 12f).apply {
             setTextColor(if (analysis.trafficLight == TrafficLightStatus.YELLOW || analysis.trafficLight == TrafficLightStatus.INVALID) Color.BLACK else Color.WHITE)
@@ -685,6 +695,12 @@ class RideOverlayService : Service() {
             }
         })
         card.addView(heading)
+        if (offer.destinationAddress.isNotBlank()) {
+            card.addView(label(offer.destinationAddress, 12f).apply {
+                setTextColor(palette("#B5C9C7")); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                contentDescription = "Destino: ${offer.destinationAddress}"
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(4) })
+        }
         val body = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         val information = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val measures = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
@@ -708,12 +724,16 @@ class RideOverlayService : Service() {
             String.format(Locale.GERMANY, "%.2f", analysis.estimatedProfit))
         listOf("R$/km", "R$/hora", "Lucro Médio").forEachIndexed { index, title ->
             val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            column.addView(label(amounts[index], 16f).apply {
+            column.setPadding(dpToPx(6), dpToPx(7), dpToPx(6), dpToPx(7))
+            column.background = GradientDrawable().apply {
+                setColor(Color.parseColor(if (dark) "#0B1F3A" else "#E8F8F2")); cornerRadius = dpToPx(12).toFloat()
+            }
+            column.addView(label(amounts[index], 17f).apply {
                 setTextColor(if (index != 2) decisionColor else if (analysis.estimatedProfit > 0) gain else if (analysis.estimatedProfit < 0) loss else warning)
                 contentDescription = listOf("Ganho por quilômetro", "Rendimento por hora", "Lucro estimado")[index]
             })
             column.addView(label(title, 11f))
-            metrics.addView(column, LinearLayout.LayoutParams(0, -2, 1f))
+            metrics.addView(column, LinearLayout.LayoutParams(0, -2, 1f).apply { if (index > 0) leftMargin = dpToPx(6) })
         }
         information.addView(metrics, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(10) })
         body.addView(information, LinearLayout.LayoutParams(0, -2, 1f))
@@ -723,8 +743,8 @@ class RideOverlayService : Service() {
 
         // Botão Aceitar Corrida com clique automatizado e registro contábil imediato
         val acceptBtn = Button(this).apply {
-            text = "Aceitar Corrida • R$ " + String.format(Locale.GERMANY, "%.2f", offer.fare)
-            textSize = 13f
+            text = "ACEITAR • R$ " + String.format(Locale.GERMANY, "%.2f", offer.fare)
+            textSize = 14f
             paint.isFakeBoldText = true
             setTextColor(Color.WHITE)
             setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6))
@@ -737,10 +757,10 @@ class RideOverlayService : Service() {
                 acceptAndRecordOffer(analysis)
             }
         }
-        card.addView(acceptBtn, LinearLayout.LayoutParams(-1, dpToPx(40)).apply { topMargin = dpToPx(8) })
+        card.addView(acceptBtn, LinearLayout.LayoutParams(-1, dpToPx(46)).apply { topMargin = dpToPx(10) })
         card.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             tag = "offerLifetime"; max = 1000; progress = 1000
-            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1D4ED8"))
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#16C784"))
             progressBackgroundTintList = android.content.res.ColorStateList.valueOf(palette("#4B5563"))
             contentDescription = "Tempo restante da oferta"
         }, LinearLayout.LayoutParams(-1, dpToPx(4)).apply { topMargin = dpToPx(12) })

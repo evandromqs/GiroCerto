@@ -185,11 +185,11 @@ class AdversarialMilestone2StressTest {
     fun testStandardizedCornerRadiusHierarchy() {
         // Requirement R2 & User Specification:
         // "os cantos dos elementos deve ser todo arredondados de forma padronizada"
-        // 16dp: cards, containers
-        // 12dp: buttons
+        // 20dp: cards, containers
+        // 16dp: buttons
         // 8dp: small items, inputs, chips, badges
-        assertEquals("Cards must be standardized to 16dp", 16.dp, AppSpacing.CornerCard)
-        assertEquals("Buttons must be standardized to 12dp", 12.dp, AppSpacing.CornerButton)
+        assertEquals("Cards must be standardized to 20dp", 20.dp, AppSpacing.CornerCard)
+        assertEquals("Buttons must be standardized to 16dp", 16.dp, AppSpacing.CornerButton)
         assertEquals("Small items must be standardized to 8dp", 8.dp, AppSpacing.CornerSmall)
         assertEquals("CornerNone must be 0dp", 0.dp, AppSpacing.CornerNone)
 

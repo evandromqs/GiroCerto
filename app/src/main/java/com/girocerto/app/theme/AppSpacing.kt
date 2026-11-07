@@ -29,12 +29,12 @@ object AppSpacing {
     val BorderThick = 1.dp       // Standard card & primary button border
     val BorderAction = 1.dp      // Modal action buttons & compact dialog borders
     val BorderThin = 1.dp        // Badges, chips, secondary outline
-    val ShadowOffset = 0.dp        // Flat surfaces: elevation comes from tonal contrast
-    val ShadowOffsetSmall = 0.dp   // Flat surfaces: no hard shadow
+    val ShadowOffset = 3.dp        // Soft tactile depth without wasting screen space
+    val ShadowOffsetSmall = 1.dp   // Compact controls retain a visible edge
     val CornerNone = 0.dp          // Zero radius reference
     val CornerSmall = 8.dp         // Badges, chips, compact action buttons
-    val CornerCard = 16.dp         // Card rounded corner
-    val CornerButton = 12.dp       // Primary button rounded corner
+    val CornerCard = 20.dp         // Friendly, high-legibility dashboard cards
+    val CornerButton = 16.dp       // Large controls for use while stopped
     val MinTouchTarget = 48.dp     // WCAG accessibility minimum touch target
 
     // ========================================================================
