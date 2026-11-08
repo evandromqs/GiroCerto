@@ -2,6 +2,8 @@ package com.girocerto.ui.home
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -115,13 +117,7 @@ fun WorkDashboard(
         }
 
         if (loading) {
-            LinearProgressIndicator(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(AppSpacing.CornerSmall))
-            )
-            AppText("Carregando seus ganhos…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            DashboardSkeleton()
         } else if (profile == null) {
             NeobrutalCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -306,6 +302,37 @@ fun WorkDashboard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardSkeleton() {
+    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "dashboard_skeleton")
+    val alpha by transition.animateFloat(
+        initialValue = .42f,
+        targetValue = .78f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            androidx.compose.animation.core.tween(720),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse,
+        ),
+        label = "skeleton_alpha",
+    )
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        AppText("Carregando seu painel…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        repeat(3) { index ->
+            Surface(
+                modifier = Modifier.fillMaxWidth().height(if (index == 0) 132.dp else 82.dp),
+                shape = RoundedCornerShape(AppSpacing.CornerCard),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(Modifier.fillMaxWidth(if (index == 0) .46f else .62f).height(18.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.outline.copy(alpha = .22f)))
+                    Box(Modifier.fillMaxWidth(if (index == 0) .78f else .88f).height(12.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.outline.copy(alpha = .14f)))
+                    if (index == 0) Box(Modifier.fillMaxWidth().height(38.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = .12f)))
                 }
             }
         }

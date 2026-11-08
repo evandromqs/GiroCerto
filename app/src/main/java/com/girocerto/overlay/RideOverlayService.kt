@@ -192,7 +192,12 @@ class RideOverlayService : Service() {
     }
 
     private fun createBubbleView(): View {
-        return BubbleViewFactory(this, ::dpToPx, object : BubbleViewFactory.Callbacks {
+        return BubbleViewFactory(
+            this,
+            ::dpToPx,
+            ::bubbleSize,
+            { com.girocerto.app.theme.AppearancePreferences.bubbleOpacity.value },
+            object : BubbleViewFactory.Callbacks {
             override fun onClick() {
                 currentAnalysis = recentOffers.active(android.os.SystemClock.elapsedRealtime()).firstOrNull()?.analysis
                 if (currentAnalysis != null) showOfferCardMode() else showQuickMenuMode()
@@ -679,6 +684,7 @@ class RideOverlayService : Service() {
             offer.appName.contains("uber", true) -> com.girocerto.app.R.drawable.platform_uber
             offer.appName.contains("99") || offer.appName.contains("didi", true) -> com.girocerto.app.R.drawable.platform_ninety_nine
             offer.appName.contains("ifood", true) -> com.girocerto.app.R.drawable.platform_ifood
+            offer.appName.contains("keeta", true) -> com.girocerto.app.R.drawable.platform_keeta
             else -> com.girocerto.app.R.drawable.ic_launcher_monochrome
         }
         heading.addView(android.widget.ImageView(this).apply {
@@ -686,6 +692,16 @@ class RideOverlayService : Service() {
         }, LinearLayout.LayoutParams(dpToPx(24), dpToPx(24)).apply { rightMargin = dpToPx(8) })
         heading.addView(label(String.format(Locale.GERMANY, "R$ %.2f", offer.fare), 22f).apply { paint.isFakeBoldText = true },
             LinearLayout.LayoutParams(0, -2, 1f))
+        val qualityIcon = when (analysis.trafficLight) {
+            TrafficLightStatus.GREEN -> com.girocerto.app.R.drawable.ride_quality_great
+            TrafficLightStatus.YELLOW -> com.girocerto.app.R.drawable.ride_quality_good
+            TrafficLightStatus.RED -> com.girocerto.app.R.drawable.ride_quality_bad
+            TrafficLightStatus.INVALID -> com.girocerto.app.R.drawable.ride_quality_good
+        }
+        heading.addView(android.widget.ImageView(this).apply {
+            setImageResource(qualityIcon)
+            contentDescription = "Qualidade da corrida: $decision"
+        }, LinearLayout.LayoutParams(dpToPx(36), dpToPx(36)).apply { rightMargin = dpToPx(6) })
         heading.addView(label(decision, 12f).apply {
             setTextColor(if (analysis.trafficLight == TrafficLightStatus.YELLOW || analysis.trafficLight == TrafficLightStatus.INVALID) Color.BLACK else Color.WHITE)
             setPadding(dpToPx(8), dpToPx(5), dpToPx(8), dpToPx(5))
@@ -930,7 +946,7 @@ class RideOverlayService : Service() {
         return (dp * density).toInt()
     }
 
-    private fun bubbleSize() = (dpToPx(64) * .8f).toInt()
+    private fun bubbleSize() = dpToPx(com.girocerto.app.theme.AppearancePreferences.bubbleSize.value.dp)
 
     companion object {
         const val ACTION_START_BUBBLE = "com.girocerto.overlay.ACTION_START_BUBBLE"

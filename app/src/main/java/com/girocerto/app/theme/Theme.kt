@@ -77,6 +77,7 @@ private val LightScheme = lightColorScheme(
 @Composable
 fun GiroCertoTheme(content: @Composable () -> Unit) {
     val mode by AppearancePreferences.mode.collectAsStateWithLifecycle()
+    val fontScale by AppearancePreferences.fontScale.collectAsStateWithLifecycle()
     val dark = mode == ThemeMode.DARK
     val activity = androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity
     SideEffect {
@@ -88,7 +89,7 @@ fun GiroCertoTheme(content: @Composable () -> Unit) {
     }
     MaterialTheme(
         colorScheme = if (dark) DarkScheme else LightScheme,
-        typography = Typography,
+        typography = remember(fontScale) { scaledTypography(Typography, fontScale.factor) },
         shapes = Shapes(
             small = RoundedCornerShape(AppSpacing.CornerSmall),
             medium = RoundedCornerShape(AppSpacing.CornerCard),

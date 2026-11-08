@@ -39,6 +39,7 @@ import com.girocerto.ui.copilot.CopilotScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,6 +74,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.girocerto.app.theme.BackgroundDark
 import com.girocerto.app.theme.BorderDark
 import com.girocerto.app.theme.PrimaryBlue
@@ -87,6 +90,10 @@ import com.girocerto.ui.history.HistoryScreen
 fun AppNavigation() {
     val context = LocalContext.current
     val app = context.applicationContext as com.girocerto.app.GiroCertoApp
+    val tutorialPrefs = remember { context.getSharedPreferences("guided_tutorial_v1", Context.MODE_PRIVATE) }
+    var tutorialStep by rememberSaveable {
+        mutableStateOf(if (!com.girocerto.app.RuntimeMode.bypassOnboarding && !tutorialPrefs.getBoolean("completed", false)) 0 else -1)
+    }
     var currentScreen by rememberSaveable { mutableStateOf(Screen.HOME) }
     var navigationHistory by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
     var todayRequest by rememberSaveable { mutableStateOf(0) }
@@ -420,6 +427,43 @@ fun AppNavigation() {
                 }
             }
         )
+    }
+    if (tutorialStep >= 0) {
+        val tabs = listOf(Screen.HOME, Screen.DIARY, Screen.GOALS, Screen.SETTINGS)
+        val details = listOf(
+            "Início" to "Veja o resumo do dia, ative o copiloto e registre seu ponto.",
+            "Ganhos" to "Registre receitas, quilômetros e horas de cada aplicativo.",
+            "Metas" to "Informe veículo, custos e objetivos para avaliar cada oferta.",
+            "Ajustes" to "Personalize aparência, fonte, bolha, voz e permissões.",
+        )
+        LaunchedEffect(tutorialStep) { currentScreen = tabs[tutorialStep] }
+        Dialog(onDismissRequest = {}, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .62f))) {
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(18.dp).navigationBarsPadding(),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+                    shadowElevation = 18.dp,
+                ) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("${tutorialStep + 1} de 4 • ${details[tutorialStep].first}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Text(details[tutorialStep].second, style = MaterialTheme.typography.bodyLarge)
+                        Text("A página explicada está aberta e destacada ao fundo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(onClick = {
+                                tutorialPrefs.edit().putBoolean("completed", true).apply(); tutorialStep = -1
+                            }) { Text("Pular") }
+                            androidx.compose.material3.Button(onClick = {
+                                if (tutorialStep < 3) tutorialStep++ else {
+                                    tutorialPrefs.edit().putBoolean("completed", true).apply(); tutorialStep = -1
+                                }
+                            }) { Text(if (tutorialStep < 3) "Próxima" else "Começar") }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

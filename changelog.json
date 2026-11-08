@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.28",
+    "changes": [
+      "Login Google migrado para o Firebase dentro do aplicativo, mantendo e-mail, senha e dados no Neon.",
+      "Nova abertura animada, skeletons de carregamento e tutorial guiado pelas quatro telas principais.",
+      "Personalização de fonte, tamanho e opacidade da bolha flutuante.",
+      "Indicadores otimizados em WebP para corridas ruins, boas e ótimas no aplicativo e no cartão flutuante.",
+      "Keeta integrado à seleção de aplicativos e identificado com ícone próprio nas ofertas."
+    ]
+  },
+  {
     "version": "1.0.27",
     "changes": [
       "Novo cartão flutuante com leitura rápida, contraste elevado e ações maiores",

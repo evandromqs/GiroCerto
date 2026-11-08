@@ -31,7 +31,6 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("target_screen")?.let { target ->
             targetScreen.value = target
         }
-        handleAuthIntent(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,7 +38,6 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("target_screen")?.let { target ->
             targetScreen.value = target
         }
-        handleAuthIntent(intent)
         enableEdgeToEdge()
         setContent {
             GiroCertoTheme {
@@ -53,9 +51,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun handleAuthIntent(intent: Intent) {
-        if (intent.data?.scheme == "girocerto" && intent.data?.host == "auth") {
-            intent.data?.getQueryParameter("code")?.let { GiroCertoApp.instance.auth.exchange(it) }
-        }
-    }
 }

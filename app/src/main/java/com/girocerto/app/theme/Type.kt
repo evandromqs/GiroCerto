@@ -54,3 +54,14 @@ val Typography = Typography(
     labelMedium = roboto(12, 16, FontWeight.Medium, 0.5),
     labelSmall = roboto(11, 16, FontWeight.Medium, 0.5)
 )
+
+fun scaledTypography(source: Typography, factor: Float): Typography {
+    fun TextStyle.scaled() = copy(fontSize = fontSize * factor, lineHeight = lineHeight * factor)
+    return source.copy(
+        displayLarge = source.displayLarge.scaled(), displayMedium = source.displayMedium.scaled(), displaySmall = source.displaySmall.scaled(),
+        headlineLarge = source.headlineLarge.scaled(), headlineMedium = source.headlineMedium.scaled(), headlineSmall = source.headlineSmall.scaled(),
+        titleLarge = source.titleLarge.scaled(), titleMedium = source.titleMedium.scaled(), titleSmall = source.titleSmall.scaled(),
+        bodyLarge = source.bodyLarge.scaled(), bodyMedium = source.bodyMedium.scaled(), bodySmall = source.bodySmall.scaled(),
+        labelLarge = source.labelLarge.scaled(), labelMedium = source.labelMedium.scaled(), labelSmall = source.labelSmall.scaled(),
+    )
+}

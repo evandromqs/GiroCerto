@@ -5,6 +5,10 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.Image
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +22,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.girocerto.app.GiroCertoApp
 import com.girocerto.app.R
@@ -30,6 +35,12 @@ import com.girocerto.ui.components.AppText as Text
 fun AppEntry() {
     if (com.girocerto.app.RuntimeMode.bypassOnboarding) {
         AppNavigation()
+        return
+    }
+    var showingSplash by rememberSaveable { mutableStateOf(true) }
+    LaunchedEffect(Unit) { delay(1_250); showingSplash = false }
+    if (showingSplash) {
+        SplashLoadingScreen()
         return
     }
     val app = GiroCertoApp.instance
@@ -85,12 +96,45 @@ private fun LoginScreen(
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     val valid = email.contains('@') && email.substringAfter('@').contains('.') && password.length >= 8 && (!createAccount || name.trim().length >= 2)
-    Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Image(painterResource(R.drawable.ic_girocerto_brand), null, Modifier.size(112.dp))
+    Box(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp, vertical = 28.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth().widthIn(max = 460.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        ) {
+          Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+          ) {
+            Image(painterResource(R.drawable.ic_girocerto_brand), "Giro Certo", Modifier.size(96.dp))
             Text("Giro Certo", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
-            Text("Seus ganhos, custos e ofertas protegidos em um só lugar.", textAlign = TextAlign.Center)
-            Text(if (createAccount) "Crie sua conta" else "Entre na sua conta", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                "Seu copiloto para escolher melhores corridas e acompanhar seus ganhos.",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                "Veja se a oferta compensa • Controle custos e metas • Trabalhe com mais segurança",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(2.dp))
+            Button(onClick = onGoogle, enabled = !loading, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+                Image(painterResource(R.drawable.ic_google_g), null, Modifier.size(22.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(if (loading) "Abrindo Google…" else "Continuar com Google", fontWeight = FontWeight.Bold)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HorizontalDivider(Modifier.weight(1f))
+                Text("ou entre com e-mail", Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider(Modifier.weight(1f))
+            }
+            Text(if (createAccount) "Criar uma conta" else "Entrar com e-mail", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             if (createAccount) OutlinedTextField(
                 value = name, onValueChange = { name = it.take(60); onClearError() },
                 label = { Text("Nome") }, singleLine = true, enabled = !loading, modifier = Modifier.fillMaxWidth()
@@ -116,17 +160,46 @@ private fun LoginScreen(
             TextButton(onClick = { createAccount = !createAccount; onClearError() }, enabled = !loading) {
                 Text(if (createAccount) "Já tenho uma conta" else "Ainda não tenho conta")
             }
-            HorizontalDivider()
-            Button(onClick = onGoogle, enabled = !loading, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp)) {
-                Text(if (loading) "Abrindo Google…" else "Continuar com Google", fontWeight = FontWeight.Bold)
-            }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
-            Text("Sua conta é protegida pelo Neon Auth. Depois, você informa somente veículo, custos e metas necessários para avaliar as ofertas.", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+            Text(
+                "Depois, você poderá informar veículo, custos e metas para receber análises personalizadas.",
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
         }
     }
 }
 
-@Composable private fun LoadingScreen() = Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+@Composable
+private fun SplashLoadingScreen() {
+    val transition = rememberInfiniteTransition(label = "splash_dots")
+    val phases = List(3) { index ->
+        transition.animateFloat(
+            initialValue = .35f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(520, delayMillis = index * 130, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "dot_$index",
+        )
+    }
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(22.dp)) {
+            Image(painterResource(R.drawable.ic_girocerto_brand), "Giro Certo", Modifier.size(132.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                phases.forEach { alpha ->
+                    Box(Modifier.size(10.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = alpha.value), CircleShape))
+                }
+            }
+            Text("Preparando seu copiloto…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable private fun LoadingScreen() = SplashLoadingScreen()
 
 @Composable
 private fun TutorialScreen(onDone: () -> Unit) {

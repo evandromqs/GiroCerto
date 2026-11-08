@@ -11,20 +11,26 @@ const MAX_PAYLOAD_BYTES = 5_000_000;
 const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SECRET_PATTERN = /^[A-Za-z0-9_-]{40,64}$/;
 const authBaseUrl = process.env.NEON_AUTH_BASE_URL!;
-const authJwks = createRemoteJWKSet(new URL(process.env.NEON_AUTH_JWKS_URL!));
+const firebaseProjectId = process.env.FIREBASE_PROJECT_ID ?? "girocerto-copiloto";
+const firebaseJwks = createRemoteJWKSet(
+  new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"),
+);
 
 function hash(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
-async function neonUser(request: Request) {
+async function firebaseUser(request: Request) {
   const authorization = request.headers.get("authorization") ?? "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
   if (!token) throw new Error("missing token");
-  const { payload } = await jwtVerify(token, authJwks, { issuer: authBaseUrl });
+  const { payload } = await jwtVerify(token, firebaseJwks, {
+    issuer: `https://securetoken.google.com/${firebaseProjectId}`,
+    audience: firebaseProjectId,
+  });
   if (!payload.sub) throw new Error("missing subject");
   return {
-    id: payload.sub,
+    id: `firebase:${payload.sub}`,
     email: typeof payload.email === "string" ? payload.email : "",
     name: typeof payload.name === "string" ? payload.name : "Motorista",
   };
@@ -104,14 +110,6 @@ export default async function cloudBackups(request: Request): Promise<Response> 
       check (octet_length(payload::text) <= 5000000)
     );
     create index if not exists cloud_backups_updated_at_idx on cloud_backups (updated_at desc);
-    create table if not exists mobile_login_codes (
-      code_hash char(64) primary key,
-      user_id text not null,
-      email text not null,
-      display_name text not null,
-      expires_at timestamptz not null,
-      used_at timestamptz
-    );
     create table if not exists mobile_sessions (
       token_hash char(64) primary key,
       user_id text not null,
@@ -132,75 +130,13 @@ export default async function cloudBackups(request: Request): Promise<Response> 
   if (request.method === "POST" && url.pathname.endsWith("/auth/email/sign-in")) {
     return emailAuth(request, "sign-in");
   }
-  if (request.method === "GET" && url.pathname.endsWith("/auth/start")) {
-    const callbackURL = `${url.origin}/auth/callback`;
-    const authResponse = await fetch(`${authBaseUrl}/sign-in/social`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ provider: "google", callbackURL, disableRedirect: true }),
-    });
-    const result = await authResponse.json() as { url?: string; message?: string };
-    if (!authResponse.ok || !result.url) return json({ error: result.message ?? "Login indisponível" }, 502);
-    return json({ url: result.url });
-  }
-
-  if (request.method === "GET" && url.pathname.endsWith("/auth/callback")) {
-    const endpoint = url.origin;
-    const html = `<!doctype html><html lang="pt-BR"><meta name="viewport" content="width=device-width"><title>Giro Certo</title>
-      <style>body{font-family:system-ui;background:#0b1730;color:white;display:grid;place-items:center;min-height:90vh;margin:0}main{text-align:center;padding:28px}button{padding:14px 20px;border-radius:14px;border:0;font-weight:700}</style>
-      <main><h1>Giro Certo</h1><p id="status">Concluindo seu login com segurança…</p><button id="retry" hidden>Tentar novamente</button></main>
-      <script>
-      async function finish(){
-        const status=document.getElementById('status'),retry=document.getElementById('retry'); retry.hidden=true;
-        try {
-          const tokenResponse=await fetch(${JSON.stringify(`${authBaseUrl}/token`)},{credentials:'include'});
-          const tokenData=await tokenResponse.json(); const token=tokenData?.token;
-          if(!token) throw new Error('Sessão do Google não encontrada');
-          const codeResponse=await fetch(${JSON.stringify(`${endpoint}/auth/mobile-code`)},{method:'POST',headers:{Authorization:'Bearer '+token}});
-          const codeData=await codeResponse.json(); if(!codeData.code) throw new Error(codeData.error||'Código indisponível');
-          status.textContent='Login concluído. Voltando ao aplicativo…'; location.href='girocerto://auth/callback?code='+encodeURIComponent(codeData.code);
-        } catch(error){ status.textContent='Não foi possível concluir o login. '+error.message; retry.hidden=false; }
-      }
-      document.getElementById('retry').onclick=finish; finish();
-      </script></html>`;
-    return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
-  }
-
-  if (request.method === "POST" && url.pathname.endsWith("/auth/mobile-code")) {
+  if (request.method === "POST" && url.pathname.endsWith("/auth/firebase/exchange")) {
     try {
-      const user = await neonUser(request);
-      const code = randomBytes(32).toString("base64url");
-      await pool.query(
-        `insert into mobile_login_codes(code_hash,user_id,email,display_name,expires_at)
-         values($1,$2,$3,$4,now()+interval '5 minutes')`,
-        [hash(code), user.id, user.email, user.name],
-      );
-      return json({ code });
-    } catch { return json({ error: "Sessão Neon inválida" }, 401); }
+      return json(await createMobileSession(await firebaseUser(request)));
+    } catch {
+      return json({ error: "Login do Google inválido ou expirado" }, 401);
+    }
   }
-
-  if (request.method === "POST" && url.pathname.endsWith("/auth/exchange")) {
-    const body = await request.json().catch(() => ({})) as { code?: string };
-    if (!body.code || !SECRET_PATTERN.test(body.code)) return json({ error: "Código inválido" }, 400);
-    const client = await pool.connect();
-    try {
-      await client.query("begin");
-      const found = await client.query(
-        `update mobile_login_codes set used_at=now()
-         where code_hash=$1 and used_at is null and expires_at>now()
-         returning user_id,email,display_name`, [hash(body.code)],
-      );
-      if (found.rowCount === 0) { await client.query("rollback"); return json({ error: "Código expirado" }, 401); }
-      const user = found.rows[0];
-      const token = randomBytes(32).toString("base64url");
-      await client.query(`insert into mobile_sessions(token_hash,user_id,email,display_name,expires_at)
-        values($1,$2,$3,$4,now()+interval '90 days')`, [hash(token), user.user_id, user.email, user.display_name]);
-      await client.query("commit");
-      return json({ token, user: { id: user.user_id, email: user.email, name: user.display_name } });
-    } catch (error) { await client.query("rollback"); throw error; }
-    finally { client.release(); }
-  }
-
   if (request.method === "GET" && url.pathname.endsWith("/auth/session")) {
     const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
     const found = bearer ? await pool.query(

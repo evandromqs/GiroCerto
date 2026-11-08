@@ -16,6 +16,8 @@ import kotlin.math.abs
 internal class BubbleViewFactory(
     private val context: Context,
     private val dp: (Int) -> Int,
+    private val sizePx: () -> Int,
+    private val opacity: () -> Float,
     private val callbacks: Callbacks
 ) {
     interface Callbacks {
@@ -36,13 +38,14 @@ internal class BubbleViewFactory(
                 setStroke(dp(2), Color.parseColor("#16C784"))
             }
             elevation = dp(12).toFloat()
+            alpha = opacity()
             setOnClickListener { callbacks.onClick() }
         }
         bubble.addView(ImageView(context).apply {
             setImageResource(com.girocerto.app.R.drawable.ic_girocerto_brand)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             alpha = .98f
-        }, FrameLayout.LayoutParams((dp(96) * .72f).toInt(), (dp(96) * .72f).toInt(), Gravity.CENTER))
+        }, FrameLayout.LayoutParams((sizePx() * .74f).toInt(), (sizePx() * .74f).toInt(), Gravity.CENTER))
         bubble.addView(View(context).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable().apply {
@@ -51,17 +54,18 @@ internal class BubbleViewFactory(
                 setStroke(dp(2), Color.WHITE)
             }
             elevation = dp(14).toFloat()
-        }, FrameLayout.LayoutParams(dp(16), dp(16), Gravity.END or Gravity.BOTTOM).apply {
+        }, FrameLayout.LayoutParams((sizePx() * .24f).toInt(), (sizePx() * .24f).toInt(), Gravity.END or Gravity.BOTTOM).apply {
             rightMargin = dp(2)
             bottomMargin = dp(2)
         })
-        bubble.setOnTouchListener(DragInteraction(context, callbacks))
+        bubble.setOnTouchListener(DragInteraction(context, callbacks, opacity))
         return bubble
     }
 
     private class DragInteraction(
         context: Context,
-        private val callbacks: Callbacks
+        private val callbacks: Callbacks,
+        private val opacity: () -> Float,
     ) : View.OnTouchListener {
         private var initialX = 0
         private var initialY = 0
@@ -76,7 +80,7 @@ internal class BubbleViewFactory(
                 MotionEvent.ACTION_DOWN -> {
                     initialX = layout.x; initialY = layout.y
                     touchX = event.rawX; touchY = event.rawY; dragging = false
-                    view.animate().scaleX(.94f).scaleY(.94f).alpha(.9f).setDuration(80).start()
+                    view.animate().scaleX(.94f).scaleY(.94f).alpha((opacity() - .08f).coerceAtLeast(.4f)).setDuration(80).start()
                     return true
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -94,12 +98,12 @@ internal class BubbleViewFactory(
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
-                    view.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(120).start()
+                    view.animate().scaleX(1f).scaleY(1f).alpha(opacity()).setDuration(120).start()
                     if (dragging) callbacks.onDrop(view, layout, initialX, initialY) else view.performClick()
                     return true
                 }
                 MotionEvent.ACTION_CANCEL -> {
-                    view.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(120).start()
+                    view.animate().scaleX(1f).scaleY(1f).alpha(opacity()).setDuration(120).start()
                     callbacks.onDragCancelled(view, layout, initialX, initialY)
                     return true
                 }

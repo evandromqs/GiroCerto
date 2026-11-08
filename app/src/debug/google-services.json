@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "557624547153",
+    "project_id": "girocerto-copiloto",
+    "storage_bucket": "girocerto-copiloto.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:557624547153:android:d31e60eadfc7410d0f6570",
+        "android_client_info": {
+          "package_name": "com.girocerto.app.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "557624547153-5ug1fm4p277u0k13cs0qg6mr1v0ublo0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.girocerto.app",
+            "certificate_hash": "072cdd08b18a8b4f3cdb4b8e7dfe27211ade0da3"
+          }
+        },
+        {
+          "client_id": "557624547153-qhs8b1gf7rvsr73foc0c7k9dipneono8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.girocerto.app",
+            "certificate_hash": "0d73b0376b648e219f495524094355c55f7a5310"
+          }
+        },
+        {
+          "client_id": "557624547153-t3098lh3mg5cseh74950p4iprrdogbp4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKHgOxrNaHmo7C5dzrEoUytaWkr3HaKNI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "557624547153-t3098lh3mg5cseh74950p4iprrdogbp4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,6 +1,7 @@
 package com.girocerto.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -9,22 +10,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.girocerto.app.theme.AppSpacing
 import com.girocerto.app.theme.GreenPositive
 import com.girocerto.app.theme.RedAlert
-import com.girocerto.app.theme.StatusGreenSolid
-import com.girocerto.app.theme.StatusInvalidSolid
-import com.girocerto.app.theme.StatusRedSolid
-import com.girocerto.app.theme.StatusYellowSolid
 import com.girocerto.app.theme.YellowWarning
 import com.girocerto.domain.model.TrafficLightStatus
 
@@ -39,15 +36,11 @@ fun TrafficLightBadge(
     modifier: Modifier = Modifier,
     large: Boolean = false
 ) {
-    val (tint, solid, label) = when (status) {
-        TrafficLightStatus.GREEN -> Triple(GreenPositive, StatusGreenSolid, "COMPENSA")
-        TrafficLightStatus.YELLOW -> Triple(YellowWarning, StatusYellowSolid, "ATENÇÃO")
-        TrafficLightStatus.RED -> Triple(RedAlert, StatusRedSolid, "NÃO COMPENSA")
-        TrafficLightStatus.INVALID -> Triple(
-            MaterialTheme.colorScheme.onSurfaceVariant,
-            StatusInvalidSolid,
-            "INCOMPLETO"
-        )
+    val (tint, label) = when (status) {
+        TrafficLightStatus.GREEN -> GreenPositive to "COMPENSA"
+        TrafficLightStatus.YELLOW -> YellowWarning to "ATENÇÃO"
+        TrafficLightStatus.RED -> RedAlert to "NÃO COMPENSA"
+        TrafficLightStatus.INVALID -> MaterialTheme.colorScheme.onSurfaceVariant to "INCOMPLETO"
     }
 
     val shape = RoundedCornerShape(if (large) AppSpacing.CornerCard else AppSpacing.CornerSmall)
@@ -64,10 +57,15 @@ fun TrafficLightBadge(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(if (large) 10.dp else 8.dp)
-                    .background(solid, CircleShape)
+            Image(
+                painter = painterResource(when (status) {
+                    TrafficLightStatus.GREEN -> com.girocerto.app.R.drawable.ride_quality_great
+                    TrafficLightStatus.YELLOW -> com.girocerto.app.R.drawable.ride_quality_good
+                    TrafficLightStatus.RED -> com.girocerto.app.R.drawable.ride_quality_bad
+                    TrafficLightStatus.INVALID -> com.girocerto.app.R.drawable.ride_quality_good
+                }),
+                contentDescription = null,
+                modifier = Modifier.size(if (large) 42.dp else 26.dp),
             )
             Spacer(modifier = Modifier.width(6.dp))
             AppText(

@@ -1,12 +1,20 @@
 package com.girocerto.auth
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
+import androidx.activity.ComponentActivity
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
 import com.girocerto.app.BuildConfig
+import com.girocerto.app.R
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -29,10 +37,33 @@ class AuthManager(context: Context) {
         _state.value = _state.value.copy(loading = true, error = null)
         scope.launch {
             runCatching {
-                val response = JSONObject(request("GET", "auth/start"))
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(response.getString("url"))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            }.onFailure { _state.value = _state.value.copy(loading = false, error = "Não foi possível abrir o login do Google.") }
+                val activity = context as? ComponentActivity ?: error("Tela de login indisponível")
+                val googleOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(appContext.getString(R.string.default_web_client_id))
+                    .setAutoSelectEnabled(false)
+                    .build()
+                val credential = CredentialManager.create(activity).getCredential(
+                    context = activity,
+                    request = GetCredentialRequest.Builder().addCredentialOption(googleOption).build(),
+                ).credential
+                check(credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    "Credencial do Google não reconhecida"
+                }
+                val googleToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
+                val firebaseUser = FirebaseAuth.getInstance().signInWithCredential(
+                    GoogleAuthProvider.getCredential(googleToken, null),
+                ).await().user ?: error("Conta Google não encontrada")
+                val firebaseToken = firebaseUser.getIdToken(false).await().token
+                    ?: error("Token Firebase indisponível")
+                val response = JSONObject(request("POST", "auth/firebase/exchange", authorization = firebaseToken))
+                saveSession(response)
+            }.onFailure {
+                _state.value = _state.value.copy(
+                    loading = false,
+                    error = "Não foi possível entrar com o Google. Tente novamente.",
+                )
+            }
         }
     }
 
@@ -57,17 +88,6 @@ class AuthManager(context: Context) {
         }
     }
 
-    fun exchange(code: String) {
-        _state.value = _state.value.copy(loading = true, error = null)
-        scope.launch {
-            runCatching {
-                val body = JSONObject().put("code", code).toString()
-                val response = JSONObject(request("POST", "auth/exchange", body))
-                saveSession(response)
-            }.onFailure { _state.value = AuthState(error = "O login expirou. Tente novamente.") }
-        }
-    }
-
     private fun saveSession(response: JSONObject) {
         val userJson = response.getJSONObject("user")
         val user = AuthUser(userJson.getString("id"), userJson.optString("email"), userJson.optString("name", "Motorista"))
@@ -77,6 +97,7 @@ class AuthManager(context: Context) {
     }
 
     fun signOut() {
+        FirebaseAuth.getInstance().signOut()
         prefs.edit().clear().apply()
         _state.value = AuthState()
     }
@@ -87,13 +108,14 @@ class AuthManager(context: Context) {
         return AuthState(user = AuthUser(id, prefs.getString("email", "").orEmpty(), prefs.getString("name", "Motorista").orEmpty()))
     }
 
-    private fun request(method: String, path: String, body: String? = null): String {
+    private fun request(method: String, path: String, body: String? = null, authorization: String? = null): String {
         val connection = URL("${BuildConfig.CLOUD_BACKUP_URL}$path").openConnection() as HttpURLConnection
         try {
             connection.requestMethod = method
             connection.connectTimeout = 15_000
             connection.readTimeout = 30_000
             connection.setRequestProperty("Accept", "application/json")
+            authorization?.let { connection.setRequestProperty("Authorization", "Bearer $it") }
             if (body != null) {
                 connection.doOutput = true
                 connection.setRequestProperty("Content-Type", "application/json")

@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.girocerto.app.theme.AppSpacing
 import com.girocerto.app.theme.ThemeMode
+import com.girocerto.app.theme.FontScale
+import com.girocerto.app.theme.FloatingIconSize
 import com.girocerto.navigation.Screen
 import com.girocerto.ui.components.AppText
 import com.girocerto.ui.components.NavigationGlyph
@@ -193,6 +195,9 @@ private fun SettingsLink(icon: Screen, title: String, subtitle: String, action: 
 private fun AppearancePicker() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val mode by com.girocerto.app.theme.AppearancePreferences.mode.collectAsStateWithLifecycle()
+    val fontScale by com.girocerto.app.theme.AppearancePreferences.fontScale.collectAsStateWithLifecycle()
+    val bubbleSize by com.girocerto.app.theme.AppearancePreferences.bubbleSize.collectAsStateWithLifecycle()
+    val bubbleOpacity by com.girocerto.app.theme.AppearancePreferences.bubbleOpacity.collectAsStateWithLifecycle()
     NeobrutalCard(
         modifier = Modifier.fillMaxWidth(),
         backgroundColor = MaterialTheme.colorScheme.surface,
@@ -233,6 +238,36 @@ private fun AppearancePicker() {
                     onClick = { com.girocerto.app.theme.AppearancePreferences.set(context, ThemeMode.DARK) }
                 )
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            AppText("Tamanho da fonte", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FontScale.entries.forEach { option ->
+                    FilterChip(
+                        selected = fontScale == option,
+                        onClick = { com.girocerto.app.theme.AppearancePreferences.setFontScale(context, option) },
+                        label = { AppText(option.label, maxLines = 1) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            AppText("Ícone flutuante", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FloatingIconSize.entries.forEach { option ->
+                    FilterChip(
+                        selected = bubbleSize == option,
+                        onClick = { com.girocerto.app.theme.AppearancePreferences.setBubbleSize(context, option) },
+                        label = { AppText(option.label, maxLines = 1) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            AppText("Opacidade da bolha: ${(bubbleOpacity * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
+            Slider(
+                value = bubbleOpacity,
+                onValueChange = { com.girocerto.app.theme.AppearancePreferences.setBubbleOpacity(context, it) },
+                valueRange = .45f..1f,
+                steps = 10,
+            )
         }
     }
 }
