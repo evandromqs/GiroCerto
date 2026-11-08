@@ -70,6 +70,10 @@ class OverlayFlowTest {
         for (theme in listOf(com.girocerto.app.theme.ThemeMode.LIGHT, com.girocerto.app.theme.ThemeMode.DARK)) {
             compose.runOnIdle {
                 com.girocerto.app.theme.AppearancePreferences.set(compose.activity, theme)
+                com.girocerto.app.theme.AppearancePreferences.setBubbleSize(
+                    compose.activity,
+                    com.girocerto.app.theme.FloatingIconSize.MEDIUM,
+                )
                 val prefs = CopilotPreferences(compose.activity); prefs.write(prefs.read().copy(enabled = true))
                 OverlayController.stopFloatingBubble(compose.activity)
                 OverlayController.restore(compose.activity)
@@ -88,7 +92,8 @@ class OverlayFlowTest {
             }
             val docked = awaitBounds("Giro Certo. Toque para abrir; arraste até a lixeira para ocultar.")
             val density = compose.activity.resources.displayMetrics.density
-            assertEquals((64 * density * .8f).toInt().toDouble(), docked.width().toDouble(), 2.0)
+            val expectedBubblePx = com.girocerto.app.theme.FloatingIconSize.MEDIUM.dp * density
+            assertEquals(expectedBubblePx.toDouble(), docked.width().toDouble(), 2.0)
             tap(docked)
             awaitBounds("Recolher painel")
             assertTopMetrics()
