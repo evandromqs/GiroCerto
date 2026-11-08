@@ -243,8 +243,8 @@ class RideOverlayService : Service() {
             setPadding(dpToPx(18), dpToPx(18), dpToPx(18), dpToPx(18))
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(Color.WHITE, palette("#C9D5E6"))).apply {
-                shape = GradientDrawable.OVAL; setStroke(dpToPx(2), palette("#102746"))
+                intArrayOf(Color.parseColor("#FFF4F4"), Color.parseColor("#FFE1E4"))).apply {
+                shape = GradientDrawable.OVAL; setStroke(dpToPx(2), Color.parseColor("#C83E52"))
             }
             elevation = dpToPx(6).toFloat()
         }
@@ -253,7 +253,7 @@ class RideOverlayService : Service() {
             typeface = resources.getFont(com.girocerto.app.R.font.poppins_medium)
             tag = "trashLabel"; text = "Solte para ocultar"; textSize = 12f; gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
-            background = GradientDrawable().apply { setColor(palette("#102746")); cornerRadius = dpToPx(8).toFloat() }
+            background = GradientDrawable().apply { setColor(Color.parseColor("#A51F35")); cornerRadius = dpToPx(14).toFloat() }
         }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dpToPx(32), Gravity.BOTTOM))
         val bottomInset = windowHost.navigationBarInset(dpToPx(24))
         val layout = getWindowLayoutParams(dpToPx(144), dpToPx(112), 0, 0).apply {
@@ -411,7 +411,7 @@ class RideOverlayService : Service() {
         summaryContainer.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 1000
             setProgress((progress * 1000).toInt())
-            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1D4ED8"))
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#16C784"))
             progressBackgroundTintList = android.content.res.ColorStateList.valueOf(palette("#4B5563"))
         }, LinearLayout.LayoutParams(-1, dpToPx(5)).apply { topMargin = dpToPx(10) })
         card.addView(summaryContainer)
@@ -441,7 +441,7 @@ class RideOverlayService : Service() {
                 setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(activeBg ?: Color.parseColor("#1D4ED8"))
+                    setColor(activeBg ?: Color.parseColor("#102A46"))
                     setStroke(dpToPx(1), strokeColor ?: Color.parseColor("#60A5FA"))
                 }
                 elevation = dpToPx(3).toFloat()
@@ -455,7 +455,7 @@ class RideOverlayService : Service() {
         }
 
         // Button 1: Registrar Ponto
-        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_trip_clock, "Registrar Ponto", Color.parseColor("#1D4ED8"), Color.parseColor("#60A5FA")) {
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_trip_clock, "Registrar dia", Color.parseColor("#102A46"), Color.parseColor("#5EE6B2")) {
             val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra("target_screen", "SHIFT")
@@ -465,7 +465,7 @@ class RideOverlayService : Service() {
         }, LinearLayout.LayoutParams(0, -2, 1f))
 
         // Button 2: Histórico de Corridas
-        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_history, "Histórico", Color.parseColor("#1D4ED8"), Color.parseColor("#60A5FA")) {
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_history, "Ofertas", Color.parseColor("#102A46"), Color.parseColor("#5EE6B2")) {
             val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra("target_screen", "HISTORY")
@@ -477,9 +477,9 @@ class RideOverlayService : Service() {
         // Button 3: Ativar / Desativar Cálculo (SEM COR VERDE - visual azul e slate refinado)
         val prefs = CopilotPreferences(this)
         val isCalcEnabled = prefs.read().enabled
-        val calcBg = if (isCalcEnabled) Color.parseColor("#1D4ED8") else Color.parseColor("#1E293B")
-        val calcStroke = if (isCalcEnabled) Color.parseColor("#60A5FA") else Color.parseColor("#475569")
-        val calcLabel = if (isCalcEnabled) "Cálculo Ativo" else "Cálculo Pausado"
+        val calcBg = if (isCalcEnabled) Color.parseColor("#16C784") else Color.parseColor("#1E293B")
+        val calcStroke = if (isCalcEnabled) Color.parseColor("#8AF0C9") else Color.parseColor("#475569")
+        val calcLabel = if (isCalcEnabled) "Leitura ativa" else "Leitura pausada"
         buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_copilot, calcLabel, calcBg, calcStroke) {
             val current = prefs.read()
             val toggled = !current.enabled
@@ -498,8 +498,8 @@ class RideOverlayService : Service() {
             elevation = dpToPx(16).toFloat()
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#1D4ED8"))
-                setStroke(dpToPx(3), Color.parseColor("#93B4FF"))
+                setColor(Color.parseColor("#102A46"))
+                setStroke(dpToPx(3), Color.parseColor("#16C784"))
             }
             isClickable = true
             isFocusable = true
@@ -578,7 +578,10 @@ class RideOverlayService : Service() {
     private fun panelHeight() = ((resources.displayMetrics.heightPixels - panelTop()) * .50f).toInt()
 
     private fun panelSurface() = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-        intArrayOf(palette("#243535"), palette("#101818"))).apply {
+        intArrayOf(
+            Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this)) "#122B45" else "#FFFFFF"),
+            Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this)) "#0B1F33" else "#F7FAF9")
+        )).apply {
         cornerRadius = dpToPx(24).toFloat()
         setStroke(dpToPx(1), Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#4B6A84" else "#B7CAC4"))
     }

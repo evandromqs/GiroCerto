@@ -1,6 +1,7 @@
 package com.girocerto.auth
 
 import android.content.Context
+import android.content.ContextWrapper
 import androidx.activity.ComponentActivity
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -37,7 +38,7 @@ class AuthManager(context: Context) {
         _state.value = _state.value.copy(loading = true, error = null)
         scope.launch {
             runCatching {
-                val activity = context as? ComponentActivity ?: error("Tela de login indisponível")
+                val activity = context.findActivity() ?: error("Não foi possível localizar a tela ativa para abrir o Google")
                 val googleOption = GetGoogleIdOption.Builder()
                     .setFilterByAuthorizedAccounts(false)
                     .setServerClientId(appContext.getString(R.string.default_web_client_id))
@@ -58,13 +59,30 @@ class AuthManager(context: Context) {
                     ?: error("Token Firebase indisponível")
                 val response = JSONObject(request("POST", "auth/firebase/exchange", authorization = firebaseToken))
                 saveSession(response)
-            }.onFailure {
+            }.onFailure { error ->
                 _state.value = _state.value.copy(
                     loading = false,
-                    error = "Não foi possível entrar com o Google. Tente novamente.",
+                    error = googleErrorMessage(error),
                 )
             }
         }
+    }
+
+    private fun Context.findActivity(): ComponentActivity? {
+        var current: Context = this
+        while (current is ContextWrapper) {
+            if (current is ComponentActivity) return current
+            val base = current.baseContext
+            if (base === current) break
+            current = base
+        }
+        return current as? ComponentActivity
+    }
+
+    private fun googleErrorMessage(error: Throwable): String {
+        val detail = generateSequence(error) { it.cause }.mapNotNull { it.message?.trim()?.takeIf(String::isNotEmpty) }.firstOrNull()
+        val type = error.javaClass.simpleName.removeSuffix("Exception").ifBlank { "Falha desconhecida" }
+        return "Google: $type" + (detail?.let { " — ${it.take(220)}" } ?: "")
     }
 
     fun signUp(name: String, email: String, password: String) = emailAuth("sign-up", name, email, password)

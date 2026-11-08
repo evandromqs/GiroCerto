@@ -341,6 +341,12 @@ fun CopilotScreen(inModal: Boolean = false) {
                     platform = WorkPlatform.IFOOD,
                     onCheckedChange = { update(policy.copy(ifood = it)) }
                 )
+                PreferenceRow(
+                    label = "Keeta",
+                    checked = policy.keeta,
+                    platform = WorkPlatform.KEETA,
+                    onCheckedChange = { update(policy.copy(keeta = it)) }
+                )
             }
         }
 

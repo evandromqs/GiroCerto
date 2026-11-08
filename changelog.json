@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.0.29",
+    "changes": [
+      "Leitura do Uber reforçada com OCR local habilitado por padrão quando o texto da oferta não estiver acessível.",
+      "Keeta agora aparece entre os aplicativos acompanhados, com controle próprio e ícone oficial.",
+      "Login Google localiza corretamente a tela ativa e mostra o tipo e o detalhe real da falha quando não consegue entrar.",
+      "Menu e cartão flutuantes renovados com azul-marinho, verde da marca, superfícies mais limpas e atalhos próprios do Giro Certo.",
+      "Lixeira redesenhada em vermelho para deixar clara a ação de ocultar a bolha."
+    ]
+  },
+  {
     "version": "1.0.28",
     "changes": [
       "Login Google migrado para o Firebase dentro do aplicativo, mantendo e-mail, senha e dados no Neon.",

@@ -71,7 +71,7 @@ class CopilotPreferences(private val context: Context) {
             notifyOffers = prefs.getBoolean("notifications", false),
             minimumPassengerRating = prefs.getString("minimum_rating", "0.0")?.toDoubleOrNull()?.takeIf { it.isFinite() }?.coerceIn(0.0, 5.0) ?: 0.0,
             captureOfferScreenshot = prefs.getBoolean("capture_screenshot", false),
-            ocrEnabled = prefs.getBoolean("ocr_enabled", false),
+            ocrEnabled = prefs.getBoolean("ocr_enabled", true),
             autoSave = prefs.getBoolean("autosave", false),
             addFiveMinutes = prefs.getBoolean("add_five_minutes", false),
             autoRejectLoss = prefs.getBoolean("auto_reject_loss", false),
