@@ -24,6 +24,7 @@ class VoiceCommandService : Service(), RecognitionListener, TextToSpeech.OnInitL
     private var listening = false
 
     private sealed interface PendingAction {
+        data class Accept(val packageName: String) : PendingAction
         data class Reject(val packageName: String) : PendingAction
         data class Disconnect(val app: WorkApp?, val packageName: String) : PendingAction
     }
@@ -84,10 +85,49 @@ class VoiceCommandService : Service(), RecognitionListener, TextToSpeech.OnInitL
             return
         }
         when (command) {
+            VoiceCommand.AcceptOffer -> {
+                val pkg = GiroCertoAccessibilityService.currentOfferPackage()
+                if (pkg.isBlank()) speak("Não encontrei uma oferta ativa")
+                else {
+                    // Executa o clique de aceitar diretamente via Acessibilidade
+                    val ok = GiroCertoAccessibilityService.requestAcceptOffer(pkg)
+                    if (ok) {
+                        speak("Corrida aceita")
+                    } else {
+                        speak("Não consegui tocar no botão aceitar")
+                    }
+                }
+            }
             VoiceCommand.RejectOffer -> {
                 val pkg = GiroCertoAccessibilityService.currentOfferPackage()
                 if (pkg.isBlank()) speak("Não encontrei uma oferta ativa")
-                else { pending = PendingAction.Reject(pkg); speak("Confirmar recusa da oferta?") }
+                else {
+                    // Executa recusa com confirmação rápida ou direta
+                    val ok = GiroCertoAccessibilityService.requestRejectOffer(pkg)
+                    if (ok) {
+                        speak("Oferta recusada")
+                    } else {
+                        speak("Não encontrei o botão de recusar")
+                    }
+                }
+            }
+            VoiceCommand.PunchShift -> {
+                speak("Abrindo registro de ponto")
+                val intent = Intent(this, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    putExtra("target_screen", "SHIFT")
+                }
+                startActivity(intent)
+            }
+            VoiceCommand.DailySummary -> {
+                val today = com.girocerto.app.GiroCertoApp.instance.workRepository.days.value.firstOrNull { it.date == java.time.LocalDate.now() }
+                if (today != null) {
+                    val rev = String.format(Locale.GERMANY, "%.2f", today.revenue)
+                    val km = String.format(Locale.GERMANY, "%.1f", today.totalKm)
+                    speak("Você já faturou $rev reais rodando $km quilômetros hoje.")
+                } else {
+                    speak("Ainda não há ganhos registrados hoje.")
+                }
             }
             is VoiceCommand.Disconnect -> {
                 val pkg = command.app?.packages?.firstOrNull(::isInstalled)
@@ -104,17 +144,20 @@ class VoiceCommandService : Service(), RecognitionListener, TextToSpeech.OnInitL
         }
     }
 
-    private fun helpText(): String = "Comandos de voz disponíveis: recusar ou aceitar uma oferta, " +
-        "desconectar do app de transporte, abrir Waze ou Google Maps, parar de ouvir, " +
-        "ou pedir ajuda. Quando um comando pede confirmação, diga apenas \"confirmar\" ou \"cancelar\"."
+    private fun helpText(): String = "Comandos de voz disponíveis: aceitar corrida, recusar corrida, " +
+        "quanto fiz hoje, bater ponto, abrir Waze ou Google Maps, desconectar do aplicativo, ou parar comandos."
 
     private fun execute(action: PendingAction) {
         when (action) {
+            is PendingAction.Accept -> {
+                val ok = GiroCertoAccessibilityService.requestAcceptOffer(action.packageName)
+                if (ok) speak("Corrida aceita") else speak("Não consegui tocar no botão aceitar")
+            }
             is PendingAction.Reject -> {
                 val ok = GiroCertoAccessibilityService.requestRejectOffer(action.packageName)
                 if (ok) handler.postDelayed({
                     GiroCertoAccessibilityService.requestRejectOffer(action.packageName)
-                    speak("Comando de recusa executado")
+                    speak("Oferta recusada")
                 }, 600) else speak("Não encontrei o botão de recusar")
             }
             is PendingAction.Disconnect -> {

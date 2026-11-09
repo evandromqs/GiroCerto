@@ -107,10 +107,10 @@ internal class AccessibilityActionExecutor(
     private fun visibleWindows() = try { service.windows.sortedByDescending { it.layer } } catch (_: Exception) { emptyList() }
 
     private companion object {
-        val ACCEPT_TEXT = Regex("(?i)\\b(aceitar|accept)\\b")
-        val ACCEPT_IDS = setOf("accept", "aceitar")
-        val REJECT_TEXT = Regex("(?i)\\b(recusar|rejeitar|descartar|ignorar|fechar|decline|reject|dismiss)\\b")
-        val REJECT_IDS = setOf("close", "reject", "decline", "dismiss")
+        val ACCEPT_TEXT = Regex("(?i)\\b(aceitar|aceitar corrida|aceitar entrega|aceite|accept|toque para aceitar)\\b")
+        val ACCEPT_IDS = setOf("accept", "aceitar", "btn_accept", "accept_button", "action_accept", "take_order")
+        val REJECT_TEXT = Regex("(?i)\\b(recusar|rejeitar|descartar|ignorar|fechar|decline|reject|dismiss|nao quero|não quero|recusar corrida)\\b")
+        val REJECT_IDS = setOf("close", "reject", "decline", "dismiss", "btn_reject", "action_reject", "btn_close")
         val DISCONNECT_TEXT = Regex("(?i)^(ficar offline|desconectar|parar de receber( corridas| ofertas)?|go offline|stop requests)$")
         val DISCONNECT_IDS = setOf("go_offline", "offline_button")
 

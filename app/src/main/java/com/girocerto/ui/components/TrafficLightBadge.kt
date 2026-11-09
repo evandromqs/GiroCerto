@@ -15,6 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -36,19 +38,19 @@ fun TrafficLightBadge(
     modifier: Modifier = Modifier,
     large: Boolean = false
 ) {
-    val (tint, label) = when (status) {
-        TrafficLightStatus.GREEN -> GreenPositive to "COMPENSA"
-        TrafficLightStatus.YELLOW -> YellowWarning to "ATENÇÃO"
-        TrafficLightStatus.RED -> RedAlert to "NÃO COMPENSA"
-        TrafficLightStatus.INVALID -> MaterialTheme.colorScheme.onSurfaceVariant to "INCOMPLETO"
+    val (tint, label, textColor) = when (status) {
+        TrafficLightStatus.GREEN -> Triple(GreenPositive, "COMPENSA", if (androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f) com.girocerto.app.theme.BrandRoyalBlue else GreenPositive)
+        TrafficLightStatus.YELLOW -> Triple(YellowWarning, "ATENÇÃO", YellowWarning)
+        TrafficLightStatus.RED -> Triple(RedAlert, "NÃO COMPENSA", RedAlert)
+        TrafficLightStatus.INVALID -> Triple(MaterialTheme.colorScheme.onSurfaceVariant, "INCOMPLETO", MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
     val shape = RoundedCornerShape(if (large) AppSpacing.CornerCard else AppSpacing.CornerSmall)
 
     Box(
         modifier = modifier
-            .background(color = tint.copy(alpha = 0.12f), shape = shape)
-            .border(BorderStroke(AppSpacing.BorderThin, tint.copy(alpha = 0.32f)), shape = shape)
+            .background(color = if (status == TrafficLightStatus.GREEN) tint else tint.copy(alpha = 0.12f), shape = shape)
+            .border(BorderStroke(AppSpacing.BorderThin, if (status == TrafficLightStatus.GREEN) Color.White.copy(alpha = 0.6f) else tint.copy(alpha = 0.32f)), shape = shape)
             .padding(
                 horizontal = if (large) 14.dp else 10.dp,
                 vertical = if (large) 8.dp else 5.dp
@@ -70,7 +72,7 @@ fun TrafficLightBadge(
             Spacer(modifier = Modifier.width(6.dp))
             AppText(
                 text = label,
-                color = tint,
+                color = textColor,
                 fontSize = if (large) 12.sp else 10.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.5.sp

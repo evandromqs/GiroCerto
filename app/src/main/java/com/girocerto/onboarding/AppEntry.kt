@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -68,12 +69,16 @@ fun AppEntry() {
             onboardingPrefs.edit().putString("profile_owner", owner).apply()
             profileOwner = owner
         })
-        !tutorialDone -> TutorialScreen {
-            onboardingPrefs.edit().putBoolean("tutorial_done", true).apply(); tutorialDone = true
-        }
-        !permissionsDone -> PermissionGuideScreen {
-            onboardingPrefs.edit().putBoolean("permissions_done", true).apply(); permissionsDone = true
-        }
+        !tutorialDone || !permissionsDone -> UnifiedOnboardingSpotlightScreen(
+            onCompleted = {
+                onboardingPrefs.edit()
+                    .putBoolean("tutorial_done", true)
+                    .putBoolean("permissions_done", true)
+                    .apply()
+                tutorialDone = true
+                permissionsDone = true
+            }
+        )
         else -> {
             AppNavigation()
             com.girocerto.update.AppUpdatePrompt()
@@ -202,57 +207,293 @@ private fun SplashLoadingScreen() {
 @Composable private fun LoadingScreen() = SplashLoadingScreen()
 
 @Composable
-private fun TutorialScreen(onDone: () -> Unit) {
-    var page by remember { mutableIntStateOf(0) }
-    val pages = listOf(
-        "Entenda cada oferta" to "O Giro Certo calcula ganho por km, ganho por hora, custos e lucro antes de você decidir.",
-        "Semáforo simples" to "Verde indica uma oferta saudável, amarelo pede atenção e vermelho sinaliza possível prejuízo.",
-        "Tudo continua offline" to "A leitura e os cálculos acontecem no celular. A nuvem guarda apenas seu backup protegido.",
-    )
-    val item = pages[page]
-    Column(Modifier.fillMaxSize().padding(28.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("${page + 1} de ${pages.size}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(16.dp)); Text(item.first, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(12.dp)); Text(item.second, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(28.dp))
-        Button(onClick = { if (page < pages.lastIndex) page++ else onDone() }, modifier = Modifier.fillMaxWidth()) {
-            Text(if (page < pages.lastIndex) "Próximo" else "Configurar permissões")
-        }
-    }
-}
-
-@Composable
-private fun PermissionGuideScreen(onDone: () -> Unit) {
+private fun UnifiedOnboardingSpotlightScreen(onCompleted: () -> Unit) {
     val context = LocalContext.current
     var refresh by remember { mutableIntStateOf(0) }
     val overlay = remember(refresh) { OverlayController.canDrawOverlays(context) }
     val accessibility = remember(refresh) { GiroCertoAccessibilityService.isAccessibilityEnabled(context) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Permissões do Copiloto", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
-        Text("Ative as duas permissões para detectar popups de oferta mesmo enquanto Maps, música ou outro aplicativo estiver na frente.")
-        PermissionCard("Aparecer sobre outros apps", "Mostra o semáforo e os cálculos por cima do app aberto.", overlay) {
-            context.startActivity(OverlayController.createOverlayPermissionIntent(context)); refresh++
-        }
-        PermissionCard("Acessibilidade", "Lê somente os textos das ofertas e notificações dos apps habilitados.", accessibility) {
-            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); refresh++
-        }
-        Text("No Android, procure Giro Certo e confirme o uso do serviço. Você pode desativar essas permissões a qualquer momento.", style = MaterialTheme.typography.bodySmall)
-        Button(onClick = onDone, modifier = Modifier.fillMaxWidth(), enabled = overlay && accessibility) { Text("Entrar no Giro Certo") }
-        TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))) }, modifier = Modifier.fillMaxWidth()) { Text("Abrir informações do aplicativo") }
-    }
+    var currentStep by remember { mutableIntStateOf(0) }
+
+    val steps = listOf(
+        SpotlightStep(
+            tag = "CÁLCULO EM TEMPO REAL",
+            title = "Avaliação Automática",
+            description = "O Giro Certo analisa valores, distância e tempo de cada oferta da Uber, 99 e iFood na hora, calculando seu lucro líquido real.",
+            iconRes = R.drawable.ic_copilot
+        ),
+        SpotlightStep(
+            tag = "DECISÃO VISUAL SEM TEXTO",
+            title = "Semáforo Inteligente",
+            description = "Identifique em 1 segundo no canto da tela se a corrida é Ótima, Boa ou Ruim usando os ícones oficiais e cores de alto contraste.",
+            iconRes = R.drawable.ic_goals
+        ),
+        SpotlightStep(
+            tag = "COMANDOS DE VOZ",
+            title = "Controle com as Mãos no Volante",
+            description = "Diga 'aceitar corrida', 'recusar', 'quanto fiz hoje' ou 'bater ponto' para pilotar sem tirar a atenção do trânsito.",
+            iconRes = R.drawable.ic_trip_clock
+        ),
+        SpotlightStep(
+            tag = "CONFIGURAÇÃO FINAL",
+            title = "Permissões Essenciais",
+            description = "Ative a sobreposição e a acessibilidade para o copiloto monitorar as corridas sobre os aplicativos de motorista.",
+            iconRes = R.drawable.ic_advanced
+        )
+    )
+
+    val step = steps[currentStep]
+
     DisposableEffect(Unit) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event -> if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) refresh++ }
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) refresh++
+        }
         val owner = context as? androidx.lifecycle.LifecycleOwner
         owner?.lifecycle?.addObserver(observer)
         onDispose { owner?.lifecycle?.removeObserver(observer) }
     }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Top Indicator
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "PASSO ${currentStep + 1} DE ${steps.size}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (currentStep < steps.lastIndex) {
+                        TextButton(onClick = { currentStep = steps.lastIndex }) {
+                            Text("Pular", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
+                // Progress Bar
+                LinearProgressIndicator(
+                    progress = { (currentStep + 1) / steps.size.toFloat() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Spotlight Card (Clean, sem fundo opaco/escuro)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Spotlight Badge Icon
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(step.iconRes),
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+
+                    // Step Tag Pill
+                    Box(
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = step.tag,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Text(
+                        text = step.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Black,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Text(
+                        text = step.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Step 4 Permissions integration inside the spotlight card
+                    if (currentStep == steps.lastIndex) {
+                        Spacer(Modifier.height(8.dp))
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            PermissionItemRow(
+                                title = "Sobrepor a outros aplicativos",
+                                subtitle = "Exibe o card de oferta na hora que toca a chamada.",
+                                granted = overlay,
+                                onAction = {
+                                    context.startActivity(OverlayController.createOverlayPermissionIntent(context))
+                                    refresh++
+                                }
+                            )
+
+                            PermissionItemRow(
+                                title = "Acessibilidade do Giro Certo",
+                                subtitle = "Lê dados da oferta sem interferir no app de corrida.",
+                                granted = accessibility,
+                                onAction = {
+                                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                    refresh++
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(32.dp))
+
+            // Action Buttons Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (currentStep > 0) {
+                    OutlinedButton(
+                        onClick = { currentStep-- },
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("Voltar", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        if (currentStep < steps.lastIndex) {
+                            currentStep++
+                        } else {
+                            onCompleted()
+                        }
+                    },
+                    modifier = Modifier.weight(if (currentStep > 0) 1.5f else 1f).height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    enabled = currentStep < steps.lastIndex || (overlay && accessibility),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(
+                        text = if (currentStep < steps.lastIndex) "Avançar" else "Concluir e Começar",
+                        fontWeight = FontWeight.Black
+                    )
+                }
+            }
+        }
+    }
+}
+
+private data class SpotlightStep(
+    val tag: String,
+    val title: String,
+    val description: String,
+    val iconRes: Int
+)
+
+@Composable
+private fun PermissionItemRow(
+    title: String,
+    subtitle: String,
+    granted: Boolean,
+    onAction: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Button(
+                onClick = onAction,
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (granted) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.primary,
+                    contentColor = if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Text(if (granted) "OK" else "Ativar", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
 }
 
 @Composable
-private fun PermissionCard(title: String, description: String, granted: Boolean, onClick: () -> Unit) {
-    Card { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, fontWeight = FontWeight.Bold)
-        Text(description, style = MaterialTheme.typography.bodyMedium)
-        Button(onClick = onClick) { Text(if (granted) "Ativada" else "Ativar") }
-    } }
-}
+private fun TutorialScreen(onDone: () -> Unit) = UnifiedOnboardingSpotlightScreen(onDone)
+
+@Composable
+private fun PermissionGuideScreen(onDone: () -> Unit) = UnifiedOnboardingSpotlightScreen(onDone)
+
+@Composable
+private fun PermissionCard(title: String, description: String, granted: Boolean, onClick: () -> Unit) = Unit
+

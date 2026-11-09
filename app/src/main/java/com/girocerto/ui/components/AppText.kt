@@ -25,7 +25,7 @@ fun AppText(text: String, modifier: Modifier = Modifier, color: Color = Color.Un
     val family = fontFamily ?: style.fontFamily ?: com.girocerto.app.theme.RobotoFamily
     MaterialText(
         text = text,
-        modifier = if (align == TextAlign.Center) modifier.fillMaxWidth() else modifier,
+        modifier = modifier,
         color = color,
         fontSize = fontSize,
         fontStyle = fontStyle,

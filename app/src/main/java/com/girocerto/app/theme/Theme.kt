@@ -10,68 +10,67 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 // ============================================================================
-// Single-accent dark scheme: neutral navy surfaces, one brand hue.
-// secondary and tertiary mirror the primary family so no second accent appears.
+// Dark scheme: deep cockpit navy surfaces, Royal Blue structure, Neon Lime action.
 // ============================================================================
 private val DarkScheme = darkColorScheme(
-    primary = BrandBlueDark,
-    onPrimary = BrandNavy,
-    primaryContainer = Color(0xFF123D42),
-    onPrimaryContainer = Color(0xFFD8FFF0),
-    secondary = BrandBlueDark,
-    onSecondary = Color(0xFF08142B),
-    secondaryContainer = Color(0xFF123D42),
-    onSecondaryContainer = Color(0xFFD8FFF0),
-    tertiary = BrandBlueDark,
-    onTertiary = Color(0xFF08142B),
-    tertiaryContainer = Color(0xFF123D42),
-    onTertiaryContainer = Color(0xFFD8FFF0),
-    background = NeobrutalDarkBackground,
-    onBackground = Color(0xFFF4F7FD),
-    surface = NeobrutalDarkSurface,
-    onSurface = Color(0xFFF4F7FD),
-    surfaceVariant = Color(0xFF173651),
-    onSurfaceVariant = Color(0xFFB7C9D8),
-    outline = Color(0xFF4B6A84),
-    outlineVariant = Color(0xFF31536D),
-    error = Color(0xFFFFB3BE),
+    primary = BrandNeonLime,
+    onPrimary = Color(0xFF05102E),
+    primaryContainer = Color(0xFF132247),
+    onPrimaryContainer = BrandNeonLime,
+    secondary = BrandRoyalBlue,
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFF162345),
+    onSecondaryContainer = Color(0xFFE8EDF9),
+    tertiary = BrandNeonLimeDark,
+    onTertiary = Color(0xFF05102E),
+    tertiaryContainer = Color(0xFF132247),
+    onTertiaryContainer = BrandNeonLime,
+    background = CockpitDarkBackground,
+    onBackground = Color(0xFFFFFFFF),
+    surface = CockpitDarkSurface,
+    onSurface = Color(0xFFFFFFFF),
+    surfaceVariant = CockpitDarkSurfaceVariant,
+    onSurfaceVariant = Color(0xFF93A4C8),
+    outline = Color(0xFF203362),
+    outlineVariant = Color(0xFF172648),
+    error = Color(0xFFFF4D6D),
     onError = Color(0xFF3A0710),
     errorContainer = Color(0xFF5A1520),
     onErrorContainer = Color(0xFFFFD9DE),
-    surfaceContainer = NeobrutalDarkSurface,
-    surfaceContainerHigh = Color(0xFF1B3C59)
+    surfaceContainer = CockpitDarkSurface,
+    surfaceContainerHigh = Color(0xFF162345)
 )
 
 // ============================================================================
-// Single-accent light scheme: soft neutral canvas, one brand hue.
+// Light scheme: clean bright canvas, Royal Blue primary, Neon Lime highlights.
 // ============================================================================
 private val LightScheme = lightColorScheme(
-    primary = BrandBlue,
-    onPrimary = BrandNavy,
-    primaryContainer = NeobrutalLightBlueTint,
-    onPrimaryContainer = Color(0xFF0F172A),
-    secondary = BrandNavy,
-    onSecondary = NeobrutalWhite,
-    secondaryContainer = NeobrutalLightBlueTint,
-    onSecondaryContainer = Color(0xFF0F172A),
-    tertiary = BrandGreenPressed,
-    onTertiary = NeobrutalWhite,
-    tertiaryContainer = NeobrutalLightBlueTint,
-    onTertiaryContainer = Color(0xFF0F172A),
-    background = NeobrutalLightGray,
-    onBackground = BrandNavy,
-    surface = NeobrutalWhite,
-    onSurface = BrandNavy,
-    surfaceVariant = NeobrutalLightBlueTint,
-    onSurfaceVariant = Color(0xFF43566A),
-    outline = Color(0xFFB7CAC4),
-    outlineVariant = Color(0xFFD2E2DD),
-    error = Color(0xFFB42336),
-    onError = NeobrutalWhite,
+    primary = BrandRoyalBlue,
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFE8EDF9),
+    onPrimaryContainer = BrandRoyalBlue,
+    secondary = BrandRoyalBlue,
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFE8EDF9),
+    onSecondaryContainer = Color(0xFF05102E),
+    tertiary = BrandNeonLimeDark,
+    onTertiary = Color(0xFF05102E),
+    tertiaryContainer = Color(0xFFF1FED1),
+    onTertiaryContainer = Color(0xFF05102E),
+    background = CockpitLightBackground,
+    onBackground = Color(0xFF05102E),
+    surface = CockpitLightSurface,
+    onSurface = Color(0xFF05102E),
+    surfaceVariant = CockpitLightSurfaceVariant,
+    onSurfaceVariant = Color(0xFF4B5878),
+    outline = Color(0xFFD1DBEE),
+    outlineVariant = Color(0xFFE2EAF8),
+    error = Color(0xFFC70D2C),
+    onError = Color(0xFFFFFFFF),
     errorContainer = Color(0xFFFBE7EA),
     onErrorContainer = Color(0xFF4A0A13),
-    surfaceContainer = NeobrutalWhite,
-    surfaceContainerHigh = Color(0xFFF1F4F9)
+    surfaceContainer = CockpitLightSurface,
+    surfaceContainerHigh = Color(0xFFF0F4FC)
 )
 
 @Composable

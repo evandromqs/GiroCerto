@@ -79,7 +79,7 @@ fun NeobrutalButton(
             AppText(
                 text = text,
                 color = contentColor,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
             )

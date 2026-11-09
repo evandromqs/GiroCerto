@@ -31,33 +31,30 @@ fun NeobrutalCard(
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.surface,
     borderColor: Color = MaterialTheme.colorScheme.outline,
-    borderWidth: Dp = AppSpacing.BorderThick, // 2.5.dp
-    shadowOffset: Dp = AppSpacing.ShadowOffset, // 4.dp
-    shadowColor: Color = NeobrutalBlack,
-    shape: Shape = RoundedCornerShape(AppSpacing.CornerCard), // 12.dp standardized rounded corners
+    borderWidth: Dp = AppSpacing.BorderThick,
+    shadowOffset: Dp = 0.dp,
+    shadowColor: Color = Color.Transparent,
+    shape: Shape = RoundedCornerShape(AppSpacing.CornerCard),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Box(
-        modifier = modifier.padding(end = shadowOffset, bottom = shadowOffset),
-        propagateMinConstraints = true
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        shadowElevation = 2.dp,
+        tonalElevation = 1.dp,
+        color = backgroundColor,
+        border = if (borderWidth > 0.dp) BorderStroke(borderWidth, borderColor) else null
     ) {
-        Surface(
-            shape = shape,
-            shadowElevation = 8.dp,
-            color = backgroundColor,
-            border = if (borderWidth > 0.dp) BorderStroke(borderWidth, borderColor) else null
-        ) {
-            Column(
-                modifier = Modifier.background(
-                    Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = .13f),
-                        .22f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = .055f),
-                    )
-                ),
-                content = content,
-            )
-        }
+        Column(
+            modifier = Modifier.background(
+                Brush.verticalGradient(
+                    0f to Color.White.copy(alpha = .06f),
+                    .22f to Color.Transparent,
+                    1f to Color.Black.copy(alpha = .04f),
+                )
+            ),
+            content = content,
+        )
     }
 }
 

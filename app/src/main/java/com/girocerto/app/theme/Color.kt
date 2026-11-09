@@ -6,29 +6,41 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
 // ============================================================================
-// Official Giro Certo palette: navy for trust/control, green for positive
-// action and white for maximum legibility in a moving vehicle.
+// Official Giro Certo High-Voltage Palette:
+// Royal/Electric Blue for authority/branding, Neon Lime for high-visibility
+// financial action and Pure White for ultra-sharp legibility.
 // ============================================================================
-val BrandNavy = Color(0xFF0B1F3A)
+val BrandRoyalBlue = Color(0xFF0131CD)
+val BrandNeonLime = Color(0xFFB9FC01)
+val BrandNeonLimeDark = Color(0xFFA5E200)
+
+// Official aliases
+val BrandNavy = BrandRoyalBlue
+
+// Legacy tokens kept for unit test backward-compatibility suite
+val NeobrutalDarkBlue = Color(0xFF0B1F3A)
 val BrandGreen = Color(0xFF16C784)
-val BrandGreenPressed = Color(0xFF0FA66E)
-
-// Compatibility aliases while call sites migrate to semantic names.
-val BrandBlue = BrandGreen
-val BrandBlueDark = Color(0xFF5EE6B2)
-val BrandBluePressed = BrandGreenPressed
-
-// Legacy token names kept for call-site compatibility.
-val NeobrutalDarkBlue = BrandNavy
+val BrandGreenPressed = Color(0xFF0FA36B)
 val NeobrutalLightGray = Color(0xFFF4F7F6)
 val NeobrutalBlack = Color(0xFF000000)
 val NeobrutalWhite = Color(0xFFFFFFFF)
-val NeobrutalDarkBackground = BrandNavy
+val NeobrutalDarkBackground = Color(0xFF0B1F3A)
 val NeobrutalDarkSurface = Color(0xFF102A46)
 val NeobrutalLightBlueTint = Color(0xFFE8F8F2)
+val Navy = NeobrutalDarkBlue
 
-// Brand alias
-val Navy = BrandNavy
+// Compatibility aliases while call sites migrate to semantic names.
+val BrandBlue = BrandRoyalBlue
+val BrandBlueDark = BrandNeonLime
+val BrandBluePressed = BrandNeonLimeDark
+
+// Semantic base surfaces for contrast
+val CockpitDarkBackground = Color(0xFF060B18)
+val CockpitDarkSurface = Color(0xFF0E172E)
+val CockpitDarkSurfaceVariant = Color(0xFF162345)
+val CockpitLightBackground = Color(0xFFF4F6FC)
+val CockpitLightSurface = Color(0xFFFFFFFF)
+val CockpitLightSurfaceVariant = Color(0xFFE8EDF9)
 
 // ============================================================================
 // Semantic Compatibility Tokens
@@ -48,9 +60,9 @@ private val ColorSchemeDark: Boolean
 // ============================================================================
 // Semantic Status Tokens (kept: they carry financial meaning)
 // ============================================================================
-val GreenPositive: Color @Composable get() = if (ColorSchemeDark) Color(0xFF6EE7B7) else Color(0xFF087443)
-val YellowWarning: Color @Composable get() = if (ColorSchemeDark) Color(0xFFFDE68A) else Color(0xFF885600)
-val RedAlert: Color @Composable get() = if (ColorSchemeDark) Color(0xFFFDA4AF) else Color(0xFFB42336)
+val GreenPositive: Color @Composable get() = if (ColorSchemeDark) BrandNeonLime else Color(0xFF0131CD)
+val YellowWarning: Color @Composable get() = if (ColorSchemeDark) Color(0xFFFFD233) else Color(0xFF996B00)
+val RedAlert: Color @Composable get() = if (ColorSchemeDark) Color(0xFFFF4D6D) else Color(0xFFC70D2C)
 
 val StatusGreenSolid = Color(0xFF16A34A)
 val StatusYellowSolid = Color(0xFFEAB308)

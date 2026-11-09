@@ -233,6 +233,7 @@ class RideOverlayService : Service() {
 
     private fun showTrashTarget() {
         if (trashTarget != null) return
+        val dark = com.girocerto.app.theme.AppearancePreferences.isDark(this)
         val target = FrameLayout(this).apply {
             contentDescription = "Solte aqui para ocultar"
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
@@ -240,27 +241,32 @@ class RideOverlayService : Service() {
         val icon = android.widget.ImageView(this).apply {
             tag = "trashIcon"
             setImageResource(com.girocerto.app.R.drawable.ic_trash)
-            setPadding(dpToPx(18), dpToPx(18), dpToPx(18), dpToPx(18))
+            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(Color.parseColor("#FFF4F4"), Color.parseColor("#FFE1E4"))).apply {
-                shape = GradientDrawable.OVAL; setStroke(dpToPx(2), Color.parseColor("#C83E52"))
+            imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor(if (dark) "#0E172E" else "#162345"))
+                setStroke(dpToPx(2), Color.parseColor("#0131CD"))
             }
-            elevation = dpToPx(6).toFloat()
+            elevation = dpToPx(8).toFloat()
         }
         target.addView(icon, FrameLayout.LayoutParams(dpToPx(64), dpToPx(64), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dpToPx(8) })
         target.addView(TextView(this).apply {
             typeface = resources.getFont(com.girocerto.app.R.font.poppins_medium)
-            tag = "trashLabel"; text = "Solte para ocultar"; textSize = 12f; gravity = Gravity.CENTER
+            tag = "trashLabel"; text = "Solte para ocultar"; textSize = 11.5f; gravity = Gravity.CENTER
+            paint.isFakeBoldText = true
             setTextColor(Color.WHITE)
-            background = GradientDrawable().apply { setColor(Color.parseColor("#A51F35")); cornerRadius = dpToPx(14).toFloat() }
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor(if (dark) "#060B18" else "#0E172E"))
+                setStroke(dpToPx(1), Color.parseColor("#203362"))
+                cornerRadius = dpToPx(10).toFloat()
+            }
         }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dpToPx(32), Gravity.BOTTOM))
         val bottomInset = windowHost.navigationBarInset(dpToPx(24))
         val layout = getWindowLayoutParams(dpToPx(144), dpToPx(112), 0, 0).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             x = 0; y = bottomInset + dpToPx(16)
-            // Keep this short-lived target discoverable by accessibility during the drag.
-            // The pointer remains captured by the bubble until ACTION_UP.
         }
         try { windowHost.attach(target, layout); trashTarget = target }
         catch (_: Exception) { trashTarget = null }
@@ -277,11 +283,41 @@ class RideOverlayService : Service() {
     private fun updateTrashHover(hovered: Boolean) {
         if (trashHovered == hovered) return
         trashHovered = hovered
+        val dark = com.girocerto.app.theme.AppearancePreferences.isDark(this)
         trashTarget?.findViewWithTag<View>("trashIcon")?.apply {
-            scaleX = if (hovered) 1.15f else 1f; scaleY = scaleX
-            if (hovered) performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            animate().scaleX(if (hovered) 1.22f else 1f).scaleY(if (hovered) 1.22f else 1f).setDuration(120).start()
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                if (hovered) {
+                    setColor(Color.parseColor("#991B1B")) // Vermelho escuro de alerta
+                    setStroke(dpToPx(3), Color.parseColor("#EF4444")) // Borda vermelha brilhante
+                } else {
+                    setColor(Color.parseColor(if (dark) "#0E172E" else "#162345"))
+                    setStroke(dpToPx(2), Color.parseColor("#0131CD"))
+                }
+            }
+            if (hovered) {
+                // Vibração física tátil
+                val vibrator = getSystemService(android.os.Vibrator::class.java)
+                if (vibrator != null && vibrator.hasVibrator()) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(45, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator.vibrate(45)
+                    }
+                }
+                performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+            }
         }
-        trashTarget?.findViewWithTag<TextView>("trashLabel")?.text = if (hovered) "Solte agora" else "Solte para ocultar"
+        trashTarget?.findViewWithTag<TextView>("trashLabel")?.apply {
+            text = if (hovered) "Solte agora" else "Solte para ocultar"
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor(if (hovered) "#DC2626" else (if (dark) "#060B18" else "#0E172E")))
+                setStroke(dpToPx(1), Color.parseColor(if (hovered) "#EF4444" else "#203362"))
+                cornerRadius = dpToPx(10).toFloat()
+            }
+        }
     }
 
     private fun hideTrashTarget() {
@@ -352,18 +388,78 @@ class RideOverlayService : Service() {
             orientation = LinearLayout.VERTICAL
             background = panelSurface()
             elevation = dpToPx(12).toFloat()
-            setPadding(dpToPx(16), dpToPx(48), dpToPx(16), dpToPx(16))
+            setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(16))
         }
 
-        // Close button at top right
-        val closeRow = LinearLayout(this).apply {
-            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+        // Header Compacto: Ícone do app à esquerda, Título "Giro Certo", Botão fechar vermelho à direita
+        val headerRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 0, 0, dpToPx(12))
         }
-        val closeBtn = iconAction(com.girocerto.app.R.drawable.ic_close_panel, "Recolher painel") { switchToBubble() }.apply {
-            setPadding(dpToPx(5), dpToPx(5), dpToPx(5), dpToPx(5))
+
+        // 1. Ícone do app à esquerda (40x40dp)
+        val appIcon = FrameLayout(this).apply {
+            elevation = dpToPx(4).toFloat()
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(10).toFloat()
+                setColor(Color.parseColor("#0131CD"))
+                setStroke(dpToPx(1), Color.parseColor("#B9FC01"))
+            }
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Abrir Giro Certo em primeiro plano"
+            setOnClickListener {
+                val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+                startActivity(intent)
+                switchToBubble()
+            }
         }
-        closeRow.addView(closeBtn, LinearLayout.LayoutParams(dpToPx(26), dpToPx(26)))
-        card.addView(closeRow)
+        appIcon.addView(android.widget.ImageView(this).apply {
+            setImageResource(com.girocerto.app.R.drawable.ic_girocerto_brand)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, FrameLayout.LayoutParams(dpToPx(28), dpToPx(28), Gravity.CENTER))
+        headerRow.addView(appIcon, LinearLayout.LayoutParams(dpToPx(40), dpToPx(40)))
+
+        // 2. Título "Giro Certo" limpo ao lado do ícone (sem bola verde piscante)
+        val titleCol = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(10), 0, dpToPx(10), 0)
+        }
+        titleCol.addView(label("Giro Certo", 16f).apply {
+            paint.isFakeBoldText = true
+            setTextColor(Color.WHITE)
+        })
+        titleCol.addView(label("Copiloto em Execução", 10.5f).apply {
+            setTextColor(palette("#B5C9C7"))
+        })
+        headerRow.addView(titleCol, LinearLayout.LayoutParams(0, -2, 1f))
+
+        // 3. Botão fechar vermelho no canto direito (quadrado com bordas curvas, mesmo tamanho 40x40dp)
+        val closeBtn = FrameLayout(this).apply {
+            elevation = dpToPx(4).toFloat()
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(10).toFloat()
+                setColor(Color.parseColor("#E11D48")) // Vermelho vibrante
+            }
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Recolher painel"
+            setOnClickListener { switchToBubble() }
+        }
+        closeBtn.addView(android.widget.ImageView(this).apply {
+            setImageResource(com.girocerto.app.R.drawable.ic_close_panel)
+            imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, FrameLayout.LayoutParams(dpToPx(22), dpToPx(22), Gravity.CENTER))
+        headerRow.addView(closeBtn, LinearLayout.LayoutParams(dpToPx(40), dpToPx(40)))
+
+        card.addView(headerRow)
 
         // Summary Data (Meta do dia, Total feito, Kms rodados)
         val today = GiroCertoApp.instance.workRepository.days.value.firstOrNull { it.date == java.time.LocalDate.now() }
@@ -382,13 +478,13 @@ class RideOverlayService : Service() {
             gravity = Gravity.CENTER
         }
 
-        fun summaryCol(title: String, value: String): LinearLayout {
+        fun summaryCol(title: String, value: String, highlight: Boolean = false): LinearLayout {
             return LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
                 addView(label(value, 17f).apply {
                     paint.isFakeBoldText = true
-                    setTextColor(palette("#F9FAFB"))
+                    setTextColor(if (highlight) Color.parseColor("#B9FC01") else palette("#F9FAFB"))
                     gravity = Gravity.CENTER
                 })
                 addView(label(title, 11f).apply {
@@ -403,7 +499,7 @@ class RideOverlayService : Service() {
         val kmStr = String.format(Locale.GERMANY, "%.1f km", km)
 
         metricsRow.addView(summaryCol("Meta do dia", goalStr), LinearLayout.LayoutParams(0, -2, 1f))
-        metricsRow.addView(summaryCol("Total feito", revStr), LinearLayout.LayoutParams(0, -2, 1f))
+        metricsRow.addView(summaryCol("Total feito", revStr, highlight = true), LinearLayout.LayoutParams(0, -2, 1f))
         metricsRow.addView(summaryCol("Kms rodados", kmStr), LinearLayout.LayoutParams(0, -2, 1f))
         summaryContainer.addView(metricsRow)
 
@@ -411,7 +507,7 @@ class RideOverlayService : Service() {
         summaryContainer.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 1000
             setProgress((progress * 1000).toInt())
-            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#16C784"))
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#B9FC01"))
             progressBackgroundTintList = android.content.res.ColorStateList.valueOf(palette("#4B5563"))
         }, LinearLayout.LayoutParams(-1, dpToPx(5)).apply { topMargin = dpToPx(10) })
         card.addView(summaryContainer)
@@ -441,8 +537,8 @@ class RideOverlayService : Service() {
                 setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(activeBg ?: Color.parseColor("#102A46"))
-                    setStroke(dpToPx(1), strokeColor ?: Color.parseColor("#60A5FA"))
+                    setColor(activeBg ?: Color.parseColor("#0131CD"))
+                    setStroke(dpToPx(1), strokeColor ?: Color.parseColor("#B9FC01"))
                 }
                 elevation = dpToPx(3).toFloat()
             }
@@ -455,7 +551,7 @@ class RideOverlayService : Service() {
         }
 
         // Button 1: Registrar Ponto
-        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_trip_clock, "Registrar dia", Color.parseColor("#102A46"), Color.parseColor("#5EE6B2")) {
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_trip_clock, "Registrar Ponto", Color.parseColor("#0131CD"), Color.parseColor("#203362")) {
             val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra("target_screen", "SHIFT")
@@ -465,7 +561,7 @@ class RideOverlayService : Service() {
         }, LinearLayout.LayoutParams(0, -2, 1f))
 
         // Button 2: Histórico de Corridas
-        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_history, "Ofertas", Color.parseColor("#102A46"), Color.parseColor("#5EE6B2")) {
+        buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_history, "Histórico", Color.parseColor("#0131CD"), Color.parseColor("#203362")) {
             val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra("target_screen", "HISTORY")
@@ -474,51 +570,27 @@ class RideOverlayService : Service() {
             switchToBubble()
         }, LinearLayout.LayoutParams(0, -2, 1f))
 
-        // Button 3: Ativar / Desativar Cálculo (SEM COR VERDE - visual azul e slate refinado)
+        // Button 3: Ativar / Desativar Cálculo
         val prefs = CopilotPreferences(this)
         val isCalcEnabled = prefs.read().enabled
-        val calcBg = if (isCalcEnabled) Color.parseColor("#16C784") else Color.parseColor("#1E293B")
-        val calcStroke = if (isCalcEnabled) Color.parseColor("#8AF0C9") else Color.parseColor("#475569")
-        val calcLabel = if (isCalcEnabled) "Leitura ativa" else "Leitura pausada"
+        val calcBg = if (isCalcEnabled) Color.parseColor("#B9FC01") else Color.parseColor("#162345")
+        val calcStroke = if (isCalcEnabled) Color.parseColor("#FFFFFF") else Color.parseColor("#203362")
+        val calcLabel = if (isCalcEnabled) "Cálculo Ativo" else "Cálculo Pausado"
         buttonsRow.addView(menuButton(com.girocerto.app.R.drawable.ic_copilot, calcLabel, calcBg, calcStroke) {
             val current = prefs.read()
             val toggled = !current.enabled
             prefs.write(current.copy(enabled = toggled))
             Toast.makeText(this@RideOverlayService, if (toggled) "Cálculo de ofertas ativado!" else "Cálculo pausado", Toast.LENGTH_SHORT).show()
             showQuickMenuMode()
+        }.apply {
+            if (isCalcEnabled) {
+                findViewWithTag<android.widget.ImageView>("calcIcon")?.imageTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#0131CD"))
+            }
         }, LinearLayout.LayoutParams(0, -2, 1f))
 
         card.addView(buttonsRow)
 
-        // Card com topMargin de 42dp para acomodar o ícone superior de 84dp sobreposto pela metade
-        root.addView(card, FrameLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(42) })
-
-        // Central Top Icon com girocerto.webp aumentado em 50% (84dp)
-        val topIconContainer = FrameLayout(this).apply {
-            elevation = dpToPx(16).toFloat()
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#102A46"))
-                setStroke(dpToPx(3), Color.parseColor("#16C784"))
-            }
-            isClickable = true
-            isFocusable = true
-            contentDescription = "Abrir Giro Certo em primeiro plano"
-            setOnClickListener {
-                val intent = Intent(this@RideOverlayService, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                }
-                startActivity(intent)
-                switchToBubble()
-            }
-        }
-        topIconContainer.addView(android.widget.ImageView(this).apply {
-            setImageResource(com.girocerto.app.R.drawable.ic_girocerto_brand)
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, FrameLayout.LayoutParams(dpToPx(72), dpToPx(72), Gravity.CENTER))
-
-        root.addView(topIconContainer, FrameLayout.LayoutParams(dpToPx(84), dpToPx(84), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
-
+        root.addView(card, FrameLayout.LayoutParams(-1, -2))
         return root
     }
 
@@ -578,21 +650,18 @@ class RideOverlayService : Service() {
     private fun panelHeight() = ((resources.displayMetrics.heightPixels - panelTop()) * .50f).toInt()
 
     private fun panelSurface() = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-        intArrayOf(
-            Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this)) "#122B45" else "#FFFFFF"),
-            Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this)) "#0B1F33" else "#F7FAF9")
-        )).apply {
+        intArrayOf(palette("#243535"), palette("#101818"))).apply {
         cornerRadius = dpToPx(24).toFloat()
-        setStroke(dpToPx(1), Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#4B6A84" else "#B7CAC4"))
+        setStroke(dpToPx(1), Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#0131CD" else "#D1DBEE"))
     }
 
     private fun offerSurface() = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
         intArrayOf(
-            Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this)) "#183B58" else "#FFFFFF"),
-            Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this)) "#102A46" else "#F0F7F4"),
+            Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this)) "#162345" else "#FFFFFF"),
+            Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this)) "#0E172E" else "#F4F6FC"),
         )).apply {
         cornerRadius = dpToPx(20).toFloat()
-        setStroke(dpToPx(1), Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#4B6A84" else "#B7CAC4"))
+        setStroke(dpToPx(1), Color.parseColor(if (com.girocerto.app.theme.AppearancePreferences.isDark(this@RideOverlayService)) "#203362" else "#D1DBEE"))
     }
 
     private fun label(value: String, size: Float = 12f) = TextView(this).apply {
@@ -603,11 +672,11 @@ class RideOverlayService : Service() {
 
     private fun iconAction(icon: Int, description: String, click: () -> Unit) = android.widget.ImageButton(this).apply {
         setImageResource(icon); contentDescription = description
-        imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+        imageTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#0131CD"))
         setPadding(dpToPx(13), dpToPx(13), dpToPx(13), dpToPx(13))
         background = android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x40FFFFFF),
-            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.parseColor("#16C784"), Color.parseColor("#0FA66E"))).apply {
-                cornerRadius = dpToPx(14).toFloat(); setStroke(dpToPx(1), Color.parseColor("#78E8BE"))
+            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.parseColor("#B9FC01"), Color.parseColor("#A5E200"))).apply {
+                cornerRadius = dpToPx(14).toFloat(); setStroke(dpToPx(1), Color.WHITE)
             }, null)
         elevation = dpToPx(2).toFloat()
         setOnClickListener { click() }
@@ -628,7 +697,7 @@ class RideOverlayService : Service() {
         header.addView(android.widget.ImageView(this).apply {
             setImageResource(com.girocerto.app.R.drawable.ic_launcher_monochrome)
             imageTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(
-                "#16C784"))
+                "#B9FC01"))
             contentDescription = "Giro Certo"
         }, LinearLayout.LayoutParams(dpToPx(24), dpToPx(24)).apply { rightMargin = dpToPx(8) })
         header.addView(label("Giro Certo", 16f), LinearLayout.LayoutParams(0, -2, 1f))
@@ -667,9 +736,9 @@ class RideOverlayService : Service() {
         val analysis = entry.analysis
         val offer = analysis.offer
         val dark = com.girocerto.app.theme.AppearancePreferences.isDark(this)
-        val gain = Color.parseColor(if (dark) "#6EE7B7" else "#087443")
-        val loss = Color.parseColor(if (dark) "#FDA4AF" else "#B42336")
-        val warning = Color.parseColor(if (dark) "#FDE68A" else "#885600")
+        val gain = Color.parseColor(if (dark) "#B9FC01" else "#0131CD")
+        val loss = Color.parseColor(if (dark) "#FF3B56" else "#C70D2C")
+        val warning = Color.parseColor(if (dark) "#FFD233" else "#996B00")
         val decisionColor = when (analysis.trafficLight) { TrafficLightStatus.GREEN -> gain; TrafficLightStatus.RED -> loss; else -> warning }
         val decision = when (analysis.trafficLight) {
             TrafficLightStatus.GREEN -> "Compensa"
@@ -695,24 +764,34 @@ class RideOverlayService : Service() {
         }, LinearLayout.LayoutParams(dpToPx(24), dpToPx(24)).apply { rightMargin = dpToPx(8) })
         heading.addView(label(String.format(Locale.GERMANY, "R$ %.2f", offer.fare), 22f).apply { paint.isFakeBoldText = true },
             LinearLayout.LayoutParams(0, -2, 1f))
+
+        // Destaque visual no canto direito com o ícone real (ride_quality_*.webp), sem texto "Compensa/Não Compensa"
         val qualityIcon = when (analysis.trafficLight) {
             TrafficLightStatus.GREEN -> com.girocerto.app.R.drawable.ride_quality_great
             TrafficLightStatus.YELLOW -> com.girocerto.app.R.drawable.ride_quality_good
             TrafficLightStatus.RED -> com.girocerto.app.R.drawable.ride_quality_bad
             TrafficLightStatus.INVALID -> com.girocerto.app.R.drawable.ride_quality_good
         }
-        heading.addView(android.widget.ImageView(this).apply {
+        val qualityBadgeBorderColor = when (analysis.trafficLight) {
+            TrafficLightStatus.GREEN -> Color.parseColor("#B9FC01")
+            TrafficLightStatus.RED -> Color.parseColor("#FF3B56")
+            else -> Color.parseColor("#FFD233")
+        }
+        val qualityContainer = FrameLayout(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(12).toFloat()
+                setColor(Color.parseColor(if (dark) "#0E172E" else "#FFFFFF"))
+                setStroke(dpToPx(2), qualityBadgeBorderColor)
+            }
+            elevation = dpToPx(4).toFloat()
+            setPadding(dpToPx(3), dpToPx(3), dpToPx(3), dpToPx(3))
+        }
+        qualityContainer.addView(android.widget.ImageView(this).apply {
             setImageResource(qualityIcon)
             contentDescription = "Qualidade da corrida: $decision"
-        }, LinearLayout.LayoutParams(dpToPx(36), dpToPx(36)).apply { rightMargin = dpToPx(6) })
-        heading.addView(label(decision, 12f).apply {
-            setTextColor(if (analysis.trafficLight == TrafficLightStatus.YELLOW || analysis.trafficLight == TrafficLightStatus.INVALID) Color.BLACK else Color.WHITE)
-            setPadding(dpToPx(8), dpToPx(5), dpToPx(8), dpToPx(5))
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor(when (analysis.trafficLight) { TrafficLightStatus.GREEN -> "#087443"; TrafficLightStatus.RED -> "#B42336"; else -> "#FDE68A" }))
-                cornerRadius = dpToPx(20).toFloat()
-            }
-        })
+        }, FrameLayout.LayoutParams(dpToPx(40), dpToPx(40), Gravity.CENTER))
+        heading.addView(qualityContainer, LinearLayout.LayoutParams(dpToPx(46), dpToPx(46)))
         card.addView(heading)
         if (offer.destinationAddress.isNotBlank()) {
             card.addView(label(offer.destinationAddress, 12f).apply {
@@ -745,7 +824,7 @@ class RideOverlayService : Service() {
             val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             column.setPadding(dpToPx(6), dpToPx(7), dpToPx(6), dpToPx(7))
             column.background = GradientDrawable().apply {
-                setColor(Color.parseColor(if (dark) "#0B1F3A" else "#E8F8F2")); cornerRadius = dpToPx(12).toFloat()
+                setColor(Color.parseColor(if (dark) "#162345" else "#E8EDF9")); cornerRadius = dpToPx(12).toFloat()
             }
             column.addView(label(amounts[index], 17f).apply {
                 setTextColor(if (index != 2) decisionColor else if (analysis.estimatedProfit > 0) gain else if (analysis.estimatedProfit < 0) loss else warning)
@@ -761,15 +840,25 @@ class RideOverlayService : Service() {
         card.addView(body, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dpToPx(12) })
 
         // Botão Aceitar Corrida com clique automatizado e registro contábil imediato
+        val isLoss = analysis.trafficLight == TrafficLightStatus.RED
         val acceptBtn = Button(this).apply {
             text = "ACEITAR • R$ " + String.format(Locale.GERMANY, "%.2f", offer.fare)
             textSize = 14f
             paint.isFakeBoldText = true
-            setTextColor(Color.WHITE)
+            setTextColor(if (isLoss) Color.parseColor("#FF4D6D") else Color.parseColor("#0131CD"))
             setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6))
-            background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(Color.parseColor("#087443"), Color.parseColor("#10B981"))).apply {
-                cornerRadius = dpToPx(20).toFloat()
+            background = if (isLoss) {
+                GradientDrawable().apply {
+                    setColor(Color.parseColor("#26111C"))
+                    cornerRadius = dpToPx(20).toFloat()
+                    setStroke(dpToPx(1), Color.parseColor("#FF4D6D"))
+                }
+            } else {
+                GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                    intArrayOf(Color.parseColor("#B9FC01"), Color.parseColor("#A5E200"))).apply {
+                    cornerRadius = dpToPx(20).toFloat()
+                    setStroke(dpToPx(1), Color.WHITE)
+                }
             }
             elevation = dpToPx(2).toFloat()
             setOnClickListener {
@@ -779,7 +868,7 @@ class RideOverlayService : Service() {
         card.addView(acceptBtn, LinearLayout.LayoutParams(-1, dpToPx(46)).apply { topMargin = dpToPx(10) })
         card.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             tag = "offerLifetime"; max = 1000; progress = 1000
-            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#16C784"))
+            progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#B9FC01"))
             progressBackgroundTintList = android.content.res.ColorStateList.valueOf(palette("#4B5563"))
             contentDescription = "Tempo restante da oferta"
         }, LinearLayout.LayoutParams(-1, dpToPx(4)).apply { topMargin = dpToPx(12) })
@@ -929,16 +1018,16 @@ class RideOverlayService : Service() {
     private fun palette(hex: String): Int {
         val dark = com.girocerto.app.theme.AppearancePreferences.isDark(this)
         val color = when (hex.uppercase(Locale.ROOT)) {
-            "#101818" -> if (dark) "#0B1120" else "#F5F7FB"
-            "#243535" -> if (dark) "#121B2C" else "#FFFFFF"
-            "#304242" -> if (dark) "#1A263A" else "#EEF2F7"
-            "#4B5563" -> if (dark) "#2B3A52" else "#D6DEE9"
-            "#F9FAFB" -> if (dark) "#F4F7FD" else "#0F172A"
-            "#B5C9C7" -> if (dark) "#9BA9BE" else "#5B6678"
-            "#FACC15" -> if (dark) "#F4F7FD" else "#0F172A"
-            "#EF4444" -> if (dark) "#F4F7FD" else "#0F172A"
-            "#6B7280" -> if (dark) "#9BA9BE" else "#5B6678"
-            "#19BFB0", "#22C55E", "#10B981", "#06B6D4", "#EA1D2C", "#F97316", "#F59E0B" -> "#1D4ED8"
+            "#101818" -> if (dark) "#060B18" else "#F4F6FC"
+            "#243535" -> if (dark) "#0E172E" else "#FFFFFF"
+            "#304242" -> if (dark) "#162345" else "#E8EDF9"
+            "#4B5563" -> if (dark) "#203362" else "#D1DBEE"
+            "#F9FAFB" -> if (dark) "#FFFFFF" else "#05102E"
+            "#B5C9C7" -> if (dark) "#93A4C8" else "#4B5878"
+            "#FACC15" -> if (dark) "#FFD233" else "#996B00"
+            "#EF4444" -> if (dark) "#FF3B56" else "#C70D2C"
+            "#6B7280" -> if (dark) "#93A4C8" else "#4B5878"
+            "#19BFB0", "#22C55E", "#10B981", "#06B6D4", "#EA1D2C", "#F97316", "#F59E0B" -> "#B9FC01"
             else -> hex
         }
         return Color.parseColor(color)

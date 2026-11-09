@@ -34,8 +34,8 @@ internal class BubbleViewFactory(
             contentDescription = "Giro Certo. Toque para abrir; arraste até a lixeira para ocultar."
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#F20B1F3A"))
-                setStroke(dp(2), Color.parseColor("#16C784"))
+                setColor(Color.parseColor("#F2060B18"))
+                setStroke(dp(2), Color.parseColor("#B9FC01"))
             }
             elevation = dp(12).toFloat()
             alpha = opacity()
@@ -45,19 +45,7 @@ internal class BubbleViewFactory(
             setImageResource(com.girocerto.app.R.drawable.ic_girocerto_brand)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             alpha = .98f
-        }, FrameLayout.LayoutParams((sizePx() * .74f).toInt(), (sizePx() * .74f).toInt(), Gravity.CENTER))
-        bubble.addView(View(context).apply {
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#16C784"))
-                setStroke(dp(2), Color.WHITE)
-            }
-            elevation = dp(14).toFloat()
-        }, FrameLayout.LayoutParams((sizePx() * .24f).toInt(), (sizePx() * .24f).toInt(), Gravity.END or Gravity.BOTTOM).apply {
-            rightMargin = dp(2)
-            bottomMargin = dp(2)
-        })
+        }, FrameLayout.LayoutParams((sizePx() * .80f).toInt(), (sizePx() * .80f).toInt(), Gravity.CENTER))
         bubble.setOnTouchListener(DragInteraction(context, callbacks, opacity))
         return bubble
     }

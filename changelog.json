@@ -1,12 +1,21 @@
 [
   {
+    "version": "1.0.30",
+    "changes": [
+      "Onboarding e tutorial integrados em fluxo único com spotlight dinâmico e sem fundo opaco.",
+      "Comandos de voz aprimorados: aceitar e recusar ofertas com resposta direta, consulta de ganhos do dia e bater ponto.",
+      "Card de sobreposição RideOverlay com indicador de qualidade por ícones reais (Ótimo, Bom, Ruim) sem texto redundante.",
+      "Nova lixeira flutuante tátil com pulso de hover, transição vermelha de alerta e vibração física háptica.",
+      "Tela inicial otimizada com hierarquia visual cockpit em Azul Elétrico e Verde Neon sem opções repetitivas."
+    ]
+  },{
     "version": "1.0.29",
     "changes": [
-      "Leitura do Uber reforçada com OCR local habilitado por padrão quando o texto da oferta não estiver acessível.",
-      "Keeta agora aparece entre os aplicativos acompanhados, com controle próprio e ícone oficial.",
-      "Login Google localiza corretamente a tela ativa e mostra o tipo e o detalhe real da falha quando não consegue entrar.",
-      "Menu e cartão flutuantes renovados com azul-marinho, verde da marca, superfícies mais limpas e atalhos próprios do Giro Certo.",
-      "Lixeira redesenhada em vermelho para deixar clara a ação de ocultar a bolha."
+      "Onboarding e tutorial integrados em fluxo único com spotlight dinâmico e sem fundo opaco.",
+      "Comandos de voz aprimorados: aceitar e recusar ofertas com resposta direta, consulta de ganhos do dia e bater ponto.",
+      "Card de sobreposição RideOverlay com indicador de qualidade por ícones reais (Ótimo, Bom, Ruim) sem texto redundante.",
+      "Nova lixeira flutuante tátil com pulso de hover, transição vermelha de alerta e vibração física háptica.",
+      "Tela inicial otimizada com hierarquia visual cockpit em Azul Elétrico e Verde Neon sem opções repetitivas."
     ]
   },
   {

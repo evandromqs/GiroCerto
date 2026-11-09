@@ -13,7 +13,12 @@ import com.girocerto.navigation.Screen
 
 /** Native vectors generated from the editable SVG family in design/icons. */
 @Composable
-fun NavigationGlyph(screen: Screen, selected: Boolean) {
+fun NavigationGlyph(
+    screen: Screen,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    tint: androidx.compose.ui.graphics.Color? = null
+) {
     val icon = when (screen) {
         Screen.HOME -> R.drawable.ic_home
         Screen.DIARY -> R.drawable.ic_diary
@@ -24,6 +29,11 @@ fun NavigationGlyph(screen: Screen, selected: Boolean) {
         Screen.COPILOT -> R.drawable.ic_copilot
         Screen.ADVANCED -> R.drawable.ic_advanced
     }
-    Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(24.dp),
-        tint = if (selected) PrimaryBlue else TextSecondary)
+    val defaultTint = if (selected) PrimaryBlue else TextSecondary
+    Icon(
+        painter = painterResource(icon),
+        contentDescription = null,
+        modifier = modifier.size(24.dp),
+        tint = tint ?: defaultTint
+    )
 }
