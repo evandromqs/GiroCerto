@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.0.31",
+    "changes": [
+      "Removido fundo adicionado no ícone flutuante da bolha e no menu rápido do copiloto para transparência pura da marca.",
+      "Revisão completa e padronização das cores dos ícones nos temas claro e escuro.",
+      "Correção e alinhamento dos vetores com a paleta oficial em Azul Royal (#0131CD) e Verde Neon (#B9FC01)."
+    ]
+  },
+  {
     "version": "1.0.30",
     "changes": [
       "Onboarding e tutorial integrados em fluxo único com spotlight dinâmico e sem fundo opaco.",
@@ -8,7 +16,8 @@
       "Nova lixeira flutuante tátil com pulso de hover, transição vermelha de alerta e vibração física háptica.",
       "Tela inicial otimizada com hierarquia visual cockpit em Azul Elétrico e Verde Neon sem opções repetitivas."
     ]
-  },{
+  },
+  {
     "version": "1.0.29",
     "changes": [
       "Onboarding e tutorial integrados em fluxo único com spotlight dinâmico e sem fundo opaco.",
