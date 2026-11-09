@@ -401,12 +401,7 @@ class RideOverlayService : Service() {
         // 1. Ícone do app à esquerda (40x40dp)
         val appIcon = FrameLayout(this).apply {
             elevation = dpToPx(4).toFloat()
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(10).toFloat()
-                setColor(Color.parseColor("#0131CD"))
-                setStroke(dpToPx(1), Color.parseColor("#B9FC01"))
-            }
+            background = null
             isClickable = true
             isFocusable = true
             contentDescription = "Abrir Giro Certo em primeiro plano"
@@ -421,7 +416,7 @@ class RideOverlayService : Service() {
         appIcon.addView(android.widget.ImageView(this).apply {
             setImageResource(com.girocerto.app.R.drawable.ic_girocerto_brand)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, FrameLayout.LayoutParams(dpToPx(28), dpToPx(28), Gravity.CENTER))
+        }, FrameLayout.LayoutParams(dpToPx(40), dpToPx(40), Gravity.CENTER))
         headerRow.addView(appIcon, LinearLayout.LayoutParams(dpToPx(40), dpToPx(40)))
 
         // 2. Título "Giro Certo" limpo ao lado do ícone (sem bola verde piscante)

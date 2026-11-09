@@ -32,11 +32,7 @@ internal class BubbleViewFactory(
     fun create(): View {
         val bubble = FrameLayout(context).apply {
             contentDescription = "Giro Certo. Toque para abrir; arraste até a lixeira para ocultar."
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#F2060B18"))
-                setStroke(dp(2), Color.parseColor("#B9FC01"))
-            }
+            background = null
             elevation = dp(12).toFloat()
             alpha = opacity()
             setOnClickListener { callbacks.onClick() }
@@ -45,7 +41,7 @@ internal class BubbleViewFactory(
             setImageResource(com.girocerto.app.R.drawable.ic_girocerto_brand)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             alpha = .98f
-        }, FrameLayout.LayoutParams((sizePx() * .80f).toInt(), (sizePx() * .80f).toInt(), Gravity.CENTER))
+        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER))
         bubble.setOnTouchListener(DragInteraction(context, callbacks, opacity))
         return bubble
     }
