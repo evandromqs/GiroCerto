@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.0.32",
+    "changes": [
+      "Suporte aprimorado no OCR para corridas normais com reconhecimento de categorias (UberX, Comfort, 99Pop) e tratamento de valores por km.",
+      "Aumento de estabilidade com eliminação de asserções nulas (!!) em turnos, dashboard e acessibilidade.",
+      "Tratamento de exceções com logging nos serviços de sobreposição flutuante e anúncio por voz."
+    ]
+  },
+  {
     "version": "1.0.31",
     "changes": [
       "Removido fundo adicionado no ícone flutuante da bolha e no menu rápido do copiloto para transparência pura da marca.",
