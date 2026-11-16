@@ -974,7 +974,9 @@ class RideOverlayService : Service() {
                                 currentParams.y = currentParams.y.coerceIn(0, (resources.displayMetrics.heightPixels - root.height).coerceAtLeast(0))
                                 windowHost.update(root, currentParams)
                             }
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) {
+                            android.util.Log.w("RideOverlayService", "Failed to update overlay position", e)
+                        }
                         return true
                     }
                 }
@@ -992,7 +994,9 @@ class RideOverlayService : Service() {
         if (currentView != null) {
             try {
                 currentView?.let(windowHost::remove)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.w("RideOverlayService", "Failed to remove overlay view", e)
+            }
             currentView = null
         }
     }

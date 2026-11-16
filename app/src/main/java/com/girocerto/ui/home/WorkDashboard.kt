@@ -170,7 +170,7 @@ fun WorkDashboard(
                     verticalArrangement = Arrangement.spacedBy(AppSpacing.Gap),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    val goal = today?.grossGoal ?: profile!!.dailyGrossGoal
+                    val goal = today?.grossGoal ?: profile?.dailyGrossGoal ?: 0.0
                     val gap = today?.let { it.revenue - goal }
 
                     Row(
@@ -459,8 +459,10 @@ fun WorkDiaryScreen(
                         leadingIcon = { NavigationGlyph(Screen.PROFILE, true) }
                     )
                 } else {
-                    dayDrafts.SaveableStateProvider(selectedDate) {
-                        DayEditor(date, days.firstOrNull { it.date == date }, profile!!, viewModel, repo)
+                    profile?.let { activeProfile ->
+                        dayDrafts.SaveableStateProvider(selectedDate) {
+                            DayEditor(date, days.firstOrNull { it.date == date }, activeProfile, viewModel, repo)
+                        }
                     }
                 }
                 AppText(

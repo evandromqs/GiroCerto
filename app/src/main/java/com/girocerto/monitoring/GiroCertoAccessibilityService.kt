@@ -82,7 +82,7 @@ class GiroCertoAccessibilityService : AccessibilityService() {
                         val pkg = windowOwners.owner(window.id, root?.packageName?.toString(), android.os.SystemClock.elapsedRealtime())
                         @Suppress("DEPRECATION")
                         root?.recycle()
-                        if (pkg in TARGET_PACKAGES) packages.putIfAbsent(pkg!!, window.id)
+                        if (pkg != null && pkg in TARGET_PACKAGES) packages.putIfAbsent(pkg, window.id)
                     }
                     scanDelay = if (packages.isEmpty()) 2_000L else 1_000L
                     packages.forEach { (pkg, id) -> readOfferWindow(pkg, id) }
@@ -138,13 +138,15 @@ class GiroCertoAccessibilityService : AccessibilityService() {
         // retaining AccessibilityEvent or mixing text from different offers.
         val windowId = event.windowId
         if (!readOfferWindow(packageName, windowId, eventRoot(event, packageName))) {
-            retryRead = Runnable {
+            val firstRetry = Runnable {
                 if (!readOfferWindow(packageName, windowId)) {
-                    retryRead = Runnable { readOfferWindow(packageName, windowId) }
-                    readHandler.postDelayed(retryRead!!, 700)
+                    val secondRetry = Runnable { readOfferWindow(packageName, windowId) }
+                    retryRead = secondRetry
+                    readHandler.postDelayed(secondRetry, 700)
                 }
             }
-            readHandler.postDelayed(retryRead!!, 250)
+            retryRead = firstRetry
+            readHandler.postDelayed(firstRetry, 250)
         }
     }
 

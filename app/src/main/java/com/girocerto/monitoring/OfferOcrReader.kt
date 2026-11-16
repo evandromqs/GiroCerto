@@ -41,7 +41,7 @@ object OfferOcrContext {
         if (Regex("""(?i)\b(seu saldo|rota atual)\b""").containsMatchIn(text)) return false
         val matches = Regex("""(?i)(?:R\$|BRL)\s*((?:[0-9]{1,3}(?:\.[0-9]{3})+,[0-9]{2}|[0-9]{1,4}[.,][0-9]{2}))(?![0-9.,])""")
             .findAll(text).toList()
-        if (matches.size != Regex("(?i)(R\\$|BRL)").findAll(text).count()) return false
+        if (matches.size != Regex("(?i)(R\\$|BRL)(?!\\s*/\\s*km)").findAll(text).count()) return false
         val amounts = matches.map {
             val value = it.groupValues[1]
             (if (',' in value) value.replace(".", "").replace(',', '.') else value).toDouble()
@@ -152,11 +152,12 @@ class OfferOcrReader(
         val wait = (500L - (now - lastAttempt)).coerceAtLeast(0L)
         if (busy || wait > 0) {
             if (remaining > 0 && retry == null) {
-                retry = Runnable {
+                val retryTask = Runnable {
                     retry = null
                     attempt(pkg, remaining - 1)
                 }
-                handler.postDelayed(retry!!, if (busy) 500L else wait + 50L)
+                retry = retryTask
+                handler.postDelayed(retryTask, if (busy) 500L else wait + 50L)
             }
             return
         }

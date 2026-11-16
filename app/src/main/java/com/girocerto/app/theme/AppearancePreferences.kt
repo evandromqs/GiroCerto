@@ -39,8 +39,8 @@ object AppearancePreferences {
             else -> deviceMode(context).also { prefs.edit().putString(KEY, it.name).apply() }
         }
         _mode.value = mode
-        _fontScale.value = runCatching { FontScale.valueOf(prefs.getString(KEY_FONT, FontScale.MEDIUM.name)!!) }.getOrDefault(FontScale.MEDIUM)
-        _bubbleSize.value = runCatching { FloatingIconSize.valueOf(prefs.getString(KEY_BUBBLE_SIZE, FloatingIconSize.MEDIUM.name)!!) }.getOrDefault(FloatingIconSize.MEDIUM)
+        _fontScale.value = runCatching { FontScale.valueOf(prefs.getString(KEY_FONT, FontScale.MEDIUM.name) ?: FontScale.MEDIUM.name) }.getOrDefault(FontScale.MEDIUM)
+        _bubbleSize.value = runCatching { FloatingIconSize.valueOf(prefs.getString(KEY_BUBBLE_SIZE, FloatingIconSize.MEDIUM.name) ?: FloatingIconSize.MEDIUM.name) }.getOrDefault(FloatingIconSize.MEDIUM)
         _bubbleOpacity.value = prefs.getFloat(KEY_BUBBLE_OPACITY, .95f).coerceIn(.45f, 1f)
     }
 

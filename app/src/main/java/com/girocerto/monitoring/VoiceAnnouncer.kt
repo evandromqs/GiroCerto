@@ -127,7 +127,9 @@ class VoiceAnnouncer(private val context: Context) : TextToSpeech.OnInitListener
             tts?.shutdown()
             tts = null
             isInitialized = false
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("VoiceAnnouncer", "Failed to shutdown TTS", e)
+        }
     }
 }
 

@@ -189,8 +189,9 @@ fun ElectricProfileScreen(onDone: () -> Unit) {
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        if (saved != null && !editing) {
-            val profile = saved!!
+        val savedProfile = saved
+        if (savedProfile != null && !editing) {
+            val profile = savedProfile
             AppText(
                 text = "${profile.name}, este é o seu plano.",
                 modifier = Modifier.fillMaxWidth(),

@@ -84,7 +84,7 @@ fun ShiftDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    val activeShift = currentShift!!
+                    currentShift?.let { activeShift ->
                     AppText(
                         text = "Turno em andamento desde as ${activeShift.startTime}" +
                             (activeShift.startKm?.let { " (odômetro inicial: ${String.format(java.util.Locale.forLanguageTag("pt-BR"), "%.0f km", it)})" } ?: "") +
@@ -93,6 +93,7 @@ fun ShiftDialog(
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold
                     )
+                    }
                 }
 
                 OutlinedTextField(
