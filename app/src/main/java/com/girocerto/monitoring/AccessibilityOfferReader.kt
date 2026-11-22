@@ -94,7 +94,17 @@ object AccessibilityOfferReader {
         }
         val priced = eligibleLines.flatMap { line ->
             val matcher = FARE_PATTERN.matcher(line)
-            buildList { while (matcher.find()) add(parseCurrency(matcher.group(1))) }
+            buildList {
+                while (matcher.find()) {
+                    val after = line.substring(matcher.end())
+                    val before = line.substring(0, matcher.start())
+                    val isRate = Regex("^\\s*/\\s*(km|h|hr|hora|min)\\b", RegexOption.IGNORE_CASE).containsMatchIn(after)
+                    val isPlusBonus = Regex("\\+\\s*$").containsMatchIn(before)
+                    if (!isRate && !isPlusBonus) {
+                        add(parseCurrency(matcher.group(1)))
+                    }
+                }
+            }
         }
         val maxFare = priced.maxOrNull()
         val included = includedBonusFares(cleanedLines)

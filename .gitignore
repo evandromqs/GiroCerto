@@ -1,5 +1,6 @@
 *.iml
 .gradle
+.gradle-user/
 /local.properties
 /.idea/caches
 /.idea/libraries
@@ -19,6 +20,11 @@ local.properties
 Referencia/
 analysis/tools/
 analysis/rea/
+analysis/rotapro/
+analysis/screenshots/
+analysis/live-debug/
+*.apk
+*.apkm
 signing/
 *.jks
 *.keystore
