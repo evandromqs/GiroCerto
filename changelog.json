@@ -1,5 +1,11 @@
 [
   {
+    "version": "1.0.33",
+    "changes": [
+      "Correção na leitura OCR/acessibilidade de corridas de passageiro (carro e moto) na Uber e 99, ignorando tarifas por unidade (R$/km, R$/h) e bônus (+R$) na contagem de preço."
+    ]
+  },
+  {
     "version": "1.0.32",
     "changes": [
       "Suporte aprimorado no OCR para corridas normais com reconhecimento de categorias (UberX, Comfort, 99Pop) e tratamento de valores por km.",
